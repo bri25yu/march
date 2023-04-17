@@ -16,5 +16,5 @@ class BaselineExperiment(ExperimentBase):
         return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
 
     def get_model(self) -> TransformerBase:
-        config = TransformerConfig(1024, 12, 64)
+        config = TransformerConfig()
         return BaselineTransformer(config)

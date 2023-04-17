@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from torch import bfloat16, float32, long, ones, rsqrt, strided
 from torch.nn import Module, Parameter
 
+from transformers.configuration_utils import PretrainedConfig
+
 
 __all__ = [
     "MODEL_PRECISION",
@@ -36,10 +38,10 @@ MultiHeadedAttention = TensorType["N", "H", "L_in", "L_out", bfloat16, strided]
 
 
 @dataclass
-class TransformerConfig:
-    dim_model: int
-    num_layers: int
-    dim_qkv: int
+class TransformerConfig(PretrainedConfig):
+    dim_model: int = 512
+    num_layers: int = 6
+    dim_qkv: int = 64
 
     dim_feedforward: Union[None, int] = None
     num_heads: Union[None, int] = None
@@ -123,8 +125,8 @@ class AttentionBase(TransformerComponentBase):
         return input_embeds
 
     def reshape_to_head_insensitive(self, input_embeds: MultiHeadedEmbeds) -> SequenceInputEmbeds:
-        batch_size, sequence_length = input_embeds.size()[0], input_embeds.size()[1]
         input_embeds = input_embeds.permute(0, 2, 1, 3)
+        batch_size, sequence_length = input_embeds.size()[0], input_embeds.size()[1]
         input_embeds = input_embeds.reshape(batch_size, sequence_length, -1)
 
         return input_embeds.contiguous()

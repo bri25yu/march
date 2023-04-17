@@ -3,7 +3,7 @@ from torchtyping import TensorType
 
 from abc import abstractmethod
 
-from torch import FloatTensor, matmul, ones, triu
+from torch import FloatTensor, long, matmul, ones, triu
 from torch.nn import CrossEntropyLoss, Linear, ModuleList, Parameter
 from torch.nn.functional import dropout, embedding, relu
 
@@ -24,7 +24,7 @@ class AbsolutePositionEncoding(TransformerComponentBase):
     def init_weights(self) -> None:
         config = self.config
 
-        self.timing_table.data.normal_(mean=0.0, var=config.dim_model ** -0.5)
+        self.timing_table.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
 
     def forward(self, inputs: SequenceInputEmbeds) -> SequenceInputEmbeds:
         inputs: SequenceInputEmbeds = dropout(inputs, p=self.config.dropout_prob, training=self.training)
@@ -71,6 +71,7 @@ class EncoderBase(TransformerComponentBase):
             normed_input_embeds: SequenceInputEmbeds = self_attention_layernorm(input_embeds)
             self_attention_output: AttentionOutput = self_attention_layer(normed_input_embeds, attention_mask)
             input_embeds: SequenceInputEmbeds = input_embeds + dropout(self_attention_output.input_embeds, p=config.dropout_prob, training=self.training)
+            encoder_key_value_states.append(self_attention_output.key_value_states)
 
             normed_input_embeds: SequenceInputEmbeds = feedforward_layernorm(input_embeds)
             feedforward_output: SequenceInputEmbeds = feedforward_layer(normed_input_embeds)
@@ -158,7 +159,7 @@ class TransformerBase(TransformerComponentBase):
         pass
 
     def __init__(self, config: TransformerConfig) -> None:
-        super().__init__()
+        super().__init__(config)
 
         self.config = config
 
@@ -171,7 +172,7 @@ class TransformerBase(TransformerComponentBase):
         self.init_weights()
 
     def init_weights(self) -> None:
-        self.embedding.weight.data.normal(mean=0.0, std=1.0)
+        self.embedding.weight.data.normal_(mean=0.0, std=1.0)
 
     def forward(
         self,
@@ -207,7 +208,7 @@ class TransformerBase(TransformerComponentBase):
         batch_size, sequence_length = decoder_input_ids.size()
 
         no_loss_mask: TensorType["N", 1, "L_out"] = decoder_input_ids[:, None, :] == -100
-        causal_mask: TensorType["L_out", "L_out"] = triu(ones(sequence_length, sequence_length), diagonal=1)[None, :, :]
+        causal_mask: TensorType["L_out", "L_out"] = triu(ones(sequence_length, sequence_length, dtype=long), diagonal=1)[None, :, :].to(device=decoder_input_ids.device)
         decoder_attention_mask: TensorType["N", "L_out", "L_out"] = no_loss_mask | causal_mask
         assert decoder_attention_mask.size() == (batch_size, sequence_length, sequence_length), f"Expected decoder attention mask of shape {(batch_size, sequence_length, sequence_length)}, but got {decoder_attention_mask.size()}."
 
@@ -248,11 +249,10 @@ class BaselineAttention(AttentionBase):
 
         if not self.is_cross_attention:
             attention_values: List[SequenceInputEmbeds] = self.w_q(input_embeds), self.w_k(input_embeds), self.w_v(input_embeds)
+            query, key, value = list(map(self.reshape_to_head_sensitive, attention_values))
         else:
             key, value = encoder_key_value_states
-            attention_values: List[SequenceInputEmbeds] = self.w_q(input_embeds), key, value
-
-        query, key, value = list(map(self.reshape_to_head_sensitive, attention_values))
+            query: SequenceInputEmbeds = self.reshape_to_head_sensitive(self.w_q(input_embeds))
 
         attention_logits: MultiHeadedAttention = matmul(query, key.transpose(2, 3))
 
@@ -287,8 +287,8 @@ class BaselineFeedforward(TransformerComponentBase):
     def init_weights(self) -> None:
         config = self.config
 
-        self.up_projection.weight.data.normal(mean=0.0, std=config.dim_model ** -0.5)
-        self.down_projection.weight.data.normal(mean=0.0, std=config.dim_feedforward ** -0.5)
+        self.up_projection.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
+        self.down_projection.weight.data.normal_(mean=0.0, std=config.dim_feedforward ** -0.5)
 
     def forward(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:
         config = self.config

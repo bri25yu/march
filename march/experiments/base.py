@@ -8,6 +8,8 @@ import json
 
 from datasets import DatasetDict
 
+from torch import roll
+
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, PrinterCallback, ProgressCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
 
 from march import CONFIG_DIR, RESULTS_DIR
@@ -55,9 +57,10 @@ class ExperimentBase(ABC):
         base_data_collator = DataCollatorForSeq2Seq(tokenizer)
         bos_token_id = tokenizer.convert_tokens_to_ids(EOS_TOKEN)
         def data_collator(examples):
-            examples = base_data_collator(examples)
+            for example in examples:
+                example["decoder_input_ids"] = [bos_token_id] + example["labels"][:-1]
 
-            examples["decoder_input_ids"] = [[bos_token_id] + labels[:-1] for labels in examples["labels"]]
+            examples = base_data_collator(examples)
 
             return examples
 

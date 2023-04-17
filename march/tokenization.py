@@ -51,4 +51,7 @@ def train_tokenizer() -> None:
 
 
 def load_tokenizer() -> PreTrainedTokenizerFast:
-    return PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(TOKENIZER_FILE))
+    tokenizer = PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(TOKENIZER_FILE))
+    tokenizer.pad_token_id = tokenizer.convert_tokens_to_ids(EOS_TOKEN)
+
+    return tokenizer
