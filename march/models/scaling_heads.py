@@ -1,5 +1,7 @@
 from typing import List
 
+from abc import abstractmethod
+
 from copy import deepcopy
 
 from torch.nn import ModuleList
@@ -8,12 +10,12 @@ from march.models.baseline import *
 from march.models.utils import *
 
 
-__all__ = ["ScalingHeadsTransformer"]
+__all__ = ["ScalingHeadsTransformer", "InverseScalingHeadsTransformer"]
 
 
-def create_scaling_heads_configs(config: TransformerConfig) -> List[TransformerConfig]:
-    later_num_heads = config.num_heads // 2
-    initial_num_heads = config.num_heads + later_num_heads
+def create_scaling_heads_configs_helper(
+    config: TransformerConfig, initial_num_heads: int, later_num_heads: int
+) -> List[TransformerConfig]:
     layer_num_heads = \
         [initial_num_heads] * (config.num_layers // 4) \
         + [config.num_heads] * ((config.num_layers // 2) % 2) \
@@ -27,7 +29,23 @@ def create_scaling_heads_configs(config: TransformerConfig) -> List[TransformerC
     return layer_configs
 
 
-class ScalingHeadsEncoder(BaselineEncoder):
+def create_scaling_heads_configs(config: TransformerConfig) -> List[TransformerConfig]:
+    later_num_heads = config.num_heads // 2
+    initial_num_heads = config.num_heads + later_num_heads
+    return create_scaling_heads_configs_helper(config, initial_num_heads, later_num_heads)
+
+
+def create_inverse_scaling_heads_configs(config: TransformerConfig) -> List[TransformerConfig]:
+    initial_num_heads = config.num_heads // 2
+    later_num_heads = config.num_heads + initial_num_heads
+    return create_scaling_heads_configs_helper(config, initial_num_heads, later_num_heads)
+
+
+class ScalingHeadsEncoderBase(BaselineEncoder):
+    @abstractmethod
+    def create_scaling_heads_configs(self, config: TransformerConfig) -> List[TransformerConfig]:
+        pass
+
     # This is a copy of `BaselineEncoder.__init__` unless specified otherwise
     def __init__(self, config: TransformerConfig) -> None:
         TransformerComponentBase.__init__(self, config)
@@ -43,7 +61,7 @@ class ScalingHeadsEncoder(BaselineEncoder):
         #     [self.ATTENTION_CLS(config, is_cross_attention=False) for _ in range(config.num_layers // 2)]
         # )
 
-        layer_configs = create_scaling_heads_configs(config)
+        layer_configs = self.create_scaling_heads_configs(config)
         self.self_attention_layers: List[AttentionBase] = ModuleList(
             [self.ATTENTION_CLS(layer_config, is_cross_attention=False) for layer_config in layer_configs]
         )
@@ -57,7 +75,11 @@ class ScalingHeadsEncoder(BaselineEncoder):
         )
 
 
-class ScalingHeadsDecoder(BaselineDecoder):
+class ScalingHeadsDecoderBase(BaselineDecoder):
+    @abstractmethod
+    def create_scaling_heads_configs(self, config: TransformerConfig) -> List[TransformerConfig]:
+        pass
+
     # This is a copy of `BaselineDecoder.__init__` unless specified otherwise
     def __init__(self, config: TransformerConfig) -> None:
         TransformerComponentBase.__init__(self, config)
@@ -76,7 +98,7 @@ class ScalingHeadsDecoder(BaselineDecoder):
         #     [self.ATTENTION_CLS(config, is_cross_attention=True) for _ in range(config.num_layers // 2)]
         # )
 
-        layer_configs = create_scaling_heads_configs(config)
+        layer_configs = self.create_scaling_heads_configs(config)
         self.self_attention_layers: List[AttentionBase] = ModuleList(
             [self.ATTENTION_CLS(layer_config, is_cross_attention=False) for layer_config in layer_configs]
         )
@@ -93,6 +115,31 @@ class ScalingHeadsDecoder(BaselineDecoder):
         )
 
 
+class ScalingHeadsEncoder(ScalingHeadsEncoderBase):
+    def create_scaling_heads_configs(self, config: TransformerConfig) -> List[TransformerConfig]:
+        return create_scaling_heads_configs(config)
+
+
+class ScalingHeadsDecoder(ScalingHeadsDecoderBase):
+    def create_scaling_heads_configs(self, config: TransformerConfig) -> List[TransformerConfig]:
+        return create_scaling_heads_configs(config)
+
+
 class ScalingHeadsTransformer(BaselineTransformer):
     ENCODER_CLS = ScalingHeadsEncoder
     DECODER_CLS = ScalingHeadsDecoder
+
+
+class InverseScalingHeadsEncoder(ScalingHeadsEncoderBase):
+    def create_scaling_heads_configs(self, config: TransformerConfig) -> List[TransformerConfig]:
+        return create_inverse_scaling_heads_configs(config)
+
+
+class InverseScalingHeadsDecoder(ScalingHeadsDecoderBase):
+    def create_scaling_heads_configs(self, config: TransformerConfig) -> List[TransformerConfig]:
+        return create_inverse_scaling_heads_configs(config)
+
+
+class InverseScalingHeadsTransformer(BaselineTransformer):
+    ENCODER_CLS = InverseScalingHeadsEncoder
+    DECODER_CLS = InverseScalingHeadsDecoder

@@ -1,7 +1,5 @@
-from transformers import Seq2SeqTrainingArguments
-
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
-from march.models.tests import ScalingHeadsTransformer
+from march.models.scaling_heads import ScalingHeadsTransformer, InverseScalingHeadsTransformer
 from march.experiments.baseline import BaselineWikiTextExperiment
 
 
@@ -27,3 +25,9 @@ class ScalingHeadsExperiment(BaselineWikiTextExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
         return ScalingHeadsTransformer(config)
+
+
+class InverseScalingHeadsExperiment(BaselineWikiTextExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        return InverseScalingHeadsTransformer(config)
