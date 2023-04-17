@@ -27,9 +27,15 @@ def run(experiment_name: Union[None, str]=None) -> None:
     if experiment_name is None:
         experiment_names = list(available_experiments)
         experiment_index = input(
-            "Choose an experiment class:\n" + "\n".join(f"{i+1}. {name}" for i, name in enumerate(experiment_names))
+            "Choose an experiment class:\n" + "\n".join(f"{i+1}. {name}" for i, name in enumerate(experiment_names)) + "\n"
         )
+        try:
+            experiment_index = int(experiment_index) - 1
+        except ValueError as e:
+            raise e
+
         experiment_name = experiment_names[experiment_index]
+        print(f"{experiment_name} chosen!")
 
     experiment_cls = available_experiments.get(experiment_name, None)
 

@@ -249,7 +249,7 @@ class BaselineAttention(AttentionBase):
             key, value = encoder_key_value_states
             attention_values: List[SequenceInputEmbeds] = self.w_q(input_embeds), key, value
 
-        query, key, value: List[MultiHeadedEmbeds] = list(map(self.reshape_to_head_sensitive, attention_values))
+        query, key, value = list(map(self.reshape_to_head_sensitive, attention_values))
 
         attention_logits: MultiHeadedAttention = matmul(query, key.transpose(2, 3))
 

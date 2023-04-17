@@ -10,6 +10,8 @@ from tokenizers.processors import TemplateProcessing
 
 from datasets import load_dataset
 
+from transformers import PreTrainedTokenizerFast
+
 from march import CONFIG_DIR
 
 
@@ -22,7 +24,7 @@ MAX_LENGTH = 1024
 VOCAB_SIZE = 30000
 
 
-def train_tokenizer() -> Tokenizer:
+def train_tokenizer() -> None:
     tokenizer = Tokenizer(BPE(byte_fallback=True))
     trainer = BpeTrainer(
         vocab_size=VOCAB_SIZE,
@@ -48,5 +50,5 @@ def train_tokenizer() -> Tokenizer:
     tokenizer.save(TOKENIZER_FILE)
 
 
-def load_tokenizer() -> Tokenizer:
-    return Tokenizer.from_file(TOKENIZER_FILE)
+def load_tokenizer() -> PreTrainedTokenizerFast:
+    return PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(TOKENIZER_FILE))

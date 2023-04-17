@@ -8,9 +8,7 @@ import json
 
 from datasets import DatasetDict
 
-from tokenizers import Tokenizer
-
-from transformers import DataCollatorForSeq2Seq, PrinterCallback, ProgressCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
+from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, PrinterCallback, ProgressCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
 
 from march import CONFIG_DIR, RESULTS_DIR
 from march.tokenization import EOS_TOKEN, load_tokenizer
@@ -19,7 +17,7 @@ from march.models.baseline import TransformerBase
 
 class ExperimentBase(ABC):
     @abstractmethod
-    def load_dataset_dict(self, tokenizer: Tokenizer) -> DatasetDict:
+    def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
         pass
 
     @abstractmethod
@@ -54,7 +52,7 @@ class ExperimentBase(ABC):
         model = self.get_model()
 
         base_data_collator = DataCollatorForSeq2Seq(tokenizer)
-        bos_token_id = tokenizer.token_to_id(EOS_TOKEN)
+        bos_token_id = tokenizer.convert_tokens_to_ids(EOS_TOKEN)
         def data_collator(examples):
             examples = base_data_collator(examples)
 
