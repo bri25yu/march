@@ -58,7 +58,7 @@ def create_wikipedia_baseline(tokenizer: PreTrainedTokenizerFast) -> None:
     tokenized_dataset_dict = dataset_dict.map(tokenize_fn, batched=True, remove_columns=dataset_dict["train"].column_names, desc="Tokenizing", num_proc=16)
     print(f"Tokenized Wikipedia\n{tokenized_dataset_dict}")
 
-    packed_dataset_dict = tokenized_dataset_dict.map(pack_fn, batched=True, desc="Packing")
+    packed_dataset_dict = tokenized_dataset_dict.map(pack_fn, batched=True, desc="Packing", num_proc=16)
     print(f"Packed Wikipedia\n{packed_dataset_dict}")
 
     span_corrupted_dataset_dict = packed_dataset_dict.map(apply_span_corruption, batched=True, num_proc=16, desc="Applying span corruption")
