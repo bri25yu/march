@@ -57,13 +57,14 @@ def create_wikipedia_baseline(tokenizer: PreTrainedTokenizerFast) -> None:
     print(f"Packed Wikipedia\n{packed_dataset_dict}")
 
     span_corrupted_dataset_dict = packed_dataset_dict.map(apply_span_corruption, batched=True, num_proc=16, desc="Applying span corruption")
-    print(f"Span corrupted Wikipedia\n{span_corrupted_dataset_dict}")
 
     span_corrupted_dataset_dict = DatasetDict(
         train=span_corrupted_dataset_dict["train"].select(range(2000, len(span_corrupted_dataset_dict["train"]))),
         validation=span_corrupted_dataset_dict["train"].select(range(1000, 2000)),
         test=span_corrupted_dataset_dict["train"].select(range(1000)),
     )
+    print(f"Span corrupted Wikipedia\n{span_corrupted_dataset_dict}")
+
     span_corrupted_dataset_dict.push_to_hub(WIKIPEDIA_BASELINE_NAME)
 
 
