@@ -10,12 +10,11 @@ from datasets import DatasetDict
 
 from tokenizers import Tokenizer
 
-from torch.nn import Module
-
 from transformers import DataCollatorForSeq2Seq, PrinterCallback, ProgressCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
 
 from march import CONFIG_DIR, RESULTS_DIR
-from march.tokenization import load_tokenizer
+from march.tokenization import EOS_TOKEN, load_tokenizer
+from march.models.baseline import TransformerBase
 
 
 class ExperimentBase(ABC):
@@ -34,7 +33,7 @@ class ExperimentBase(ABC):
         pass
 
     @abstractmethod
-    def get_model(self) -> Module:
+    def get_model(self) -> TransformerBase:
         pass
 
     @property
@@ -54,6 +53,15 @@ class ExperimentBase(ABC):
         self._validate_dataset_dict(dataset_dict)
         model = self.get_model()
 
+        base_data_collator = DataCollatorForSeq2Seq(tokenizer)
+        bos_token_id = tokenizer.token_to_id(EOS_TOKEN)
+        def data_collator(examples):
+            examples = base_data_collator(examples)
+
+            examples["decoder_input_ids"] = [[bos_token_id] + labels[:-1] for labels in examples["labels"]]
+
+            return examples
+
         training_arguments = self.get_training_arguments()
         trainer = Seq2SeqTrainer(
             model=model,
@@ -61,7 +69,7 @@ class ExperimentBase(ABC):
             train_dataset=dataset_dict["train"],
             eval_dataset=dataset_dict["validation"],
             tokenizer=tokenizer,
-            data_collator=DataCollatorForSeq2Seq(tokenizer),
+            data_collator=data_collator,
         )
         for callback_to_remove in [PrinterCallback, ProgressCallback]:
             trainer.remove_callback(callback_to_remove)
@@ -73,6 +81,6 @@ class ExperimentBase(ABC):
         actual_splits = list(dataset_dict)
         assert set(expected_splits) == set(actual_splits), f"Expected dataset dict to have splits {expected_splits}, but got {actual_splits}."
 
-        expected_columns = ["input_ids", "attention_mask", "labels"]
+        expected_columns = ["input_ids", "labels"]
         actual_columns = dataset_dict["train"].column_names
         assert set(expected_columns) == set(actual_columns), f"Expected dataset to have columns {expected_columns}, but got {actual_columns}."

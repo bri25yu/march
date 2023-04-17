@@ -16,15 +16,16 @@ from march import CONFIG_DIR
 __all__ = ["EOS_TOKEN", "EXTRA_ID_TOKENS", "train_tokenizer", "load_tokenizer"]
 
 EOS_TOKEN = "</s>"
-EXTRA_ID_TOKENS = [f"<extra_id_{i}>" for i in range(100)]
+EXTRA_ID_TOKENS = [f"<extra_id_{i}>" for i in reversed(range(100))]
 TOKENIZER_FILE = join(CONFIG_DIR, "tokenizer.json")
 MAX_LENGTH = 1024
+VOCAB_SIZE = 30000
 
 
 def train_tokenizer() -> Tokenizer:
     tokenizer = Tokenizer(BPE(byte_fallback=True))
     trainer = BpeTrainer(
-        vocab_size=30000,
+        vocab_size=VOCAB_SIZE,
         min_frequency=3,
         show_progress=True,
         special_tokens=[EOS_TOKEN] + EXTRA_ID_TOKENS + list("0123456789"),
