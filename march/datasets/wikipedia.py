@@ -77,7 +77,7 @@ def create_human_readable_wikipedia_baseline(tokenizer: PreTrainedTokenizerFast)
     dataset_dict = load_wikipedia_baseline()
     dataset_dict["train"] = dataset_dict["train"].select(range(1000))
 
-    def decode_into_text(examples: List[str, List[int]]) -> List[str, List[str]]:
+    def decode_into_text(examples: Dict[str, List[int]]) -> Dict[str, List[str]]:
         return {
             "text_inputs": tokenizer.batch_decode(examples["input_ids"]),
             "text_labels": tokenizer.batch_decode(examples["labels"]),
