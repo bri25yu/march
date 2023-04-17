@@ -50,6 +50,7 @@ class ExperimentBase(ABC):
         dataset_dict = self.load_dataset_dict(tokenizer)
         self._validate_dataset_dict(dataset_dict)
         model = self.get_model()
+        print(f"Current model parameter count: {model.count_parameters():,}")
 
         base_data_collator = DataCollatorForSeq2Seq(tokenizer)
         bos_token_id = tokenizer.convert_tokens_to_ids(EOS_TOKEN)

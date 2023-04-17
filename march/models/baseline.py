@@ -213,6 +213,9 @@ class TransformerBase(TransformerComponentBase):
 
         return decoder_attention_mask
 
+    def count_parameters(self) -> int:
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
 
 class BaselineAttention(AttentionBase):
     def __init__(self, config: TransformerConfig, is_cross_attention: bool) -> None:

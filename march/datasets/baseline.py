@@ -33,8 +33,8 @@ def create_wikitext103_baseline(tokenizer: PreTrainedTokenizerFast) -> None:
         for input_ids in examples["input_ids"]:
             current.extend(input_ids)
             if len(current) > MAX_LENGTH:
-                current, input_ids = current[:MAX_LENGTH], current[MAX_LENGTH:]
-                outputs["input_ids"].append(current)
+                outputs["input_ids"].append(current[:MAX_LENGTH])
+                current = current[MAX_LENGTH:]
         return outputs
 
     def apply_span_corruption(examples: Dict[str, List[int]]) -> Dict[str, List[int]]:
