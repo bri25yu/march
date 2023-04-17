@@ -17,6 +17,12 @@ class MoreHeadsLessQKVDimExperiment(BaselineWikiTextExperiment):
         return BaselineTransformer(config)
 
 
+class LessHeadsMoreQKVDimExperiment(BaselineWikiTextExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig(dim_qkv=128)
+        return BaselineTransformer(config)
+
+
 class ScalingHeadsExperiment(BaselineWikiTextExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()

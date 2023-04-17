@@ -60,7 +60,7 @@ class ScalingHeadsEncoder(BaselineEncoder):
 class ScalingHeadsDecoder(BaselineDecoder):
     # This is a copy of `BaselineDecoder.__init__` unless specified otherwise
     def __init__(self, config: TransformerConfig) -> None:
-        TransformerComponentBase().__init__(self, config)
+        TransformerComponentBase.__init__(self, config)
 
         self.layernorms = ModuleList([LayerNorm(config) for _ in range(((config.num_layers // 2) * 3) + 1)])
 
