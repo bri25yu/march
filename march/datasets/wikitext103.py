@@ -2,8 +2,6 @@ from typing import Dict, List
 
 from datasets import DatasetDict, load_dataset
 
-from tokenizers import Encoding
-
 from transformers import PreTrainedTokenizerFast
 
 from march.tokenization import EXTRA_ID_TOKENS, MAX_LENGTH

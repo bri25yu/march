@@ -2,7 +2,7 @@ from datasets import DatasetDict
 
 from transformers import PreTrainedTokenizerFast, Seq2SeqTrainingArguments
 
-from march.datasets.baseline import load_wikitext103_baseline
+from march.datasets.wikitext103 import load_wikitext103_baseline
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
 from march.experiments.base import ExperimentBase
 
