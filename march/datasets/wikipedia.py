@@ -1,3 +1,8 @@
+"""
+To use on Colab:
+
+!pip -q -q -q install apache_beam mwparserfromhell dill==0.3.5.1
+"""
 from typing import Dict, List
 
 from datasets import DatasetDict, load_dataset
