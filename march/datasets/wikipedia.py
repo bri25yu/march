@@ -48,11 +48,6 @@ def create_wikipedia_baseline(tokenizer: PreTrainedTokenizerFast) -> None:
 
 
     dataset_dict = load_dataset("wikipedia", "20220301.en")
-    dataset_dict = DatasetDict(
-        train=dataset_dict["train"].select(range(2000, len(dataset_dict["train"]))),
-        validation=dataset_dict["train"].select(range(1000, 2000)),
-        test=dataset_dict["train"].select(range(1000)),
-    )
     print(f"Raw Wikipedia\n{dataset_dict}")
 
     tokenized_dataset_dict = dataset_dict.map(tokenize_fn, batched=True, remove_columns=dataset_dict["train"].column_names, desc="Tokenizing", num_proc=16)
@@ -64,6 +59,11 @@ def create_wikipedia_baseline(tokenizer: PreTrainedTokenizerFast) -> None:
     span_corrupted_dataset_dict = packed_dataset_dict.map(apply_span_corruption, batched=True, num_proc=16, desc="Applying span corruption")
     print(f"Span corrupted Wikipedia\n{span_corrupted_dataset_dict}")
 
+    span_corrupted_dataset_dict = DatasetDict(
+        train=span_corrupted_dataset_dict["train"].select(range(2000, len(span_corrupted_dataset_dict["train"]))),
+        validation=span_corrupted_dataset_dict["train"].select(range(1000, 2000)),
+        test=span_corrupted_dataset_dict["train"].select(range(1000)),
+    )
     span_corrupted_dataset_dict.push_to_hub(WIKIPEDIA_BASELINE_NAME)
 
 
