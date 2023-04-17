@@ -1,3 +1,5 @@
+from transformers import Seq2SeqTrainingArguments
+
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
 from march.models.tests import ScalingHeadsTransformer
 from march.experiments.baseline import BaselineWikiTextExperiment
@@ -11,7 +13,7 @@ class MoreHeadsLessLayersExperiment(BaselineWikiTextExperiment):
 
 class MoreHeadsLessQKVDimExperiment(BaselineWikiTextExperiment):
     def get_model(self) -> TransformerBase:
-        config = TransformerConfig(dim_qkv=16)
+        config = TransformerConfig(dim_qkv=32)
         return BaselineTransformer(config)
 
 
