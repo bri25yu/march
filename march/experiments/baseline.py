@@ -7,7 +7,7 @@ from march.models.baseline import TransformerBase, BaselineTransformer, Transfor
 from march.experiments.base import ExperimentBase
 
 
-class BaselineExperiment(ExperimentBase):
+class BaselineWikiTextExperiment(ExperimentBase):
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
         return load_wikitext103_baseline()
 
