@@ -48,9 +48,7 @@ def create_wikipedia_baseline(tokenizer: PreTrainedTokenizerFast) -> None:
         validation=dataset_dict["train"].select(range(1000, 2000)),
         test=dataset_dict["train"].select(range(1000)),
     )
-
-    examples = "\n\t".join(dataset_dict["train"]["text"][:5])
-    print(f"Raw Wikipedia\n{dataset_dict}\n\t{examples}")
+    print(f"Raw Wikipedia\n{dataset_dict}")
 
     tokenized_dataset_dict = dataset_dict.map(tokenize_fn, batched=True, remove_columns=dataset_dict["train"].column_names, desc="Tokenizing", num_proc=16)
     print(f"Tokenized Wikipedia\n{tokenized_dataset_dict}")
