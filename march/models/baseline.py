@@ -14,10 +14,13 @@ from march.models.utils import *
 
 
 __all__ = [
+    "CrossEntropyLoss",
     "Linear",
     "ModuleList",
     "dropout",
+    "embedding",
     "matmul",
+    "Seq2SeqLMOutput",
     "AbsolutePositionEncoding",
     "EncoderBase",
     "DecoderBase",
