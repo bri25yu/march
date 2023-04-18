@@ -2,6 +2,7 @@ from march.models.baseline import TransformerBase, BaselineTransformer, Transfor
 from march.models.scaling_heads import ScalingHeadsTransformer, InverseScalingHeadsTransformer
 from march.models.unified_attention import UnifiedAttentionTransformer
 from march.models.scaling_heads_constant import ScalingHeadsConstantTransformer, InverseScalingHeadsConstantTransformer
+from march.models.perfect_overfit import PerfectOverfitTransformer
 
 from march.experiments.baseline import BaselineExperiment
 
@@ -52,3 +53,9 @@ class InverseScalingHeadsConstantExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
         return InverseScalingHeadsConstantTransformer(config)
+
+
+class PerfectOverfitExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        return PerfectOverfitTransformer(config)
