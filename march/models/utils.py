@@ -14,6 +14,8 @@ from transformers.configuration_utils import PretrainedConfig
 __all__ = [
     "TensorType",
     "List",
+    "Tuple",
+    "Parameter",
     "MODEL_PRECISION",
     "LAYERNORM_PRECISION",
     "SequenceInputIds",

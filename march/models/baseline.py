@@ -3,7 +3,7 @@ from torchtyping import TensorType
 
 from abc import abstractmethod
 
-from torch import FloatTensor, long, matmul, ones, triu
+from torch import BFloat16Tensor, long, matmul, ones, triu
 from torch.nn import CrossEntropyLoss, Linear, ModuleList, Parameter
 from torch.nn.functional import dropout, embedding, relu
 
@@ -15,12 +15,14 @@ from march.models.utils import *
 
 __all__ = [
     "CrossEntropyLoss",
+    "BFloat16Tensor",
     "Linear",
     "ModuleList",
     "dropout",
     "embedding",
     "matmul",
     "Seq2SeqLMOutput",
+    "VOCAB_SIZE",
     "AbsolutePositionEncoding",
     "EncoderBase",
     "DecoderBase",
@@ -37,7 +39,7 @@ class AbsolutePositionEncoding(TransformerComponentBase):
     def __init__(self, config: TransformerConfig) -> None:
         super().__init__(config)
 
-        self.timing_table = Parameter(FloatTensor(MAX_LENGTH, config.dim_model))
+        self.timing_table = Parameter(BFloat16Tensor(MAX_LENGTH, config.dim_model))
 
         self.init_weights()
 
@@ -262,7 +264,7 @@ class BaselineAttention(AttentionBase):
     def forward(
         self,
         input_embeds: SequenceInputEmbeds,
-        attention_mask: SequenceInputIds,
+        attention_mask: SequenceInputIds=None,
         encoder_key_value_states: KeyValueStates=None,
     ) -> AttentionOutput:
         config = self.config
@@ -276,14 +278,15 @@ class BaselineAttention(AttentionBase):
 
         attention_logits: MultiHeadedAttention = matmul(query, key.transpose(2, 3))
 
-        if len(attention_mask.size()) == 2:
-            input_sequence_length = 1
-            batch_size, output_sequence_length = attention_mask.size()
-        elif len(attention_mask.size()) == 3:
-            batch_size, input_sequence_length, output_sequence_length = attention_mask.size()
+        if attention_mask is not None:
+            if len(attention_mask.size()) == 2:
+                input_sequence_length = 1
+                batch_size, output_sequence_length = attention_mask.size()
+            elif len(attention_mask.size()) == 3:
+                batch_size, input_sequence_length, output_sequence_length = attention_mask.size()
 
-        attention_mask = -1e9 * attention_mask.reshape(batch_size, 1, input_sequence_length, output_sequence_length)
-        attention_logits: MultiHeadedAttention = attention_logits + attention_mask
+            attention_mask = -1e9 * attention_mask.reshape(batch_size, 1, input_sequence_length, output_sequence_length)
+            attention_logits: MultiHeadedAttention = attention_logits + attention_mask
 
         attention_probs: MultiHeadedAttention = attention_logits.softmax(dim=3)
         attention_probs: MultiHeadedAttention = dropout(attention_probs, p=config.dropout_prob, training=self.training)
