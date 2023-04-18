@@ -4,6 +4,7 @@ from transformers import PreTrainedTokenizerFast, Seq2SeqTrainingArguments
 
 from march.datasets.wikipedia import load_wikipedia_baseline
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
+from march.models.perfect_overfit import PerfectOverfitTransformer
 from march.experiments.base import ExperimentBase
 
 
@@ -18,6 +19,12 @@ class BaselineExperiment(ExperimentBase):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
         return BaselineTransformer(config)
+
+
+class PerfectOverfitExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig(num_layers=2, dim_model=64, dropout_prob=0.0)
+        return PerfectOverfitTransformer(config)
 
 
 class BestExperiment(BaselineExperiment):
