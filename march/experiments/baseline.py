@@ -24,8 +24,8 @@ class BestExperiment(BaselineExperiment):
     def get_training_arguments(self) -> Seq2SeqTrainingArguments:
         default_training_arguments = self.load_default_training_arguments()
 
-        target_total_batch_size = 64 * 16
-        train_batch_size = 16
+        target_total_batch_size = 64 * 16 * 4  # 64 * 16 is the baseline. This is 4B tokens seen
+        train_batch_size = 4
         assert target_total_batch_size % train_batch_size == 0
         gradient_accumulation_steps = target_total_batch_size // train_batch_size
 
@@ -36,5 +36,5 @@ class BestExperiment(BaselineExperiment):
         return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
 
     def get_model(self) -> TransformerBase:
-        config = TransformerConfig(dim_model=1024, num_layers=24)
+        config = TransformerConfig(dim_model=1024, num_layers=48)  # Match t5-large
         return BaselineTransformer(config)

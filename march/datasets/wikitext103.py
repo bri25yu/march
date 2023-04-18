@@ -12,6 +12,7 @@ MASK_PROB = 0.15
 AVERAGE_SPAN_LENGTH = 3
 
 WIKITEXT103_BASELINE_NAME = "wikitext103_baseline"
+WIKIPEDIA_BASELINE_TEXT_NAME = "wikitext103_baseline_text"
 
 
 def create_wikitext103_baseline(tokenizer: PreTrainedTokenizerFast) -> None:
@@ -69,3 +70,19 @@ def create_wikitext103_baseline(tokenizer: PreTrainedTokenizerFast) -> None:
 
 def load_wikitext103_baseline() -> DatasetDict:
     return load_dataset("bri25yu/wikitext103_baseline")
+
+
+def create_human_readable_wikitext103_baseline(tokenizer: PreTrainedTokenizerFast) -> None:
+    dataset_dict = load_wikitext103_baseline()
+    dataset_dict["train"] = dataset_dict["train"].select(range(1000))
+
+    def decode_into_text(examples: Dict[str, List[int]]) -> Dict[str, List[str]]:
+        return {
+            "text_inputs": tokenizer.batch_decode(examples["input_ids"]),
+            "text_labels": tokenizer.batch_decode(examples["labels"]),
+        }
+
+    decoded_dataset_dict = dataset_dict.map(
+        decode_into_text, batched=True, num_proc=16, remove_columns=dataset_dict["train"].column_names
+    )
+    decoded_dataset_dict.push_to_hub(WIKIPEDIA_BASELINE_TEXT_NAME)
