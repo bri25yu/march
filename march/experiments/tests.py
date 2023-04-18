@@ -3,6 +3,7 @@ from march.models.scaling_heads import ScalingHeadsTransformer, InverseScalingHe
 from march.models.unified_attention import UnifiedAttentionTransformer
 from march.models.scaling_heads_constant import ScalingHeadsConstantTransformer, InverseScalingHeadsConstantTransformer
 from march.models.database import DatabaseTransformer
+from march.models.absolute_position_embeddings import APESumOverAverageTransformer, APEUnitVarianceTransformer
 
 from march.experiments.baseline import BaselineExperiment
 
@@ -66,3 +67,15 @@ class DatabaseFromLayersExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(num_layers=4)
         return DatabaseTransformer(config)
+
+
+class APESumOverAverageExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        return APESumOverAverageTransformer(config)
+
+
+class APEUnitVarianceExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        return APEUnitVarianceTransformer(config)

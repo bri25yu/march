@@ -1,3 +1,5 @@
+from torch.nn import ParameterList
+
 from march.models.utils import *
 from march.models.baseline import *
 
@@ -128,7 +130,7 @@ class DatabaseDecoder(DatabaseDecoderBase):
 
 class DatabaseTransformerBase(TransformerBase):
     def __init__(self, config: TransformerConfig) -> None:
-        super().__init__(config)
+        TransformerComponentBase.__init__(self, config)
 
         self.config = config
 
@@ -136,10 +138,10 @@ class DatabaseTransformerBase(TransformerBase):
         self.position_encoding = self.POSITION_ENCODING_CLS(config)
 
         num_database_states = config.dim_model * (config.num_layers // 2)
-        self.database_key_value_states: DatabaseKeyValueStates = (
-            Parameter(BFloat16Tensor(num_database_states, config.dim_model)),
-            Parameter(BFloat16Tensor(num_database_states, config.dim_model)),
-        )
+        self.database_key_value_states: DatabaseKeyValueStates = ParameterList((
+            Parameter(BFloat16Tensor(1, 1, num_database_states, config.dim_qkv)),
+            Parameter(BFloat16Tensor(1, 1, num_database_states, config.dim_qkv)),
+        ))
 
         self.encoder = self.ENCODER_CLS(config)
         self.decoder = self.DECODER_CLS(config)
@@ -147,12 +149,10 @@ class DatabaseTransformerBase(TransformerBase):
         self.init_weights()
 
     def init_weights(self) -> None:
-        config = self.config
-
         self.embedding.weight.data.normal_(mean=0.0, std=1.0)
 
-        self.database_key_value_states[0].data.normal_(config.d_model ** -0.5)
-        self.database_key_value_states[1].data.normal_(config.d_model ** -0.5)
+        self.database_key_value_states[0].data.normal_(mean=0.0, std=1.0)
+        self.database_key_value_states[1].data.normal_(mean=0.0, std=1.0)
 
     def forward(
         self,
