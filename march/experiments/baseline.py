@@ -33,7 +33,7 @@ class BestExperiment(BaselineExperiment):
         default_training_arguments["per_device_eval_batch_size"] = train_batch_size * 2
         default_training_arguments["gradient_accumulation_steps"] = gradient_accumulation_steps
 
-        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+        return Seq2SeqTrainingArguments(self.output_dir, warmup_steps=2000, **default_training_arguments)
 
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(dim_model=1024, num_layers=48)  # Match t5-large
