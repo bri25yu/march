@@ -22,6 +22,20 @@ class BaselineExperiment(ExperimentBase):
 
 
 class PerfectOverfitExperiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+
+        target_total_batch_size = 64 * 16
+        train_batch_size = 64 * 16
+        assert target_total_batch_size % train_batch_size == 0
+        gradient_accumulation_steps = target_total_batch_size // train_batch_size
+
+        default_training_arguments["per_device_train_batch_size"] = train_batch_size
+        default_training_arguments["per_device_eval_batch_size"] = train_batch_size * 2
+        default_training_arguments["gradient_accumulation_steps"] = gradient_accumulation_steps
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(num_layers=2, dim_model=64, dropout_prob=0.0)
         return PerfectOverfitTransformer(config)
