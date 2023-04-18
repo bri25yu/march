@@ -18,3 +18,10 @@ class BaselineExperiment(ExperimentBase):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
         return BaselineTransformer(config)
+
+
+class BestExperiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments["learning_rate"] = 1e-3
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
