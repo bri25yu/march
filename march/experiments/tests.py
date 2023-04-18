@@ -1,5 +1,7 @@
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
 from march.models.scaling_heads import ScalingHeadsTransformer, InverseScalingHeadsTransformer
+from march.models.unified_attention import UnifiedAttentionTransformer
+
 from march.experiments.baseline import BaselineExperiment
 
 
@@ -31,3 +33,9 @@ class InverseScalingHeadsExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
         return InverseScalingHeadsTransformer(config)
+
+
+class UnifiedAttentionExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        return UnifiedAttentionTransformer(config)
