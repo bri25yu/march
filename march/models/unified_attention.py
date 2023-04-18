@@ -84,7 +84,7 @@ class UnifiedAttention(AttentionBase):
 
 class UnifiedAttentionDecoderBase(DecoderBase):
     def __init__(self, config: TransformerConfig) -> None:
-        super().__init__(config)
+        TransformerComponentBase.__init__(self, config)
 
         self.layernorms = ModuleList([LayerNorm(config) for _ in range(config.num_layers + 1)])
         self.cross_attention_layers: List[AttentionBase] = ModuleList(
