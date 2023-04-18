@@ -12,6 +12,7 @@ from transformers.configuration_utils import PretrainedConfig
 
 
 __all__ = [
+    "List",
     "MODEL_PRECISION",
     "LAYERNORM_PRECISION",
     "SequenceInputIds",

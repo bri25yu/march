@@ -14,6 +14,10 @@ from march.models.utils import *
 
 
 __all__ = [
+    "Linear",
+    "ModuleList",
+    "dropout",
+    "matmul",
     "AbsolutePositionEncoding",
     "EncoderBase",
     "DecoderBase",
