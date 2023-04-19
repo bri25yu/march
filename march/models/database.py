@@ -8,6 +8,11 @@ DatabaseState = TensorType["L", "D_kv"]
 DatabaseKeyValueStates = Tuple[DatabaseState, DatabaseState]
 
 
+@dataclass
+class DatabaseTransformerConfig(TransformerConfig):
+    num_database_states: int = 512
+
+
 class DatabaseEncoderBase(EncoderBase):
     def __init__(self, config: TransformerConfig) -> None:
         TransformerComponentBase.__init__(self, config)
@@ -129,7 +134,7 @@ class DatabaseDecoder(DatabaseDecoderBase):
 
 
 class DatabaseTransformerBase(TransformerBase):
-    def __init__(self, config: TransformerConfig) -> None:
+    def __init__(self, config: DatabaseTransformerConfig) -> None:
         TransformerComponentBase.__init__(self, config)
 
         self.config = config
@@ -137,10 +142,9 @@ class DatabaseTransformerBase(TransformerBase):
         self.embedding: TensorType["D", "V"] = Linear(config.dim_model, VOCAB_SIZE, bias=False, dtype=MODEL_PRECISION)
         self.position_encoding = self.POSITION_ENCODING_CLS(config)
 
-        num_database_states = config.dim_model * (config.num_layers // 2)
         self.database_key_value_states: DatabaseKeyValueStates = ParameterList((
-            Parameter(BFloat16Tensor(1, 1, num_database_states, config.dim_qkv)),
-            Parameter(BFloat16Tensor(1, 1, num_database_states, config.dim_qkv)),
+            Parameter(BFloat16Tensor(1, 1, config.num_database_states, config.dim_qkv)),
+            Parameter(BFloat16Tensor(1, 1, config.num_database_states, config.dim_qkv)),
         ))
 
         self.encoder = self.ENCODER_CLS(config)

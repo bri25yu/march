@@ -12,9 +12,11 @@ from transformers.configuration_utils import PretrainedConfig
 
 
 __all__ = [
-    "TensorType",
     "List",
     "Tuple",
+    "Union",
+    "dataclass",
+    "TensorType",
     "Parameter",
     "MODEL_PRECISION",
     "LAYERNORM_PRECISION",
