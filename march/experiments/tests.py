@@ -69,6 +69,12 @@ class DatabaseFromLayersExperiment(BaselineExperiment):
         return DatabaseTransformer(config)
 
 
+class DatabaseFromDimExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig(dim_model=448)
+        return DatabaseTransformer(config)
+
+
 class APESumOverAverageExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
