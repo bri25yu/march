@@ -1,0 +1,13 @@
+name: march
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - cudatoolkit-dev=11.7.0
+  - cudatoolkit=11.8.0
+  - pip
+  - pip:
+    - torch --extra-index-url https://download.pytorch.org/whl/cu117
+    - -r requirements.txt
+    - deepspeed==0.8.2
+    - mpi4py==3.1.4
