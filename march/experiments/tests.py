@@ -4,6 +4,7 @@ from march.models.unified_attention import UnifiedAttentionTransformer
 from march.models.scaling_heads_constant import ScalingHeadsConstantTransformer, InverseScalingHeadsConstantTransformer
 from march.models.database import DatabaseTransformerConfig, DatabaseTransformer
 from march.models.absolute_position_embeddings import APESumOverAverageTransformer, APEUnitVarianceTransformer
+from march.models.big_heads import BigHeadsTransformer, BigHeadsTransformerConfig
 
 from march.experiments.baseline import BaselineExperiment
 
@@ -109,7 +110,20 @@ class APEUnitVarianceExperiment(BaselineExperiment):
         return APEUnitVarianceTransformer(config)
 
 
-class MoreHeadsLessQKVDimLessLayersExperiment(APEUnitVarianceExperiment):
+class MoreHeadsLessQKVDimLessLayersExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(dim_qkv=32, num_layers=4, num_heads=24)
         return APEUnitVarianceTransformer(config)
+
+
+# Targeted experiments for BigHeadTransformer:
+# 2x d_kv for each head but smaller overall hidden dimension 
+# size due to constraint of keeping the model size the same
+# dim model: 512 -> 448
+# Num params = 35,582,400
+# Num params baseline model = 36,340,224
+class BigHeadsExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = BigHeadsTransformerConfig(dim_model=448,dim_qkv=112)
+        return BigHeadsTransformer(config)
+
