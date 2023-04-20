@@ -8,7 +8,7 @@ import json
 
 from datasets import DatasetDict
 
-from torch import roll
+from torch.cuda import device_count, get_device_properties
 
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, PrinterCallback, ProgressCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
 
@@ -45,7 +45,29 @@ class ExperimentBase(ABC):
         return join(RESULTS_DIR, self.name)
 
     def load_default_training_arguments(self) -> Dict[str, Any]:
-        return json.load(open(join(CONFIG_DIR, "default_training_arguments.json")))
+        args_dict = json.load(open(join(CONFIG_DIR, "default_training_arguments.json")))
+
+        num_gpus = device_count()
+
+        assert num_gpus > 0, "Training models is supposed to occur on GPUs, no GPUs found!"
+
+        if num_gpus == 1:
+            gpu_total_memory = get_device_properties(0).total_memory
+            gpu_total_memory_gb = gpu_total_memory // (10 ** 9)
+            assert gpu_total_memory_gb >= 42, f"Default batch size requires at least 40GB of GPU memory. The current GPU only has {gpu_total_memory_gb}GB."
+        else:
+            deepspeed_config = json.load(open(join(CONFIG_DIR, "deepspeed.json")))
+            args_dict["deepspeed"] = deepspeed_config
+
+            total_batch_size = args_dict["per_device_train_batch_size"] * args_dict["gradient_accumulation_steps"]
+            # Assume 24GB GPUs
+            batch_size_per_gpu = 32
+            args_dict["per_device_train_batch_size"] = batch_size_per_gpu
+            args_dict["per_device_eval_batch_size"] = batch_size_per_gpu * 2
+            assert total_batch_size % batch_size_per_gpu == 0
+            args_dict["gradient_accumulation_steps"] = total_batch_size // batch_size_per_gpu
+
+        return args_dict
 
     def train(self) -> None:
         tokenizer = load_tokenizer()
