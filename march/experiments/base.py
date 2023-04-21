@@ -21,7 +21,7 @@ from march.models.baseline import TransformerBase, LayerNorm
 class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
     def log(self, logs: Dict[str, float]) -> None:
         if "LOG_WEIGHTS" in environ:
-            modules_by_cls = lambda cls: [module.weight.data for module in self.deepspeed.modules() if isinstance(module, cls)]
+            modules_by_cls = lambda cls: [module.weight.data for module in self.model_wrapped.modules() if isinstance(module, cls)]
 
             layernorm_modules = modules_by_cls(LayerNorm)
             logs["layernorm_mean"] = sum(layernorm_modules).mean() / len(layernorm_modules)
