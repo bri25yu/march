@@ -56,9 +56,6 @@ class ExperimentBase(ABC):
             gpu_total_memory_gb = gpu_total_memory // (10 ** 9)
             assert gpu_total_memory_gb >= 42, f"Default batch size requires at least 40GB of GPU memory. The current GPU only has {gpu_total_memory_gb}GB."
         else:
-            deepspeed_config = json.load(open(join(CONFIG_DIR, "deepspeed.json")))
-            args_dict["deepspeed"] = deepspeed_config
-
             total_batch_size = args_dict["per_device_train_batch_size"] * args_dict["gradient_accumulation_steps"]
             # Assume 24GB GPUs
             batch_size_per_gpu = 32

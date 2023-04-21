@@ -9,5 +9,3 @@ dependencies:
   - pip:
     - torch --extra-index-url https://download.pytorch.org/whl/cu117
     - -r requirements.txt
-    - deepspeed==0.9.1
-    - mpi4py==3.1.4
