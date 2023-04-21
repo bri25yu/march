@@ -1,7 +1,0 @@
-torchtyping
-transformers
-sentencepiece
-accelerate
-datasets
-tensorboard
--e .

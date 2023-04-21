@@ -48,23 +48,10 @@ class ExperimentBase(ABC):
         args_dict = json.load(open(join(CONFIG_DIR, "default_training_arguments.json")))
 
         num_gpus = device_count()
+        assert num_gpus == 8, "Training models is supposed to occur on a DGX node of 8 GPUs!"
 
-        assert num_gpus > 0, "Training models is supposed to occur on GPUs, no GPUs found!"
-
-        if num_gpus == 1:
-            gpu_total_memory = get_device_properties(0).total_memory
-            gpu_total_memory_gb = gpu_total_memory // (10 ** 9)
-            assert gpu_total_memory_gb >= 42, f"Default batch size requires at least 40GB of GPU memory. The current GPU only has {gpu_total_memory_gb}GB."
-        else:
-            deepspeed_config = json.load(open(join(CONFIG_DIR, "deepspeed.json")))
-            args_dict["deepspeed"] = deepspeed_config
-
-            batch_size_per_gpu = args_dict["per_device_train_batch_size"]
-            total_batch_size = batch_size_per_gpu * args_dict["gradient_accumulation_steps"]
-            args_dict["gradient_accumulation_steps"] = total_batch_size // (batch_size_per_gpu * num_gpus)
-
-            args_dict["optim"] = "adamw_hf"
-            args_dict["torch_compile"] = False
+        deepspeed_config = json.load(open(join(CONFIG_DIR, "deepspeed.json")))
+        args_dict["deepspeed"] = deepspeed_config
 
         return args_dict
 
