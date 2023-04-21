@@ -15,16 +15,19 @@ from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, Printe
 
 from march import CONFIG_DIR, RESULTS_DIR
 from march.tokenization import EOS_TOKEN, load_tokenizer
-from march.models.baseline import TransformerBase, LayerNorm
+from march.models.baseline import TransformerBase, LayerNorm, AttentionBase
 
 
 class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
     def log(self, logs: Dict[str, float]) -> None:
         if "LOG_WEIGHTS" in environ:
-            modules_by_cls = lambda cls: [module.weight.data for module in self.model_wrapped.modules() if isinstance(module, cls)]
+            modules_by_cls = lambda cls: [module for module in self.model.modules() if isinstance(module, cls)]
 
             layernorm_modules = modules_by_cls(LayerNorm)
-            logs["layernorm_mean"] = sum(layernorm_modules).mean() / len(layernorm_modules)
+            logs["layernorm_mean"] = sum([m.weight.data for m in layernorm_modules]).mean() / len(layernorm_modules)
+
+            attention_modules = modules_by_cls(AttentionBase)
+            logs["attention_w_q_mean"] = sum([m.w_q.data for m in attention_modules]).mean() / len(attention_modules)
 
         return super().log(logs)
 
