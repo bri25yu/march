@@ -7,6 +7,7 @@
     "gradient_accumulation_steps": 2,
     "eval_accumulation_steps": 1,
     "weight_decay": 0.1,
+    "seed": 42,
     "adam_beta2": 0.95,
     "eval_steps": 20,
     "max_steps": 1000,
