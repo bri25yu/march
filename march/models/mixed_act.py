@@ -1,5 +1,3 @@
-from typing import Any
-
 from torch.nn.functional import gelu, relu, silu
 
 from march.models.utils import *
@@ -8,14 +6,25 @@ from march.models.absolute_position_embeddings import AbsolutePositionEncodingUn
 
 
 class GateFunctions:
-    RELU = relu
-    GELU = gelu
-    SILU = silu
+    RELU = "relu"
+    GELU = "gelu"
+    SILU = "silu"
+
+STR_TO_GATE_FN = {
+    GateFunctions.RELU: relu,
+    GateFunctions.GELU: gelu,
+    GateFunctions.SILU: silu,
+}
 
 
 @dataclass
 class GatedLinearUnitTransformerConfig(TransformerConfig):
-    gate_fn: Any = None  # TODO Type check that gate_fn is a member of `GateFunctions`
+    gate_fn: Union[None, str] = None
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+
+        assert self.gate_fn in STR_TO_GATE_FN
 
 
 class GatedLinearUnitFeedforward(BaselineFeedforward):
@@ -35,9 +44,10 @@ class GatedLinearUnitFeedforward(BaselineFeedforward):
 
     def forward(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:
         config: GatedLinearUnitTransformerConfig = self.config
+        gate_fn = STR_TO_GATE_FN[config.gate_fn]
 
         input_embeds: SequenceInputEmbeds = self.up_projection(input_embeds)
-        gate: SequenceInputEmbeds = config.gate_fn(input_embeds)
+        gate: SequenceInputEmbeds = gate_fn(input_embeds)
         input_embeds: SequenceInputEmbeds = input_embeds * gate
         input_embeds: SequenceInputEmbeds = dropout(input_embeds, config.dropout_prob, training=self.training)
         input_embeds: SequenceInputEmbeds = self.down_projection(input_embeds)
