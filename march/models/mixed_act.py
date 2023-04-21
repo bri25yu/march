@@ -1,3 +1,5 @@
+from typing import Any
+
 from torch.nn.functional import gelu, relu, silu
 
 from march.models.utils import *
@@ -13,7 +15,7 @@ class GateFunctions:
 
 @dataclass
 class GatedLinearUnitTransformerConfig(TransformerConfig):
-    gate_fn = None  # TODO Type check that gate_fn is a member of `GateFunctions`
+    gate_fn: Any = None  # TODO Type check that gate_fn is a member of `GateFunctions`
 
 
 class GatedLinearUnitFeedforward(BaselineFeedforward):
