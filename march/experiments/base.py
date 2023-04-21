@@ -63,6 +63,7 @@ class ExperimentBase(ABC):
             total_batch_size = batch_size_per_gpu * args_dict["gradient_accumulation_steps"]
             args_dict["gradient_accumulation_steps"] = total_batch_size // (batch_size_per_gpu * num_gpus)
 
+            args_dict["optim"] = "adamw_hf"
             args_dict["torch_compile"] = False
 
         return args_dict
