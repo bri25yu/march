@@ -2,19 +2,31 @@ from typing import Any, Dict
 
 from abc import ABC, abstractmethod
 
+from os import environ
 from os.path import join
 
 import json
 
 from datasets import DatasetDict
 
-from torch.cuda import device_count, get_device_properties
+from torch.cuda import device_count
 
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, PrinterCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
 
 from march import CONFIG_DIR, RESULTS_DIR
 from march.tokenization import EOS_TOKEN, load_tokenizer
-from march.models.baseline import TransformerBase
+from march.models.baseline import TransformerBase, LayerNorm
+
+
+class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
+    def log(self, logs: Dict[str, float]) -> None:
+        if "LOG_WEIGHTS" in environ:
+            modules_by_cls = lambda cls: [module.weight.data for module in self.model.modules() if isinstance(module, cls)]
+
+            layernorm_modules = modules_by_cls(LayerNorm)
+            logs["layernorm_mean"] = sum(layernorm_modules).mean() / len(layernorm_modules)
+
+        return super().log(logs)
 
 
 class ExperimentBase(ABC):
@@ -60,7 +72,6 @@ class ExperimentBase(ABC):
         dataset_dict = self.load_dataset_dict(tokenizer)
         self._validate_dataset_dict(dataset_dict)
         model = self.get_model()
-        print(f"Current model parameter count: {model.count_parameters():,}")
 
         base_data_collator = DataCollatorForSeq2Seq(tokenizer)
         bos_token_id = tokenizer.convert_tokens_to_ids(EOS_TOKEN)
@@ -73,7 +84,7 @@ class ExperimentBase(ABC):
             return examples
 
         training_arguments = self.get_training_arguments()
-        trainer = Seq2SeqTrainer(
+        trainer = CustomLoggingSeq2SeqTrainer(
             model=model,
             args=training_arguments,
             train_dataset=dataset_dict["train"],
@@ -82,6 +93,7 @@ class ExperimentBase(ABC):
             data_collator=data_collator,
         )
         trainer.remove_callback(PrinterCallback)
+        trainer.log({"num_params": model.count_parameters()})
 
         trainer.train()
 
