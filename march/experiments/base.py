@@ -15,7 +15,7 @@ from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, Printe
 
 from march import CONFIG_DIR, RESULTS_DIR
 from march.tokenization import EOS_TOKEN, load_tokenizer
-from march.models.baseline import TransformerBase, LayerNorm, AttentionBase
+from march.models.baseline import TransformerBase, LayerNorm, AttentionBase, AbsolutePositionEncoding
 
 
 class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
@@ -28,6 +28,9 @@ class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
 
             attention_modules = modules_by_cls(AttentionBase)
             logs["attention_w_q_mean"] = sum([m.w_q.weight.data for m in attention_modules]).mean().item() / len(attention_modules)
+
+            position_encoding_modules = modules_by_cls(AbsolutePositionEncoding)
+            logs["position_encoding_mean"] = sum([m.timing_table.data for m in position_encoding_modules]).mean().item() / len(position_encoding_modules)
 
         return super().log(logs)
 
