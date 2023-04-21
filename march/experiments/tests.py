@@ -5,7 +5,14 @@ from march.models.scaling_heads_constant import ScalingHeadsConstantTransformer,
 from march.models.database import DatabaseTransformerConfig, DatabaseTransformer
 from march.models.absolute_position_embeddings import APESumOverAverageTransformer, APEUnitVarianceTransformer
 from march.models.big_heads import BigHeadsTransformer, BigHeadsTransformerConfig
-from march.models.mixed_act import GatedLinearUnitTransformer, GatedLinearUnitTransformerConfig, GateFunctions, MixedActTransformer
+from march.models.mixed_act import (
+    GatedLinearUnitTransformer,
+    GatedLinearUnitTransformerConfig,
+    GateFunctions,
+    MixedActTransformer,
+    MixedActSumOverMeanTransformer,
+)
+from march.models.sparse_seqlen_attention import NoSelfAttentionResidualTransformer
 
 from march.experiments.baseline import BaselineExperiment
 
@@ -165,3 +172,17 @@ class MixedActExperiment(BaselineExperiment):
         dim_feedforward = ((dim_model * 4) * 2) // 3
         config = TransformerConfig(dim_model=dim_model, dim_feedforward=dim_feedforward)
         return MixedActTransformer(config)
+
+
+class MixedActSumOverMeanExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        dim_model = 512
+        dim_feedforward = ((dim_model * 4) * 2) // 3
+        config = TransformerConfig(dim_model=dim_model, dim_feedforward=dim_feedforward)
+        return MixedActSumOverMeanTransformer(config)
+
+
+class NoSelfAttentionResidualExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        return NoSelfAttentionResidualTransformer(config)

@@ -108,3 +108,46 @@ class MixedActTransformer(TransformerBase):
     POSITION_ENCODING_CLS = AbsolutePositionEncodingUnitVariance
     ENCODER_CLS = MixedActEncoder
     DECODER_CLS = MixedActDecoder
+
+
+class MixedActSumOverMeanFeedforward(TransformerComponentBase):
+    def __init__(self, config: TransformerConfig) -> None:
+        TransformerComponentBase.__init__(self, config)
+
+        self.up_projection_slow = Linear(config.dim_model, config.dim_feedforward, bias=False, dtype=MODEL_PRECISION)
+        self.up_projection_fast = Linear(config.dim_model, config.dim_feedforward, bias=False, dtype=MODEL_PRECISION)
+        self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False, dtype=MODEL_PRECISION)
+
+    def init_weights(self) -> None:
+        config = self.config
+
+        self.up_projection_slow.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
+        self.up_projection_fast.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
+        self.down_projection.weight.data.normal_(mean=0.0, std=config.dim_feedforward ** -0.5)
+
+    def forward(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:
+        config = self.config
+
+        input_embeds_slow: SequenceInputEmbeds = sigmoid(self.up_projection_slow(input_embeds))
+        input_embeds_fast: SequenceInputEmbeds = relu(self.up_projection_fast(input_embeds))
+        input_embeds: SequenceInputEmbeds = input_embeds_slow + input_embeds_fast
+        input_embeds: SequenceInputEmbeds = dropout(input_embeds, config.dropout_prob, training=self.training)
+        input_embeds: SequenceInputEmbeds = self.down_projection(input_embeds)
+
+        return input_embeds
+
+
+class MixedActSumOverMeanEncoder(EncoderBase):
+    ATTENTION_CLS = BaselineAttention
+    FEEDFORWARD_CLS = MixedActSumOverMeanFeedforward
+
+
+class MixedActSumOverMeanDecoder(DecoderBase):
+    ATTENTION_CLS = BaselineAttention
+    FEEDFORWARD_CLS = MixedActSumOverMeanFeedforward
+
+
+class MixedActSumOverMeanTransformer(TransformerBase):
+    POSITION_ENCODING_CLS = AbsolutePositionEncodingUnitVariance
+    ENCODER_CLS = MixedActSumOverMeanEncoder
+    DECODER_CLS = MixedActSumOverMeanDecoder
