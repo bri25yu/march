@@ -24,10 +24,10 @@ class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
             modules_by_cls = lambda cls: [module for module in self.model.modules() if isinstance(module, cls)]
 
             layernorm_modules = modules_by_cls(LayerNorm)
-            logs["layernorm_mean"] = sum([m.weight.data for m in layernorm_modules]).mean() / len(layernorm_modules)
+            logs["layernorm_mean"] = sum([m.weight.data for m in layernorm_modules]).mean().item() / len(layernorm_modules)
 
             attention_modules = modules_by_cls(AttentionBase)
-            logs["attention_w_q_mean"] = sum([m.w_q.weight.data for m in attention_modules]).mean() / len(attention_modules)
+            logs["attention_w_q_mean"] = sum([m.w_q.weight.data for m in attention_modules]).mean().item() / len(attention_modules)
 
         return super().log(logs)
 
