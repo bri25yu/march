@@ -5,7 +5,7 @@ from abc import abstractmethod
 
 from dataclasses import dataclass
 
-from torch import bfloat16, float32, long, ones, rsqrt, strided
+from torch import ones, rsqrt
 from torch.nn import Module, Parameter
 
 from transformers.configuration_utils import PretrainedConfig
@@ -31,11 +31,11 @@ __all__ = [
 ]
 
 
-SequenceInputIds = TensorType["N", "L_in", long, strided]
-SequenceInputEmbeds = TensorType["N", "L_in", "D", bfloat16, strided]
-MultiHeadedEmbeds = TensorType["N", "H", "L_in", "D_kv", bfloat16, strided]
+SequenceInputIds = TensorType["N", "L_in"]
+SequenceInputEmbeds = TensorType["N", "L_in", "D"]
+MultiHeadedEmbeds = TensorType["N", "H", "L_in", "D_kv"]
 KeyValueStates = Tuple[MultiHeadedEmbeds, MultiHeadedEmbeds]
-MultiHeadedAttention = TensorType["N", "H", "L_in", "L_out", bfloat16, strided]
+MultiHeadedAttention = TensorType["N", "H", "L_in", "L_out"]
 
 
 @dataclass

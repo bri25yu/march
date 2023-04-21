@@ -280,13 +280,13 @@ class BaselineAttention(AttentionBase):
 
         if attention_mask is not None:
             if len(attention_mask.size()) == 2:
-                input_sequence_length = 1
-                batch_size, output_sequence_length = attention_mask.size()
+                query_length = 1
+                batch_size, key_length = attention_mask.size()
             elif len(attention_mask.size()) == 3:
-                batch_size, input_sequence_length, output_sequence_length = attention_mask.size()
+                batch_size, query_length, key_length = attention_mask.size()
 
-            attention_mask = -1e9 * attention_mask.reshape(batch_size, 1, input_sequence_length, output_sequence_length)
-            attention_logits: MultiHeadedAttention = attention_logits + attention_mask
+            attention_mask = -1e9 * attention_mask.reshape(batch_size, 1, query_length, key_length)
+            attention_logits: MultiHeadedAttention = attention_logits + attention_mask.to(attention_logits.dtype)
 
         attention_probs: MultiHeadedAttention = attention_logits.softmax(dim=3)
         attention_probs: MultiHeadedAttention = dropout(attention_probs, p=config.dropout_prob, training=self.training)
