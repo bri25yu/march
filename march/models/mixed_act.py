@@ -10,6 +10,7 @@ class GateFunctions:
     GELU = "gelu"
     SILU = "silu"
 
+
 STR_TO_GATE_FN = {
     GateFunctions.RELU: relu,
     GateFunctions.GELU: gelu,
@@ -20,11 +21,6 @@ STR_TO_GATE_FN = {
 @dataclass
 class GatedLinearUnitTransformerConfig(TransformerConfig):
     gate_fn: Union[None, str] = None
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
-
-        assert self.gate_fn in STR_TO_GATE_FN
 
 
 class GatedLinearUnitFeedforward(BaselineFeedforward):
