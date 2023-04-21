@@ -83,11 +83,6 @@ class LayerNorm(TransformerComponentBase):
         self.weight: TensorType["D"] = Parameter(ones(config.dim_model))
         self.variance_epsilon = eps
 
-        self.init_weights()
-
-    def init_weights(self) -> None:
-        self.weight.data.fill_(1.0)
-
     def forward(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:
         variance: SequenceInputIds = input_embeds.to(LAYERNORM_PRECISION).pow(2).mean(-1, keepdim=True)
         input_embeds: SequenceInputEmbeds = input_embeds * rsqrt(variance + self.variance_epsilon)
