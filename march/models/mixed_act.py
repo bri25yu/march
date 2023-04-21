@@ -151,3 +151,32 @@ class MixedActSumOverMeanTransformer(TransformerBase):
     POSITION_ENCODING_CLS = AbsolutePositionEncodingUnitVariance
     ENCODER_CLS = MixedActSumOverMeanEncoder
     DECODER_CLS = MixedActSumOverMeanDecoder
+
+
+class MixedActSOMDropoutFeedforward(MixedActSumOverMeanFeedforward):
+    def forward(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:
+        config = self.config
+
+        input_embeds_slow: SequenceInputEmbeds = sigmoid(self.up_projection_slow(input_embeds))
+        input_embeds_fast: SequenceInputEmbeds = relu(self.up_projection_fast(input_embeds))
+        input_embeds: SequenceInputEmbeds = dropout(input_embeds_slow, 0.5, training=self.training) + input_embeds_fast
+        input_embeds: SequenceInputEmbeds = dropout(input_embeds, config.dropout_prob, training=self.training)
+        input_embeds: SequenceInputEmbeds = self.down_projection(input_embeds)
+
+        return input_embeds
+
+
+class MixedActSOMDropoutEncoder(EncoderBase):
+    ATTENTION_CLS = BaselineAttention
+    FEEDFORWARD_CLS = MixedActSOMDropoutFeedforward
+
+
+class MixedActSOMDropoutDecoder(DecoderBase):
+    ATTENTION_CLS = BaselineAttention
+    FEEDFORWARD_CLS = MixedActSOMDropoutFeedforward
+
+
+class MixedActSOMDropoutTransformer(TransformerBase):
+    POSITION_ENCODING_CLS = AbsolutePositionEncodingUnitVariance
+    ENCODER_CLS = MixedActSOMDropoutEncoder
+    DECODER_CLS = MixedActSOMDropoutDecoder

@@ -11,6 +11,7 @@ from march.models.mixed_act import (
     GateFunctions,
     MixedActTransformer,
     MixedActSumOverMeanTransformer,
+    MixedActSOMDropoutTransformer,
 )
 from march.models.sparse_seqlen_attention import NoSelfAttentionResidualTransformer
 
@@ -180,6 +181,14 @@ class MixedActSumOverMeanExperiment(BaselineExperiment):
         dim_feedforward = ((dim_model * 4) * 2) // 3
         config = TransformerConfig(dim_model=dim_model, dim_feedforward=dim_feedforward)
         return MixedActSumOverMeanTransformer(config)
+
+
+class MixedActSOMDropoutExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        dim_model = 512
+        dim_feedforward = ((dim_model * 4) * 2) // 3
+        config = TransformerConfig(dim_model=dim_model, dim_feedforward=dim_feedforward)
+        return MixedActSOMDropoutTransformer(config)
 
 
 class NoSelfAttentionResidualExperiment(BaselineExperiment):
