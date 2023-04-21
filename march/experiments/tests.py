@@ -5,6 +5,7 @@ from march.models.scaling_heads_constant import ScalingHeadsConstantTransformer,
 from march.models.database import DatabaseTransformerConfig, DatabaseTransformer
 from march.models.absolute_position_embeddings import APESumOverAverageTransformer, APEUnitVarianceTransformer
 from march.models.big_heads import BigHeadsTransformer, BigHeadsTransformerConfig
+from march.models.mixed_act import GatedLinearUnitTransformer, GatedLinearUnitTransformerConfig, GateFunctions
 
 from march.experiments.baseline import BaselineExperiment
 
@@ -127,3 +128,32 @@ class BigHeadsExperiment(BaselineExperiment):
         config = BigHeadsTransformerConfig(dim_model=448,dim_qkv=112)
         return BigHeadsTransformer(config)
 
+
+class ReLUGatedLinearUnitExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        dim_model = 512
+        dim_feedforward = ((dim_model * 4) * 2) // 3
+        config = GatedLinearUnitTransformerConfig(
+            dim_model=dim_model, dim_feedforward=dim_feedforward, gate_fn=GateFunctions.RELU
+        )
+        return GatedLinearUnitTransformer(config)
+
+
+class GELUGatedLinearUnitExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        dim_model = 512
+        dim_feedforward = ((dim_model * 4) * 2) // 3
+        config = GatedLinearUnitTransformerConfig(
+            dim_model=dim_model, dim_feedforward=dim_feedforward, gate_fn=GateFunctions.GELU
+        )
+        return GatedLinearUnitTransformer(config)
+
+
+class SiLUGatedLinearUnitExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        dim_model = 512
+        dim_feedforward = ((dim_model * 4) * 2) // 3
+        config = GatedLinearUnitTransformerConfig(
+            dim_model=dim_model, dim_feedforward=dim_feedforward, gate_fn=GateFunctions.SILU
+        )
+        return GatedLinearUnitTransformer(config)
