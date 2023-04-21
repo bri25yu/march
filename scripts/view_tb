@@ -1,2 +1,2 @@
 #!/bin/bash
-start chrome "" "http://localhost:62724/" & ssh -N -L 62724:localhost:62724 bri25yu@a23.millennium.berkeley.edu
+start chrome "" "http://localhost:62724/?pinnedCards=%5B%7B%22plugin%22%3A%22scalars%22%2C%22tag%22%3A%22eval%2Floss%22%7D%2C%7B%22plugin%22%3A%22scalars%22%2C%22tag%22%3A%22train%2Floss%22%7D%5D#timeseries" & ssh -N -L 62724:localhost:62724 bri25yu@a23.millennium.berkeley.edu
