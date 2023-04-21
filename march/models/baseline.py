@@ -286,7 +286,7 @@ class BaselineAttention(AttentionBase):
                 batch_size, input_sequence_length, output_sequence_length = attention_mask.size()
 
             attention_mask = -1e9 * attention_mask.reshape(batch_size, 1, input_sequence_length, output_sequence_length)
-            attention_logits: MultiHeadedAttention = attention_logits + attention_mask
+            attention_logits: MultiHeadedAttention = attention_logits + attention_mask.to(attention_logits.dtype)
 
         attention_probs: MultiHeadedAttention = attention_logits.softmax(dim=3)
         attention_probs: MultiHeadedAttention = dropout(attention_probs, p=config.dropout_prob, training=self.training)
