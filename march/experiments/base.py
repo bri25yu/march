@@ -12,7 +12,7 @@ from datasets import DatasetDict
 from numpy.random import seed as set_numpy_seed
 
 from torch.cuda import device_count
-from torch.random import seed as set_torch_seed
+from torch.random import manual_seed as set_torch_seed
 
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, PrinterCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
 
