@@ -42,8 +42,8 @@ class GatedLinearUnitFeedforward(BaselineFeedforward):
         config: GatedLinearUnitTransformerConfig = self.config
         gate_fn = STR_TO_GATE_FN[config.gate_fn]
 
+        gate: SequenceInputEmbeds = gate_fn(self.gate_projection(input_embeds))
         input_embeds: SequenceInputEmbeds = self.up_projection(input_embeds)
-        gate: SequenceInputEmbeds = gate_fn(input_embeds)
         input_embeds: SequenceInputEmbeds = input_embeds * gate
         input_embeds: SequenceInputEmbeds = dropout(input_embeds, config.dropout_prob, training=self.training)
         input_embeds: SequenceInputEmbeds = self.down_projection(input_embeds)
