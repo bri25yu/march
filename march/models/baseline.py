@@ -185,7 +185,7 @@ class TransformerBase(TransformerComponentBase):
 
         self.config = config
 
-        self.embedding: TensorType["D", "V"] = Linear(config.dim_model, VOCAB_SIZE, bias=False, dtype=MODEL_PRECISION)
+        self.embedding: TensorType["D", "V"] = Linear(config.dim_model, VOCAB_SIZE, bias=False)
         self.position_encoding = self.POSITION_ENCODING_CLS(config)
 
         self.encoder = self.ENCODER_CLS(config)
@@ -244,12 +244,12 @@ class BaselineAttention(AttentionBase):
     def __init__(self, config: TransformerConfig, is_cross_attention: bool) -> None:
         super().__init__(config, is_cross_attention)
 
-        self.w_q = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False, dtype=MODEL_PRECISION)
-        self.w_o = Linear(config.num_heads * config.dim_qkv, config.dim_model, bias=False, dtype=MODEL_PRECISION)
+        self.w_q = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
+        self.w_o = Linear(config.num_heads * config.dim_qkv, config.dim_model, bias=False)
 
         if not self.is_cross_attention:
-            self.w_k = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False, dtype=MODEL_PRECISION)
-            self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False, dtype=MODEL_PRECISION)
+            self.w_k = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
+            self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
 
     def init_weights(self) -> None:
         config = self.config
@@ -286,7 +286,7 @@ class BaselineAttention(AttentionBase):
                 batch_size, input_sequence_length, output_sequence_length = attention_mask.size()
 
             attention_mask = -1e9 * attention_mask.reshape(batch_size, 1, input_sequence_length, output_sequence_length)
-            attention_logits: MultiHeadedAttention = attention_logits + attention_mask.to(attention_logits.dtype)
+            attention_logits: MultiHeadedAttention = attention_logits + attention_mask
 
         attention_probs: MultiHeadedAttention = attention_logits.softmax(dim=3)
         attention_probs: MultiHeadedAttention = dropout(attention_probs, p=config.dropout_prob, training=self.training)
@@ -304,8 +304,8 @@ class BaselineFeedforward(TransformerComponentBase):
     def __init__(self, config: TransformerConfig) -> None:
         super().__init__(config)
 
-        self.up_projection = Linear(config.dim_model, config.dim_feedforward, bias=False, dtype=MODEL_PRECISION)
-        self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False, dtype=MODEL_PRECISION)
+        self.up_projection = Linear(config.dim_model, config.dim_feedforward, bias=False)
+        self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False)
 
     def init_weights(self) -> None:
         config = self.config

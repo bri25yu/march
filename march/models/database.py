@@ -139,7 +139,7 @@ class DatabaseTransformerBase(TransformerBase):
 
         self.config = config
 
-        self.embedding: TensorType["D", "V"] = Linear(config.dim_model, VOCAB_SIZE, bias=False, dtype=MODEL_PRECISION)
+        self.embedding: TensorType["D", "V"] = Linear(config.dim_model, VOCAB_SIZE, bias=False)
         self.position_encoding = self.POSITION_ENCODING_CLS(config)
 
         self.database_key_value_states: DatabaseKeyValueStates = ParameterList((

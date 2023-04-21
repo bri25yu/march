@@ -27,9 +27,9 @@ class GatedLinearUnitFeedforward(TransformerComponentBase):
     def __init__(self, config: GatedLinearUnitTransformerConfig) -> None:
         super().__init__(config)
 
-        self.up_projection = Linear(config.dim_model, config.dim_feedforward, bias=False, dtype=MODEL_PRECISION)
-        self.gate_projection = Linear(config.dim_model, config.dim_feedforward, bias=False, dtype=MODEL_PRECISION)
-        self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False, dtype=MODEL_PRECISION)
+        self.up_projection = Linear(config.dim_model, config.dim_feedforward, bias=False)
+        self.gate_projection = Linear(config.dim_model, config.dim_feedforward, bias=False)
+        self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False)
 
     def init_weights(self) -> None:
         config = self.config
@@ -71,9 +71,9 @@ class MixedActFeedforward(TransformerComponentBase):
     def __init__(self, config: TransformerConfig) -> None:
         TransformerComponentBase.__init__(self, config)
 
-        self.up_projection_slow = Linear(config.dim_model, config.dim_feedforward, bias=False, dtype=MODEL_PRECISION)
-        self.up_projection_fast = Linear(config.dim_model, config.dim_feedforward, bias=False, dtype=MODEL_PRECISION)
-        self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False, dtype=MODEL_PRECISION)
+        self.up_projection_slow = Linear(config.dim_model, config.dim_feedforward, bias=False)
+        self.up_projection_fast = Linear(config.dim_model, config.dim_feedforward, bias=False)
+        self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False)
 
     def init_weights(self) -> None:
         config = self.config
@@ -114,9 +114,9 @@ class MixedActSumOverMeanFeedforward(TransformerComponentBase):
     def __init__(self, config: TransformerConfig) -> None:
         TransformerComponentBase.__init__(self, config)
 
-        self.up_projection_slow = Linear(config.dim_model, config.dim_feedforward, bias=False, dtype=MODEL_PRECISION)
-        self.up_projection_fast = Linear(config.dim_model, config.dim_feedforward, bias=False, dtype=MODEL_PRECISION)
-        self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False, dtype=MODEL_PRECISION)
+        self.up_projection_slow = Linear(config.dim_model, config.dim_feedforward, bias=False)
+        self.up_projection_fast = Linear(config.dim_model, config.dim_feedforward, bias=False)
+        self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False)
 
     def init_weights(self) -> None:
         config = self.config

@@ -8,10 +8,10 @@ class UnifiedAttention(AttentionBase):
     def __init__(self, config: TransformerConfig, is_cross_attention: bool) -> None:
         super().__init__(config, is_cross_attention)
 
-        self.w_q = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False, dtype=MODEL_PRECISION)
-        self.w_k = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False, dtype=MODEL_PRECISION)
-        self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False, dtype=MODEL_PRECISION)
-        self.w_o = Linear(config.num_heads * config.dim_qkv, config.dim_model, bias=False, dtype=MODEL_PRECISION)
+        self.w_q = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
+        self.w_k = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
+        self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
+        self.w_o = Linear(config.num_heads * config.dim_qkv, config.dim_model, bias=False)
 
     def init_weights(self) -> None:
         config = self.config
