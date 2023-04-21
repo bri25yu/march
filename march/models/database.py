@@ -143,8 +143,8 @@ class DatabaseTransformerBase(TransformerBase):
         self.position_encoding = self.POSITION_ENCODING_CLS(config)
 
         self.database_key_value_states: DatabaseKeyValueStates = ParameterList((
-            Parameter(BFloat16Tensor(1, 1, config.num_database_states, config.dim_qkv)),
-            Parameter(BFloat16Tensor(1, 1, config.num_database_states, config.dim_qkv)),
+            Parameter(FloatTensor(1, 1, config.num_database_states, config.dim_qkv)),
+            Parameter(FloatTensor(1, 1, config.num_database_states, config.dim_qkv)),
         ))
 
         self.encoder = self.ENCODER_CLS(config)

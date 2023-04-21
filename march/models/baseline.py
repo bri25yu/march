@@ -3,7 +3,7 @@ from torchtyping import TensorType
 
 from abc import abstractmethod
 
-from torch import BFloat16Tensor, long, matmul, ones, triu
+from torch import FloatTensor, finfo, long, matmul, ones, triu
 from torch.nn import CrossEntropyLoss, Linear, ModuleList, Parameter
 from torch.nn.functional import dropout, embedding, relu
 
@@ -15,7 +15,7 @@ from march.models.utils import *
 
 __all__ = [
     "CrossEntropyLoss",
-    "BFloat16Tensor",
+    "FloatTensor",
     "Linear",
     "ModuleList",
     "dropout",
@@ -39,7 +39,7 @@ class AbsolutePositionEncoding(TransformerComponentBase):
     def __init__(self, config: TransformerConfig) -> None:
         super().__init__(config)
 
-        self.timing_table = Parameter(BFloat16Tensor(MAX_LENGTH, config.dim_model))
+        self.timing_table = Parameter(FloatTensor(MAX_LENGTH, config.dim_model))
 
         self.init_weights()
 
@@ -285,8 +285,9 @@ class BaselineAttention(AttentionBase):
             elif len(attention_mask.size()) == 3:
                 batch_size, query_length, key_length = attention_mask.size()
 
-            attention_mask = -1e9 * attention_mask.reshape(batch_size, 1, query_length, key_length)
-            attention_logits: MultiHeadedAttention = attention_logits + attention_mask.to(attention_logits.dtype)
+            attention_mask = attention_mask.reshape(batch_size, 1, query_length, key_length)
+            attention_mask = attention_mask.to(attention_logits.dtype) * finfo(attention_logits.dtype).min
+            attention_logits: MultiHeadedAttention = attention_logits + attention_mask
 
         attention_probs: MultiHeadedAttention = attention_logits.softmax(dim=3)
         attention_probs: MultiHeadedAttention = dropout(attention_probs, p=config.dropout_prob, training=self.training)
