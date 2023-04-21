@@ -89,8 +89,7 @@ class LayerNorm(TransformerComponentBase):
         self.weight.data.fill_(1.0)
 
     def forward(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:
-        input_embeds: SequenceInputEmbeds = input_embeds.to(LAYERNORM_PRECISION)
-        variance: SequenceInputIds = input_embeds.pow(2).mean(-1, keepdim=True)
+        variance: SequenceInputIds = input_embeds.to(LAYERNORM_PRECISION).pow(2).mean(-1, keepdim=True)
         input_embeds: SequenceInputEmbeds = input_embeds * rsqrt(variance + self.variance_epsilon)
         input_embeds: SequenceInputEmbeds = input_embeds.to(self.weight.dtype)
 
