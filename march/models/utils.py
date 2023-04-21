@@ -5,7 +5,7 @@ from abc import abstractmethod
 
 from dataclasses import dataclass
 
-from torch import float32, ones, rsqrt
+from torch import FloatTensor, float32, rsqrt
 from torch.nn import Module, Parameter
 
 from transformers.configuration_utils import PretrainedConfig
@@ -18,6 +18,7 @@ __all__ = [
     "dataclass",
     "TensorType",
     "Parameter",
+    "FloatTensor",
     "SequenceInputIds",
     "SequenceInputEmbeds",
     "KeyValueStates",
@@ -80,8 +81,14 @@ class LayerNorm(TransformerComponentBase):
     """
     def __init__(self, config: TransformerConfig, eps=1e-6):
         super().__init__(config)
-        self.weight: TensorType["D"] = Parameter(ones(config.dim_model))
+
+        self.weight: TensorType["D"] = Parameter(FloatTensor((config.dim_model,)))
         self.variance_epsilon = eps
+
+        self.init_weights()
+
+    def init_weights(self) -> None:
+        self.weight.data.fill_(1.0)
 
     def forward(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:
         variance: SequenceInputIds = input_embeds.to(LAYERNORM_PRECISION).pow(2).mean(-1, keepdim=True)

@@ -3,7 +3,7 @@ from torchtyping import TensorType
 
 from abc import abstractmethod
 
-from torch import FloatTensor, finfo, long, matmul, ones, triu
+from torch import finfo, long, matmul, ones, triu
 from torch.nn import CrossEntropyLoss, Linear, ModuleList, Parameter
 from torch.nn.functional import dropout, embedding, relu
 

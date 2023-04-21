@@ -18,7 +18,7 @@ from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, Printe
 
 from march import CONFIG_DIR, RESULTS_DIR
 from march.tokenization import EOS_TOKEN, load_tokenizer
-from march.models.baseline import TransformerBase, LayerNorm, AttentionBase, AbsolutePositionEncoding
+from march.models.baseline import TransformerBase, LayerNorm, AttentionBase
 
 
 class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
@@ -30,7 +30,11 @@ class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
             logs["layernorm_mean"] = sum([m.weight.data for m in layernorm_modules]).mean().item() / len(layernorm_modules)
 
             attention_modules = modules_by_cls(AttentionBase)
-            logs["attention_w_q_mean"] = sum([m.w_q.weight.data for m in attention_modules]).mean().item() / len(attention_modules)
+            get_attn_weight_mean = lambda weight_name: sum([getattr(m, weight_name).weight.data for m in attention_modules if hasattr(m, weight_name)]).mean().item() / len(attention_modules)
+            logs["attention_w_q_mean"] = get_attn_weight_mean("w_q")
+            logs["attention_w_k_mean"] = get_attn_weight_mean("w_k")
+            logs["attention_w_v_mean"] = get_attn_weight_mean("w_v")
+            logs["attention_w_o_mean"] = get_attn_weight_mean("w_o")
 
             logs["position_encoding_mean"] = self.model.position_encoding.timing_table.data.mean().item()
             logs["embedding_mean"] = self.model.embedding.weight.data.mean().item()
