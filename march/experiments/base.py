@@ -32,8 +32,8 @@ class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
             attention_modules = modules_by_cls(AttentionBase)
             logs["attention_w_q_mean"] = sum([m.w_q.weight.data for m in attention_modules]).mean().item() / len(attention_modules)
 
-            logs["position_encoding_mean"] = self.model.position_encoding.timing_table.weight.mean().item()
-            logs["embedding_mean"] = self.model.embedding.weight.mean().item()
+            logs["position_encoding_mean"] = self.model.position_encoding.timing_table.data.mean().item()
+            logs["embedding_mean"] = self.model.embedding.weight.data.mean().item()
 
         return super().log(logs)
 
