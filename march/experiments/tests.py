@@ -5,7 +5,7 @@ from march.models.scaling_heads_constant import ScalingHeadsConstantTransformer,
 from march.models.database import DatabaseTransformerConfig, DatabaseTransformer
 from march.models.absolute_position_embeddings import APESumOverAverageTransformer, APEUnitVarianceTransformer
 from march.models.big_heads import BigHeadsTransformer, BigHeadsTransformerConfig
-from march.models.mixed_act import GatedLinearUnitTransformer, GatedLinearUnitTransformerConfig, GateFunctions
+from march.models.mixed_act import GatedLinearUnitTransformer, GatedLinearUnitTransformerConfig, GateFunctions, MixedActTransformer
 
 from march.experiments.baseline import BaselineExperiment
 
@@ -157,3 +157,10 @@ class SiLUGatedLinearUnitExperiment(BaselineExperiment):
             dim_model=dim_model, dim_feedforward=dim_feedforward, gate_fn=GateFunctions.SILU
         )
         return GatedLinearUnitTransformer(config)
+
+
+class MixedActExperiment(BaselineExperiment):
+        dim_model = 512
+        dim_feedforward = ((dim_model * 4) * 2) // 3
+        config = TransformerConfig(dim_model=dim_model, dim_feedforward=dim_feedforward)
+        return MixedActTransformer(config)
