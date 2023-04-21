@@ -160,6 +160,7 @@ class SiLUGatedLinearUnitExperiment(BaselineExperiment):
 
 
 class MixedActExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
         dim_model = 512
         dim_feedforward = ((dim_model * 4) * 2) // 3
         config = TransformerConfig(dim_model=dim_model, dim_feedforward=dim_feedforward)
