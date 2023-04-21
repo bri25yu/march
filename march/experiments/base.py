@@ -77,6 +77,11 @@ class ExperimentBase(ABC):
         return args_dict
 
     def train(self) -> None:
+        training_arguments = self.get_training_arguments()
+
+        set_numpy_seed(training_arguments.seed)
+        set_torch_seed(training_arguments.seed)
+
         tokenizer = load_tokenizer()
         dataset_dict = self.load_dataset_dict(tokenizer)
         self._validate_dataset_dict(dataset_dict)
@@ -91,11 +96,6 @@ class ExperimentBase(ABC):
             examples = base_data_collator(examples)
 
             return examples
-
-        training_arguments = self.get_training_arguments()
-
-        set_numpy_seed(training_arguments.seed)
-        set_torch_seed(training_arguments.seed)
 
         trainer = CustomLoggingSeq2SeqTrainer(
             model=model,
