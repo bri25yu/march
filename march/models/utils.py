@@ -5,7 +5,7 @@ from abc import abstractmethod
 
 from dataclasses import dataclass
 
-from torch import ones, rsqrt
+from torch import float32, ones, rsqrt
 from torch.nn import Module, Parameter
 
 from transformers.configuration_utils import PretrainedConfig
@@ -30,6 +30,8 @@ __all__ = [
     "AttentionBase",
 ]
 
+
+LAYERNORM_PRECISION = float32
 
 SequenceInputIds = TensorType["N", "L_in"]
 SequenceInputEmbeds = TensorType["N", "L_in", "D"]
@@ -87,8 +89,10 @@ class LayerNorm(TransformerComponentBase):
         self.weight.data.fill_(1.0)
 
     def forward(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:
+        input_embeds: SequenceInputEmbeds = input_embeds.to(LAYERNORM_PRECISION)
         variance: SequenceInputIds = input_embeds.pow(2).mean(-1, keepdim=True)
         input_embeds: SequenceInputEmbeds = input_embeds * rsqrt(variance + self.variance_epsilon)
+        input_embeds: SequenceInputEmbeds = input_embeds.to(self.weight.dtype)
 
         return self.weight * input_embeds
 
