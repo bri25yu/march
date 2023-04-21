@@ -9,7 +9,10 @@ import json
 
 from datasets import DatasetDict
 
+from numpy.random import seed as set_numpy_seed
+
 from torch.cuda import device_count
+from torch.random import seed as set_torch_seed
 
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, PrinterCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
 
@@ -90,6 +93,10 @@ class ExperimentBase(ABC):
             return examples
 
         training_arguments = self.get_training_arguments()
+
+        set_numpy_seed(training_arguments.seed)
+        set_torch_seed(training_arguments.seed)
+
         trainer = CustomLoggingSeq2SeqTrainer(
             model=model,
             args=training_arguments,
