@@ -63,6 +63,8 @@ class ExperimentBase(ABC):
             total_batch_size = batch_size_per_gpu * args_dict["gradient_accumulation_steps"]
             args_dict["gradient_accumulation_steps"] = total_batch_size // (batch_size_per_gpu * num_gpus)
 
+            args_dict["bf16"] = True
+
         return args_dict
 
     def train(self) -> None:
