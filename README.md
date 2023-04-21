@@ -1,25 +1,15 @@
 # march
 Model ARCHitecture experiments
 
-Example setup on Colab:
+Example setup:
 ```bash
-%load_ext autoreload
-%autoreload 2
+git clone https://github.com/bri25yu/march
+cd march
 
-!git clone https://github.com/bri25yu/march
-%cd march
-!git pull
-!pip -q -q -q install -r requirements.txt
-%cd ..
+conda env create --file environment.yml
+conda activate march
 
-!huggingface-cli login
-
-%reload_ext tensorboard
-%tensorboard --logdir .
-
-from march import run
-
-run("BaselineExperiment")
+deepspeed run.py
 ```
 
 # Experimental Setup
