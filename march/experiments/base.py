@@ -59,14 +59,6 @@ class ExperimentBase(ABC):
             deepspeed_config = json.load(open(join(CONFIG_DIR, "deepspeed.json")))
             args_dict["deepspeed"] = deepspeed_config
 
-            total_batch_size = args_dict["per_device_train_batch_size"] * args_dict["gradient_accumulation_steps"]
-            # Assume 24GB GPUs
-            batch_size_per_gpu = 32
-            args_dict["per_device_train_batch_size"] = batch_size_per_gpu
-            args_dict["per_device_eval_batch_size"] = batch_size_per_gpu * 2
-            assert total_batch_size % batch_size_per_gpu == 0
-            args_dict["gradient_accumulation_steps"] = total_batch_size // batch_size_per_gpu
-
         return args_dict
 
     def train(self) -> None:
