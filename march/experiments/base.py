@@ -10,7 +10,7 @@ from datasets import DatasetDict
 
 from torch.cuda import device_count, get_device_properties
 
-from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, PrinterCallback, ProgressCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
+from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, PrinterCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
 
 from march import CONFIG_DIR, RESULTS_DIR
 from march.tokenization import EOS_TOKEN, load_tokenizer
@@ -95,8 +95,7 @@ class ExperimentBase(ABC):
             tokenizer=tokenizer,
             data_collator=data_collator,
         )
-        for callback_to_remove in [PrinterCallback, ProgressCallback]:
-            trainer.remove_callback(callback_to_remove)
+        trainer.remove_callback(PrinterCallback)
 
         trainer.train()
 
