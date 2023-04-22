@@ -1,3 +1,5 @@
+from os import environ
+
 from datasets import DatasetDict
 
 from transformers import PreTrainedTokenizerFast, Seq2SeqTrainingArguments
@@ -18,6 +20,20 @@ class BaselineExperiment(ExperimentBase):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
         return BaselineTransformer(config)
+
+
+class BaselineFP32Experiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        environ["LOG_WEIGHTS"] = "true"
+
+        default_training_arguments = self.load_default_training_arguments()
+
+        default_training_arguments["bf16"] = False
+        default_training_arguments["per_device_train_batch_size"] = 32
+        default_training_arguments["per_device_eval_batch_size"] = 64
+        default_training_arguments["gradient_accumulation_steps"] = 4
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
 
 
 class BestExperiment(BaselineExperiment):
