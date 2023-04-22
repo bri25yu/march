@@ -28,6 +28,8 @@ class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
 
             layernorm_modules = modules_by_cls(LayerNorm)
             logs["layernorm_mean"] = sum([m.weight.data for m in layernorm_modules]).mean().item() / len(layernorm_modules)
+            logs["layernorm_max"] = sum([m.weight.data.max() for m in layernorm_modules]).item() / len(layernorm_modules)
+            logs["layernorm_min"] = sum([m.weight.data.min() for m in layernorm_modules]).item() / len(layernorm_modules)
 
             attention_modules = modules_by_cls(AttentionBase)
             get_attn_weight_mean = lambda weight_name: sum([getattr(m, weight_name).weight.data for m in attention_modules if hasattr(m, weight_name)]).mean().item() / len(attention_modules)
