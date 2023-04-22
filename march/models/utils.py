@@ -47,6 +47,7 @@ class TransformerConfig(PretrainedConfig):
     num_layers: int = 6
     dim_qkv: int = 64
 
+    feedforward_scale: int = 4
     dim_feedforward: Union[None, int] = None
     num_heads: Union[None, int] = None
     dropout_prob: float = 0.1
@@ -57,7 +58,7 @@ class TransformerConfig(PretrainedConfig):
             self.num_heads = self.dim_model // self.dim_qkv
 
         if self.dim_feedforward is None:
-            self.dim_feedforward = self.dim_model * 4
+            self.dim_feedforward = self.dim_model * self.feedforward_scale
 
 
 class TransformerComponentBase(Module):

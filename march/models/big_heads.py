@@ -13,86 +13,70 @@ class BigHeadsTransformerConfig(TransformerConfig):
     num_layers: int = 6
     dim_qkv: int = 128
 
+    feedforward_scale: int = 4
     dim_feedforward: Union[None, int] = None
     num_heads: Union[None, int] = None
     dropout_prob: float = 0.1
 
     head_scale_size: int = 2
 
+    # dim_w_o_output_size :=  num_heads * dim_qkv / dim_w_o_output_scaling
+    dim_w_o_output_scaling: int = 1
+
     def __post_init__(self) -> None:
         if self.num_heads is None:
             assert self.dim_model % self.dim_qkv == 0, f"Dimensionality of the model must be divisible by dimensionality of the queries, keys, and values."
             self.num_heads = (self.dim_model // self.dim_qkv) * self.head_scale_size
 
-        # TODO different recombination strategy for feedforward layer? 
         if self.dim_feedforward is None:
-            self.dim_feedforward = self.dim_model * 4
+            self.dim_feedforward = self.dim_model * self.feedforward_scale
+
+        if self.dim_w_o_output_size == 1:
+            self.dim_w_o_output_size = self.num_heads * self.dim_qkv
+        else:
+            self.dim_w_o_output_size = self.num_heads * self.dim_qkv // self.dim_w_o_output_scaling
 
 
-# TODO different recombination strategy for w_o layer? 
-class BigHeadsEncoderBase(BaselineEncoder):
-    @abstractmethod
-    def create_scaling_heads_configs(self, config: TransformerConfig) -> List[TransformerConfig]:
-        pass
+class BigHeadsAttention(BaselineAttention):
+    def __init__(self, config: BigHeadsTransformerConfig, is_cross_attention: bool) -> None:
+        super().__init__(config, is_cross_attention)
 
-    # This is a copy of `BaselineEncoder.__init__` unless specified otherwise
-    def __init__(self, config: TransformerConfig) -> None:
-        TransformerComponentBase.__init__(self, config)
+        self.w_q = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False, dtype=MODEL_PRECISION)
 
-        self.layernorms = ModuleList([LayerNorm(config) for _ in range(config.num_layers + 1)])
+        # START big heads attention
+        # Make w_o actually a linear layer and then downcast later in the feedforward layer
+        # self.w_o = Linear(config.num_heads * config.dim_qkv, config.dim_model, bias=False, dtype=MODEL_PRECISION)
+        self.w_o = Linear(config.num_heads * config.dim_qkv, config.dim_w_o_output_size, bias=False, dtype=MODEL_PRECISION)
+        
+        # END big heads attention
 
-        ###############################
-        # START Big heads Attention 
-        ###############################
-
-        # Original code:
-        self.self_attention_layers: List[AttentionBase] = ModuleList(
-            [self.ATTENTION_CLS(config, is_cross_attention=False) for _ in range(config.num_layers // 2)]
-        )
-
-        # New code:
-        # Attention strategy now utilizes larger hidden dimension size per head, rather than 
-        # heads being of size D_kv = D_model / num_heads. Now, D_kv = (D_model / num_heads) * head_scale_size
-        # so the hidden dimension goes from (N, L, D_model) to (N, H, L, (D_model / num_heads ) * head_scale_size ).
-        # To achieve this, 
-
-        # layer_configs = self.create_scaling_heads_configs(config)
-        # self.self_attention_layers: List[AttentionBase] = ModuleList(
-        #     [self.ATTENTION_CLS(layer_config, is_cross_attention=False) for layer_config in layer_configs]
-        # )
-
-        ###############################
-        # END Big heads Attention 
-        ###############################
-
-        ###############################
-        # START Big heads Feed forward strategy 
-        ###############################
-
-        # Original code:
-        self.feedforward_layers: List[TransformerComponentBase] = ModuleList(
-            [self.FEEDFORWARD_CLS(config) for _ in range(config.num_layers // 2)]
-        )
-
-        # New code: 
-        # Recombination for feed forward strategy has to go from old strategy: 
-        # D_kv = D_model / num_heads 
-
-        ###############################
-        # END Big heads Feed forward strategy 
-        ###############################
+        if not self.is_cross_attention:
+            self.w_k = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False, dtype=MODEL_PRECISION)
+            self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False, dtype=MODEL_PRECISION)
 
 
-# class BigHeadsEncoder(ScalingHeadsEncoderBase):
-#     def create_scaling_heads_configs(self, config: TransformerConfig) -> List[TransformerConfig]:
-#         return create_inverse_scaling_heads_configs(config)
+class BigHeadsFeedforward(BaselineFeedforward):
+    def __init__(self, config: BigHeadsTransformerConfig) -> None:
+        super().__init__(config)
+
+        # Keep the dimension from output of w_o, and if necessary still cast up to 4D. Otherwise it acts as a FF layer. 
+        # self.up_projection = Linear(config.dim_model, config.dim_feedforward, bias=False, dtype=MODEL_PRECISION)
+        self.up_projection = Linear(config.dim_w_o_output_size, config.dim_feedforward, bias=False, dtype=MODEL_PRECISION)
+
+        # Still project from dim_feedforward (normally 4D) to D
+        self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False, dtype=MODEL_PRECISION)
 
 
-# class BigHeadsDecoder(ScalingHeadsDecoderBase):
-#     def create_scaling_heads_configs(self, config: TransformerConfig) -> List[TransformerConfig]:
-#         return create_inverse_scaling_heads_configs(config)
+class BigHeadsEncoderBase(EncoderBase):
+    ATTENTION_CLS = BigHeadsAttention
+    FEEDFORWARD_CLS = BigHeadsFeedforward
+
+
+class BigHeadsDecoderBase(DecoderBase):
+    ATTENTION_CLS = BigHeadsAttention
+    FEEDFORWARD_CLS = BigHeadsFeedforward
 
 
 class BigHeadsTransformer(BaselineTransformer):
-    ENCODER_CLS = BaselineEncoder
-    DECODER_CLS = BaselineDecoder
+    ENCODER_CLS = BigHeadsEncoderBase
+    DECODER_CLS = BigHeadsDecoderBase
