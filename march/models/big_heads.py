@@ -41,18 +41,18 @@ class BigHeadsAttention(BaselineAttention):
     def __init__(self, config: BigHeadsTransformerConfig, is_cross_attention: bool) -> None:
         super().__init__(config, is_cross_attention)
 
-        self.w_q = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False, dtype=MODEL_PRECISION)
+        self.w_q = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
 
         # START big heads attention
         # Make w_o actually a linear layer and then downcast later in the feedforward layer
-        # self.w_o = Linear(config.num_heads * config.dim_qkv, config.dim_model, bias=False, dtype=MODEL_PRECISION)
-        self.w_o = Linear(config.num_heads * config.dim_qkv, config.dim_w_o_output_size, bias=False, dtype=MODEL_PRECISION)
+        # self.w_o = Linear(config.num_heads * config.dim_qkv, config.dim_model, bias=False)
+        self.w_o = Linear(config.num_heads * config.dim_qkv, config.dim_w_o_output_size, bias=False)
         
         # END big heads attention
 
         if not self.is_cross_attention:
-            self.w_k = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False, dtype=MODEL_PRECISION)
-            self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False, dtype=MODEL_PRECISION)
+            self.w_k = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
+            self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
 
 
 class BigHeadsFeedforward(BaselineFeedforward):
@@ -60,11 +60,11 @@ class BigHeadsFeedforward(BaselineFeedforward):
         super().__init__(config)
 
         # Keep the dimension from output of w_o, and if necessary still cast up to 4D. Otherwise it acts as a FF layer. 
-        # self.up_projection = Linear(config.dim_model, config.dim_feedforward, bias=False, dtype=MODEL_PRECISION)
-        self.up_projection = Linear(config.dim_w_o_output_size, config.dim_feedforward, bias=False, dtype=MODEL_PRECISION)
+        # self.up_projection = Linear(config.dim_model, config.dim_feedforward, bias=False)
+        self.up_projection = Linear(config.dim_w_o_output_size, config.dim_feedforward, bias=False)
 
         # Still project from dim_feedforward (normally 4D) to D
-        self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False, dtype=MODEL_PRECISION)
+        self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False)
 
 
 class BigHeadsEncoderBase(EncoderBase):
