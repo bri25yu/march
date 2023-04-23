@@ -20,6 +20,7 @@ __all__ = [
     "ModuleList",
     "dropout",
     "embedding",
+    "finfo",
     "matmul",
     "Seq2SeqLMOutput",
     "VOCAB_SIZE",

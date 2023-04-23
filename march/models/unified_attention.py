@@ -68,7 +68,8 @@ class UnifiedAttention(AttentionBase):
         # END Unified self and cross attention
         ###############################
 
-        attention_logits: MultiHeadedAttention = attention_logits + -1e9 * attention_mask
+        attention_mask = attention_mask.to(attention_logits.dtype) * finfo(attention_logits.dtype).min
+        attention_logits: MultiHeadedAttention = attention_logits + attention_mask
 
         attention_probs: MultiHeadedAttention = attention_logits.softmax(dim=3)
         attention_probs: MultiHeadedAttention = dropout(attention_probs, p=config.dropout_prob, training=self.training)
