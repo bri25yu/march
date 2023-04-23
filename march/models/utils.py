@@ -9,6 +9,7 @@ from torch import FloatTensor, float32, rsqrt
 from torch.nn import Module, Parameter
 
 from transformers.configuration_utils import PretrainedConfig
+from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
 
 
 __all__ = [
@@ -97,6 +98,9 @@ class LayerNorm(TransformerComponentBase):
         input_embeds: SequenceInputEmbeds = input_embeds.to(self.weight.dtype)
 
         return self.weight * input_embeds
+
+
+ALL_LAYERNORM_LAYERS.append(LayerNorm)
 
 
 @dataclass
