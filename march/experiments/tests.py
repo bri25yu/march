@@ -1,3 +1,5 @@
+from transformers import Seq2SeqTrainingArguments
+
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
 from march.models.scaling_heads import ScalingHeadsTransformer, InverseScalingHeadsTransformer
 from march.models.unified_attention import UnifiedAttentionTransformer
@@ -25,6 +27,15 @@ class MoreHeadsLessLayersExperiment(BaselineExperiment):
 
 
 class MoreHeadsLessQKVDimExperiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+
+        default_training_arguments["per_device_train_batch_size"] = 32
+        default_training_arguments["per_device_eval_batch_size"] = 64
+        default_training_arguments["gradient_accumulation_steps"] = 4
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(dim_qkv=32)
         return BaselineTransformer(config)
