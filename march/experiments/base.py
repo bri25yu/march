@@ -95,12 +95,15 @@ class ExperimentBase(ABC):
             model = self.get_model()
 
         base_data_collator = DataCollatorForSeq2Seq(tokenizer)
-        bos_token_id = tokenizer.convert_tokens_to_ids(EOS_TOKEN)
+        bos_token_id = pad_token_id = tokenizer.convert_tokens_to_ids(EOS_TOKEN)
         def data_collator(examples):
             for example in examples:
                 example["decoder_input_ids"] = [bos_token_id] + example["labels"][:-1]
 
             examples = base_data_collator(examples)
+
+            # 1 for should mask, 0 otherwise
+            examples["attention_mask"] = examples["input_ids"] == pad_token_id
 
             return examples
 

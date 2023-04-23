@@ -227,6 +227,9 @@ class TransformerBase(TransformerComponentBase):
         return Seq2SeqLMOutput(loss=loss, logits=lm_logits)
 
     def create_decoder_attention_mask(self, decoder_input_ids: SequenceInputIds) -> TensorType["N", "L_out", "L_out"]:
+        """
+        1 for should mask, 0 otherwise.
+        """
         batch_size, sequence_length = decoder_input_ids.size()
 
         no_loss_mask: TensorType["N", 1, "L_out"] = decoder_input_ids[:, None, :] == -100
