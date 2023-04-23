@@ -2,7 +2,6 @@ from typing import Any, Dict
 
 from abc import ABC, abstractmethod
 
-from os import environ
 from os.path import join
 
 import json
@@ -23,23 +22,22 @@ from march.models.baseline import TransformerBase, LayerNorm, AttentionBase
 
 class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
     def log(self, logs: Dict[str, float]) -> None:
-        if "LOG_WEIGHTS" in environ:
-            modules_by_cls = lambda cls: [module for module in self.model.modules() if isinstance(module, cls)]
+        modules_by_cls = lambda cls: [module for module in self.model.modules() if isinstance(module, cls)]
 
-            layernorm_modules = modules_by_cls(LayerNorm)
-            logs["layernorm_mean"] = sum([m.weight.data for m in layernorm_modules]).mean().item() / len(layernorm_modules)
-            logs["layernorm_max"] = sum([m.weight.data.max() for m in layernorm_modules]).item() / len(layernorm_modules)
-            logs["layernorm_min"] = sum([m.weight.data.min() for m in layernorm_modules]).item() / len(layernorm_modules)
+        layernorm_modules = modules_by_cls(LayerNorm)
+        logs["layernorm_mean"] = sum([m.weight.data for m in layernorm_modules]).mean().item() / len(layernorm_modules)
+        logs["layernorm_max"] = sum([m.weight.data.max() for m in layernorm_modules]).item() / len(layernorm_modules)
+        logs["layernorm_min"] = sum([m.weight.data.min() for m in layernorm_modules]).item() / len(layernorm_modules)
 
-            attention_modules = modules_by_cls(AttentionBase)
-            get_attn_weight_mean = lambda weight_name: sum([getattr(m, weight_name).weight.data for m in attention_modules if hasattr(m, weight_name)]).mean().item() / len(attention_modules)
-            logs["attention_w_q_mean"] = get_attn_weight_mean("w_q")
-            logs["attention_w_k_mean"] = get_attn_weight_mean("w_k")
-            logs["attention_w_v_mean"] = get_attn_weight_mean("w_v")
-            logs["attention_w_o_mean"] = get_attn_weight_mean("w_o")
+        attention_modules = modules_by_cls(AttentionBase)
+        get_attn_weight_mean = lambda weight_name: sum([getattr(m, weight_name).weight.data for m in attention_modules if hasattr(m, weight_name)]).mean().item() / len(attention_modules)
+        logs["attention_w_q_mean"] = get_attn_weight_mean("w_q")
+        logs["attention_w_k_mean"] = get_attn_weight_mean("w_k")
+        logs["attention_w_v_mean"] = get_attn_weight_mean("w_v")
+        logs["attention_w_o_mean"] = get_attn_weight_mean("w_o")
 
-            logs["position_encoding_mean"] = self.model.position_encoding.timing_table.data.mean().item()
-            logs["embedding_mean"] = self.model.embedding.weight.data.mean().item()
+        logs["position_encoding_mean"] = self.model.position_encoding.timing_table.data.mean().item()
+        logs["embedding_mean"] = self.model.embedding.weight.data.mean().item()
 
         return super().log(logs)
 

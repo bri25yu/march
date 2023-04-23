@@ -1,5 +1,3 @@
-from os import environ
-
 from datasets import DatasetDict
 
 from transformers import PreTrainedTokenizerFast, Seq2SeqTrainingArguments
@@ -24,8 +22,6 @@ class BaselineExperiment(ExperimentBase):
 
 class BaselineFP32Experiment(BaselineExperiment):
     def get_training_arguments(self) -> Seq2SeqTrainingArguments:
-        environ["LOG_WEIGHTS"] = "true"
-
         default_training_arguments = self.load_default_training_arguments()
 
         default_training_arguments["bf16"] = False
