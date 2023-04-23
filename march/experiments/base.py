@@ -88,10 +88,11 @@ class ExperimentBase(ABC):
         set_numpy_seed(training_arguments.seed)
         set_torch_seed(training_arguments.seed)
 
-        tokenizer = load_tokenizer()
-        dataset_dict = self.load_dataset_dict(tokenizer)
-        self._validate_dataset_dict(dataset_dict)
-        model = self.get_model()
+        with training_arguments.main_process_first():
+            tokenizer = load_tokenizer()
+            dataset_dict = self.load_dataset_dict(tokenizer)
+            self._validate_dataset_dict(dataset_dict)
+            model = self.get_model()
 
         base_data_collator = DataCollatorForSeq2Seq(tokenizer)
         bos_token_id = tokenizer.convert_tokens_to_ids(EOS_TOKEN)
