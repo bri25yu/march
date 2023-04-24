@@ -44,8 +44,8 @@ MultiHeadedAttention = TensorType["N", "H", "L_in", "L_out"]
 
 @dataclass
 class TransformerConfig(PretrainedConfig):
-    dim_model: int = 512
-    num_layers: int = 6
+    dim_model: int = 768
+    num_layers: int = 24
     dim_qkv: int = 64
 
     feedforward_scale: int = 4

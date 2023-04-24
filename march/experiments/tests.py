@@ -22,9 +22,12 @@ from march.experiments.baseline import BaselineExperiment
 
 
 def update_with_half_batch_size(training_arguments_dict: Dict[str, Any]) -> Dict[str, Any]:
-    training_arguments_dict["per_device_train_batch_size"] = 32
-    training_arguments_dict["per_device_eval_batch_size"] = 64
-    training_arguments_dict["gradient_accumulation_steps"] = 4
+    original_batch_size = training_arguments_dict["per_device_train_batch_size"]
+    original_grad_accumulation = training_arguments_dict["gradient_accumulation_steps"]
+
+    training_arguments_dict["per_device_train_batch_size"] = original_batch_size // 2
+    training_arguments_dict["per_device_eval_batch_size"] = original_batch_size
+    training_arguments_dict["gradient_accumulation_steps"] = original_grad_accumulation * 2
 
     return training_arguments_dict
 
