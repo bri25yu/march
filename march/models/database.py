@@ -150,8 +150,6 @@ class DatabaseTransformerBase(TransformerBase):
         self.encoder = self.ENCODER_CLS(config)
         self.decoder = self.DECODER_CLS(config)
 
-        self.init_weights()
-
     def init_weights(self) -> None:
         self.embedding.weight.data.normal_(mean=0.0, std=1.0)
 

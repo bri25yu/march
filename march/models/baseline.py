@@ -42,8 +42,6 @@ class AbsolutePositionEncoding(TransformerComponentBase):
 
         self.timing_table = Parameter(FloatTensor(MAX_LENGTH, config.dim_model))
 
-        self.init_weights()
-
     def init_weights(self) -> None:
         config = self.config
 
@@ -192,8 +190,6 @@ class TransformerBase(TransformerComponentBase):
         self.encoder = self.ENCODER_CLS(config)
         self.decoder = self.DECODER_CLS(config)
 
-        self.init_weights()
-
     def init_weights(self) -> None:
         self.embedding.weight.data.normal_(mean=0.0, std=1.0)
 
@@ -254,8 +250,6 @@ class BaselineAttention(AttentionBase):
         if not self.is_cross_attention:
             self.w_k = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
             self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
-        
-        self.init_weights()
 
     def init_weights(self) -> None:
         config = self.config
@@ -313,8 +307,6 @@ class BaselineFeedforward(TransformerComponentBase):
 
         self.up_projection = Linear(config.dim_model, config.dim_feedforward, bias=False)
         self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False)
-
-        self.init_weights()
 
     def init_weights(self) -> None:
         config = self.config

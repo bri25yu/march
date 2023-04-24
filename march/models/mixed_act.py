@@ -31,8 +31,6 @@ class GatedLinearUnitFeedforward(TransformerComponentBase):
         self.gate_projection = Linear(config.dim_model, config.dim_feedforward, bias=False)
         self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False)
 
-        self.init_weights()
-
     def init_weights(self) -> None:
         config = self.config
 
@@ -77,8 +75,6 @@ class MixedActFeedforward(TransformerComponentBase):
         self.up_projection_fast = Linear(config.dim_model, config.dim_feedforward, bias=False)
         self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False)
 
-        self.init_weights()
-
     def init_weights(self) -> None:
         config = self.config
 
@@ -121,8 +117,6 @@ class MixedActSumOverMeanFeedforward(TransformerComponentBase):
         self.up_projection_slow = Linear(config.dim_model, config.dim_feedforward, bias=False)
         self.up_projection_fast = Linear(config.dim_model, config.dim_feedforward, bias=False)
         self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False)
-
-        self.init_weights()
 
     def init_weights(self) -> None:
         config = self.config

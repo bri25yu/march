@@ -13,8 +13,6 @@ class UnifiedAttention(AttentionBase):
         self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
         self.w_o = Linear(config.num_heads * config.dim_qkv, config.dim_model, bias=False)
 
-        self.init_weights()
-
     def init_weights(self) -> None:
         config = self.config
 

@@ -91,6 +91,7 @@ class ExperimentBase(ABC):
             dataset_dict = self.load_dataset_dict(tokenizer)
             self._validate_dataset_dict(dataset_dict)
             model = self.get_model()
+            self._call_init_weights(model)
 
         base_data_collator = DataCollatorForSeq2Seq(tokenizer)
         bos_token_id = pad_token_id = tokenizer.convert_tokens_to_ids(EOS_TOKEN)
@@ -126,3 +127,12 @@ class ExperimentBase(ABC):
         expected_columns = ["input_ids", "labels"]
         actual_columns = dataset_dict["train"].column_names
         assert set(expected_columns) == set(actual_columns), f"Expected dataset to have columns {expected_columns}, but got {actual_columns}."
+
+    def _call_init_weights(self, model: TransformerBase) -> None:
+        for module in model.modules():
+            if not hasattr(module, "init_weights"): continue
+
+            try:
+                module.init_weights()
+            except NotImplementedError:
+                pass

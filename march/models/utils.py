@@ -87,8 +87,6 @@ class LayerNorm(TransformerComponentBase):
         self.weight: TensorType["D"] = Parameter(FloatTensor((config.dim_model,)))
         self.variance_epsilon = eps
 
-        self.init_weights()
-
     def init_weights(self) -> None:
         self.weight.data.fill_(1.0)
 
