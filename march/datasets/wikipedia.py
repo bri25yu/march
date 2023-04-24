@@ -20,7 +20,9 @@ WIKIPEDIA_BASELINE_NAME = "wikipedia_baseline"
 WIKIPEDIA_BASELINE_TEXT_NAME = "wikipedia_baseline_text"
 
 
-def create_wikipedia_baseline(tokenizer: PreTrainedTokenizerFast) -> None:
+def create_wikipedia_baseline(
+    tokenizer: PreTrainedTokenizerFast, push_to_hub_name: str=WIKIPEDIA_BASELINE_NAME
+) -> None:
     sentinel_start_id = tokenizer.convert_tokens_to_ids(EXTRA_ID_TOKENS[-1])
 
     def tokenize_fn(examples: Dict[str, List[str]]) -> Dict[str, List[int]]:
@@ -66,11 +68,15 @@ def create_wikipedia_baseline(tokenizer: PreTrainedTokenizerFast) -> None:
     )
     print(f"Span corrupted Wikipedia\n{span_corrupted_dataset_dict}")
 
-    span_corrupted_dataset_dict.push_to_hub(WIKIPEDIA_BASELINE_NAME)
+    span_corrupted_dataset_dict.push_to_hub(push_to_hub_name)
 
 
 def load_wikipedia_baseline() -> DatasetDict:
     return load_dataset("bri25yu/wikipedia_baseline")
+
+
+def load_wikipedia_baseline_t5() -> DatasetDict:
+    return load_dataset("bri25yu/wikipedia_baseline_t5")
 
 
 def create_human_readable_wikipedia_baseline(tokenizer: PreTrainedTokenizerFast) -> None:

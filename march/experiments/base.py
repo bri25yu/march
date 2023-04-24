@@ -80,6 +80,9 @@ class ExperimentBase(ABC):
 
         return args_dict
 
+    def load_default_tokenizer(self) -> PreTrainedTokenizerFast:
+        return load_tokenizer()
+
     def train(self) -> None:
         training_arguments = self.get_training_arguments()
 
@@ -87,7 +90,7 @@ class ExperimentBase(ABC):
         set_torch_seed(training_arguments.seed)
 
         with training_arguments.main_process_first():
-            tokenizer = load_tokenizer()
+            tokenizer = self.load_default_tokenizer()
             dataset_dict = self.load_dataset_dict(tokenizer)
             self._validate_dataset_dict(dataset_dict)
             model = self.get_model()

@@ -2,9 +2,9 @@ from typing import Any, Dict
 
 from datasets import DatasetDict
 
-from transformers import PreTrainedTokenizerFast, Seq2SeqTrainingArguments
+from transformers import PreTrainedTokenizerFast, Seq2SeqTrainingArguments, AutoTokenizer, AutoModelForSeq2SeqLM, AutoConfig
 
-from march.datasets.wikipedia import load_wikipedia_baseline
+from march.datasets.wikipedia import load_wikipedia_baseline, load_wikipedia_baseline_t5
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
 from march.experiments.base import ExperimentBase
 
@@ -61,3 +61,20 @@ class BestExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(dim_model=1024, num_layers=48)  # Match t5-large
         return BaselineTransformer(config)
+
+
+class BaselineT5Experiment(BaselineExperiment):
+    MODEL_NAME = "t5-base"
+
+    def load_default_tokenizer(self) -> PreTrainedTokenizerFast:
+        return AutoTokenizer.from_pretrained(self.MODEL_NAME)
+
+    def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
+        return load_wikipedia_baseline_t5()
+
+    def get_model(self) -> TransformerBase:
+        config = AutoConfig.from_pretrained(self.MODEL_NAME)
+        model = AutoModelForSeq2SeqLM(config)
+        setattr(model, "count_parameters", BaselineTransformer.count_parameters)
+
+        return model
