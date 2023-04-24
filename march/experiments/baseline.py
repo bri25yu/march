@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 from datasets import DatasetDict
 
 from transformers import PreTrainedTokenizerFast, Seq2SeqTrainingArguments
@@ -5,6 +7,17 @@ from transformers import PreTrainedTokenizerFast, Seq2SeqTrainingArguments
 from march.datasets.wikipedia import load_wikipedia_baseline
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
 from march.experiments.base import ExperimentBase
+
+
+def update_with_half_batch_size(training_arguments_dict: Dict[str, Any]) -> Dict[str, Any]:
+    original_batch_size = training_arguments_dict["per_device_train_batch_size"]
+    original_grad_accumulation = training_arguments_dict["gradient_accumulation_steps"]
+
+    training_arguments_dict["per_device_train_batch_size"] = original_batch_size // 2
+    training_arguments_dict["per_device_eval_batch_size"] = original_batch_size
+    training_arguments_dict["gradient_accumulation_steps"] = original_grad_accumulation * 2
+
+    return training_arguments_dict
 
 
 class BaselineExperiment(ExperimentBase):
@@ -25,9 +38,7 @@ class BaselineFP32Experiment(BaselineExperiment):
         default_training_arguments = self.load_default_training_arguments()
 
         default_training_arguments["bf16"] = False
-        default_training_arguments["per_device_train_batch_size"] = 32
-        default_training_arguments["per_device_eval_batch_size"] = 64
-        default_training_arguments["gradient_accumulation_steps"] = 4
+        default_training_arguments = update_with_half_batch_size(default_training_arguments)
 
         return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
 
