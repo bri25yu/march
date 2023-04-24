@@ -172,7 +172,7 @@ class MoreHeadsLessQKVDimLessLayersExperiment(BaselineExperiment):
 # dim model: 512 -> 448
 # Num params = 35,582,400
 # Num params baseline model = 36,340,224
-# Head size D_kv = D_kv_orig x 2 = D_model / 4, scaling down D_model to 380
+# Head size D_kv = D_kv_orig x 2 = D_model / 4, scaling down D_model to 448
 # w_o is from D_kv_orig x 2 x 8 -> D_model
 # AKA w_o is from D_model x 2 -> D_model
 # FF layer D_model -> 4 x D_model -> D_model
@@ -192,7 +192,7 @@ class BigHeads2Experiment(BaselineExperiment):
         return BaselineTransformer(config)
 
 
-# Head size D_kv = D_kv_orig x 8 = D_model, scaling down D_model to 380
+# Head size D_kv = D_kv_orig x 8 = D_model, scaling down D_model to 306
 # w_o is from D_kv_orig x 8 x 8 -> D_model
 # AKA w_o is from D_model x 8 -> D_model
 # FF layer D_model -> 4 x D_model -> D_model
@@ -202,7 +202,7 @@ class BigHeads3Experiment(BaselineExperiment):
         return BaselineTransformer(config)
 
 
-# Head size D_kv = D_kv_orig x 2 = D_model / 4, scaling down D_model to 448
+# Head size D_kv = D_kv_orig x 2 = D_model / 4, scaling down D_model to 400
 # w_o is now from D_kv_orig x 2 x 8 -> D_kv_orig x 2 x 8
 # AKA w_o is from D_model x 2 -> D_model x 2
 # FF layer D_model x 2 -> 4 x D_model -> D_model
@@ -212,7 +212,7 @@ class BigHeadsLinearW_oExperiment(BaselineExperiment):
         return BigHeadsTransformer(config)
 
 
-# Head size D_kv = D_kv_orig x 4 = D_model / 2, scaling down D_model to 448
+# Head size D_kv = D_kv_orig x 4 = D_model / 2, scaling down D_model to 284
 # w_o is now from D_kv_orig x 4 x 8 -> D_kv_orig x 4 x 8
 # AKA w_o is from D_model x 4 -> D_model x 4
 # FF layer 4 x D_model -> 4 x D_model -> D_model
@@ -222,7 +222,7 @@ class BigHeadsLinearW_o2Experiment(BaselineExperiment):
         return BigHeadsTransformer(config)
 
 
-# Head size D_kv = D_kv_orig x 8 = D_model, scaling down D_model to 448
+# Head size D_kv = D_kv_orig x 8 = D_model, scaling down D_model to 180
 # w_o is now from D_kv_orig x 8 x 8-> D_kv_orig x 8 x 8
 # AKA w_o is from D_model x 8 -> D_model x 8
 # FF layer 8 x D_model -> 4 x D_model -> D_model
@@ -232,7 +232,7 @@ class BigHeadsLinearW_o3Experiment(BaselineExperiment):
         return BigHeadsTransformer(config)
 
 
-# Head size D_kv = D_kv_orig x 4 = D_model / 2, scaling down D_model to 448
+# Head size D_kv = D_kv_orig x 4 = D_model / 2, scaling down D_model to 306
 # w_o is now from D_kv_orig x 4 x 8 -> D_kv_orig x 4 x 8
 # AKA w_o is from D_model x 4 -> D_model x 4
 # FF layer 4 x D_model -> 2 x D_model -> D_model
@@ -242,7 +242,7 @@ class BigHeadsDownProjectExperiment(BaselineExperiment):
         return BigHeadsTransformer(config)
 
 
-# Head size D_kv = D_kv_orig x 8 = D_model, scaling down D_model to 448
+# Head size D_kv = D_kv_orig x 8 = D_model, scaling down D_model to 190
 # w_o is now from D_kv_orig x 8 x 8-> D_kv_orig x 8 x 8
 # AKA w_o is from D_model x 8 -> D_model x 4
 # FF layer 4 x D_model -> 2 x D_model -> D_model
@@ -250,6 +250,14 @@ class BigHeadsDownProject2Experiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = BigHeadsTransformerConfig(dim_model=190,dim_qkv=190,head_scale_size=8,feedforward_scale=2,dim_w_o_output_scaling=2)
         return BigHeadsTransformer(config)
+
+
+# TODO
+class BigHeadsNoW_oExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        # config = BigHeadsTransformerConfig(dim_model=448,dim_qkv=112,head_scale_size=2,use_w_o=False)
+        # return BigHeadsTransformer(config)
+        pass
 
 
 # TODO add different recombination strategy for the heads such as addition for the head recombination
