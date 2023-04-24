@@ -1,6 +1,5 @@
 from march.models.utils import *
 from march.models.baseline import *
-from march.models.absolute_position_embeddings import AbsolutePositionEncodingUnitVariance
 
 
 class NoSelfAttentionResidualEncoderBase(EncoderBase):
@@ -102,6 +101,6 @@ class NoSelfAttentionResidualDecoder(NoSelfAttentionResidualDecoderBase):
 
 
 class NoSelfAttentionResidualTransformer(TransformerBase):
-    POSITION_ENCODING_CLS = AbsolutePositionEncodingUnitVariance
+    POSITION_ENCODING_CLS = AbsolutePositionEncoding
     ENCODER_CLS = NoSelfAttentionResidualEncoder
     DECODER_CLS = NoSelfAttentionResidualDecoder

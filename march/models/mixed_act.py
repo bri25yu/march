@@ -2,7 +2,6 @@ from torch.nn.functional import gelu, relu, silu, sigmoid
 
 from march.models.utils import *
 from march.models.baseline import *
-from march.models.absolute_position_embeddings import AbsolutePositionEncodingUnitVariance
 
 
 class GateFunctions:
@@ -62,7 +61,7 @@ class GatedLinearUnitDecoder(DecoderBase):
 
 
 class GatedLinearUnitTransformer(TransformerBase):
-    POSITION_ENCODING_CLS = AbsolutePositionEncodingUnitVariance
+    POSITION_ENCODING_CLS = AbsolutePositionEncoding
     ENCODER_CLS = GatedLinearUnitEncoder
     DECODER_CLS = GatedLinearUnitDecoder
 
@@ -105,7 +104,7 @@ class MixedActDecoder(DecoderBase):
 
 
 class MixedActTransformer(TransformerBase):
-    POSITION_ENCODING_CLS = AbsolutePositionEncodingUnitVariance
+    POSITION_ENCODING_CLS = AbsolutePositionEncoding
     ENCODER_CLS = MixedActEncoder
     DECODER_CLS = MixedActDecoder
 
@@ -148,7 +147,7 @@ class MixedActSumOverMeanDecoder(DecoderBase):
 
 
 class MixedActSumOverMeanTransformer(TransformerBase):
-    POSITION_ENCODING_CLS = AbsolutePositionEncodingUnitVariance
+    POSITION_ENCODING_CLS = AbsolutePositionEncoding
     ENCODER_CLS = MixedActSumOverMeanEncoder
     DECODER_CLS = MixedActSumOverMeanDecoder
 
@@ -177,6 +176,6 @@ class MixedActSOMDropoutDecoder(DecoderBase):
 
 
 class MixedActSOMDropoutTransformer(TransformerBase):
-    POSITION_ENCODING_CLS = AbsolutePositionEncodingUnitVariance
+    POSITION_ENCODING_CLS = AbsolutePositionEncoding
     ENCODER_CLS = MixedActSOMDropoutEncoder
     DECODER_CLS = MixedActSOMDropoutDecoder
