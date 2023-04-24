@@ -67,7 +67,7 @@ class BaselineT5Experiment(BaselineExperiment):
     MODEL_NAME = "t5-base"
 
     def load_default_tokenizer(self) -> PreTrainedTokenizerFast:
-        return AutoTokenizer.from_pretrained(self.MODEL_NAME)
+        return AutoTokenizer.from_pretrained(self.MODEL_NAME, model_max_length=1024)
 
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
         return load_wikipedia_baseline_t5()

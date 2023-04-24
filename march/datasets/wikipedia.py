@@ -7,7 +7,7 @@ from typing import Dict, List
 
 from datasets import DatasetDict, load_dataset
 
-from transformers import PreTrainedTokenizerFast
+from transformers import PreTrainedTokenizerFast, AutoTokenizer
 
 from march.tokenization import EXTRA_ID_TOKENS, MAX_LENGTH
 from march.datasets.span_corrupt_utils import create_span_corrupt_inputs
@@ -69,6 +69,11 @@ def create_wikipedia_baseline(
     print(f"Span corrupted Wikipedia\n{span_corrupted_dataset_dict}")
 
     span_corrupted_dataset_dict.push_to_hub(push_to_hub_name)
+
+
+def create_wikipedia_baseline_t5() -> None:
+    tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=1024)
+    create_wikipedia_baseline(tokenizer, "wikipedia_baseline_t5")
 
 
 def load_wikipedia_baseline() -> DatasetDict:
