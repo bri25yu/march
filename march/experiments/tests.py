@@ -169,7 +169,7 @@ class MoreHeadsLessQKVDimLessLayersExperiment(BaselineExperiment):
 # FF layer D_model -> 4 x D_model -> D_model
 class BigHeadsExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = BigHeadsTransformerConfig(dim_model=448,dim_qkv=112,head_scale_size=2)
+        config = BigHeadsTransformerConfig(dim_model=448,head_scale_size=2)
         return BaselineTransformer(config)
 
 
@@ -179,7 +179,7 @@ class BigHeadsExperiment(BaselineExperiment):
 # FF layer D_model -> 4 x D_model -> D_model
 class BigHeads2Experiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = BigHeadsTransformerConfig(dim_model=380,dim_qkv=190,head_scale_size=4)
+        config = BigHeadsTransformerConfig(dim_model=380,head_scale_size=4)
         return BaselineTransformer(config)
 
 
@@ -189,7 +189,7 @@ class BigHeads2Experiment(BaselineExperiment):
 # FF layer D_model -> 4 x D_model -> D_model
 class BigHeads3Experiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = BigHeadsTransformerConfig(dim_model=306,dim_qkv=306,head_scale_size=8)
+        config = BigHeadsTransformerConfig(dim_model=306,head_scale_size=8)
         return BaselineTransformer(config)
 
 
@@ -199,7 +199,7 @@ class BigHeads3Experiment(BaselineExperiment):
 # FF layer D_model x 2 -> 4 x D_model -> D_model
 class BigHeadsLinearW_oExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = BigHeadsTransformerConfig(dim_model=400,dim_qkv=100,head_scale_size=2)
+        config = BigHeadsTransformerConfig(dim_model=400,head_scale_size=2)
         return BigHeadsTransformer(config)
 
 
@@ -209,7 +209,7 @@ class BigHeadsLinearW_oExperiment(BaselineExperiment):
 # FF layer 4 x D_model -> 4 x D_model -> D_model
 class BigHeadsLinearW_o2Experiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = BigHeadsTransformerConfig(dim_model=284,dim_qkv=142,head_scale_size=4)
+        config = BigHeadsTransformerConfig(dim_model=284,head_scale_size=4)
         return BigHeadsTransformer(config)
 
 
@@ -219,7 +219,7 @@ class BigHeadsLinearW_o2Experiment(BaselineExperiment):
 # FF layer 8 x D_model -> 4 x D_model -> D_model
 class BigHeadsLinearW_o3Experiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = BigHeadsTransformerConfig(dim_model=180,dim_qkv=180,head_scale_size=8)
+        config = BigHeadsTransformerConfig(dim_model=180,head_scale_size=8)
         return BigHeadsTransformer(config)
 
 
@@ -229,7 +229,7 @@ class BigHeadsLinearW_o3Experiment(BaselineExperiment):
 # FF layer 4 x D_model -> 2 x D_model -> D_model
 class BigHeadsDownProjectExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = BigHeadsTransformerConfig(dim_model=306,dim_qkv=153,head_scale_size=4,feedforward_scale=2)
+        config = BigHeadsTransformerConfig(dim_model=306,head_scale_size=4,feedforward_scale=2)
         return BigHeadsTransformer(config)
 
 
@@ -239,7 +239,7 @@ class BigHeadsDownProjectExperiment(BaselineExperiment):
 # FF layer 4 x D_model -> 2 x D_model -> D_model
 class BigHeadsDownProject2Experiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = BigHeadsTransformerConfig(dim_model=190,dim_qkv=190,head_scale_size=8,feedforward_scale=2,dim_w_o_output_scaling=2)
+        config = BigHeadsTransformerConfig(dim_model=190,head_scale_size=8,feedforward_scale=2,dim_w_o_output_scaling=2)
         return BigHeadsTransformer(config)
 
 

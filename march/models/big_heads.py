@@ -9,14 +9,10 @@ __all__ = ["BigHeadsTransformer", "BigHeadsTransformerConfig"]
 
 @dataclass
 class BigHeadsTransformerConfig(TransformerConfig):
-    dim_model: int = 512
-    num_layers: int = 6
-    dim_qkv: int = 128
+    dim_qkv: Union[None, int] = None
 
-    feedforward_scale: int = 4
-    dim_feedforward: Union[None, int] = None
-    num_heads: Union[None, int] = None
-    dropout_prob: float = 0.1
+    # Fix num_heads, since dim_qkv is not fixed
+    num_heads: int = 8
 
     head_scale_size: int = 2
 
@@ -25,9 +21,8 @@ class BigHeadsTransformerConfig(TransformerConfig):
     dim_w_o_output_scaling: int = 1
 
     def __post_init__(self) -> None:
-        if self.num_heads is None:
-            assert self.dim_model % self.dim_qkv == 0, f"Dimensionality of the model must be divisible by dimensionality of the queries, keys, and values."
-            self.num_heads = (self.dim_model // self.dim_qkv) * self.head_scale_size
+        if self.dim_qkv is None:
+            self.dim_qkv = (self.dim_model // self.num_heads) * self.head_scale_size
 
         if self.dim_feedforward is None:
             self.dim_feedforward = self.dim_model * self.feedforward_scale
