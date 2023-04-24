@@ -12,7 +12,7 @@ class BigHeadsTransformerConfig(TransformerConfig):
     dim_qkv: Union[None, int] = None
 
     # Fix num_heads, since dim_qkv is not fixed
-    num_heads: int = 8
+    num_heads: int = 12
 
     head_scale_size: int = 2
 
