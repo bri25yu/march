@@ -84,7 +84,7 @@ class LayerNorm(TransformerComponentBase):
     def __init__(self, config: TransformerConfig, eps=1e-6):
         super().__init__(config)
 
-        self.weight: TensorType["D"] = Parameter(FloatTensor((config.dim_model,)))
+        self.weight: TensorType["D"] = Parameter(FloatTensor(config.dim_model,))
         self.variance_epsilon = eps
 
     def init_weights(self) -> None:
