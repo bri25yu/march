@@ -1,3 +1,4 @@
+from typing import Any, Dict
 from transformers import Seq2SeqTrainingArguments
 
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
@@ -20,6 +21,14 @@ from march.models.sparse_seqlen_attention import NoSelfAttentionResidualTransfor
 from march.experiments.baseline import BaselineExperiment
 
 
+def update_with_half_batch_size(training_arguments_dict: Dict[str, Any]) -> Dict[str, Any]:
+    training_arguments_dict["per_device_train_batch_size"] = 32
+    training_arguments_dict["per_device_eval_batch_size"] = 64
+    training_arguments_dict["gradient_accumulation_steps"] = 4
+
+    return training_arguments_dict
+
+
 class MoreHeadsLessLayersExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(num_layers=4, num_heads=16)
@@ -29,10 +38,7 @@ class MoreHeadsLessLayersExperiment(BaselineExperiment):
 class MoreHeadsLessQKVDimExperiment(BaselineExperiment):
     def get_training_arguments(self) -> Seq2SeqTrainingArguments:
         default_training_arguments = self.load_default_training_arguments()
-
-        default_training_arguments["per_device_train_batch_size"] = 32
-        default_training_arguments["per_device_eval_batch_size"] = 64
-        default_training_arguments["gradient_accumulation_steps"] = 4
+        default_training_arguments = update_with_half_batch_size(default_training_arguments)
 
         return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
 
@@ -95,6 +101,12 @@ class DatabaseFromLayersExperiment(BaselineExperiment):
 
 
 class DatabaseFromDimExperiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments = update_with_half_batch_size(default_training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
     def get_model(self) -> TransformerBase:
         config = DatabaseTransformerConfig(dim_model=448)
         config.num_database_states = config.dim_model * (config.num_layers // 2)
@@ -103,6 +115,12 @@ class DatabaseFromDimExperiment(BaselineExperiment):
 
 
 class DatabaseExperiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments = update_with_half_batch_size(default_training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
     def get_model(self) -> TransformerBase:
         config = DatabaseTransformerConfig()
         config.num_database_states = config.dim_model
@@ -110,6 +128,12 @@ class DatabaseExperiment(BaselineExperiment):
 
 
 class DatabaseFromHeads2Experiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments = update_with_half_batch_size(default_training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
     def get_model(self) -> TransformerBase:
         config = DatabaseTransformerConfig()
         config.num_database_states = config.dim_model
@@ -131,6 +155,12 @@ class APEUnitVarianceExperiment(BaselineExperiment):
 
 
 class MoreHeadsLessQKVDimLessLayersExperiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments = update_with_half_batch_size(default_training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(dim_qkv=32, num_layers=4, num_heads=24)
         return APEUnitVarianceTransformer(config)
