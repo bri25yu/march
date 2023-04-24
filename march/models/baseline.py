@@ -245,21 +245,17 @@ class BaselineAttention(AttentionBase):
         super().__init__(config, is_cross_attention)
 
         self.w_q = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
+        self.w_k = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
+        self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
         self.w_o = Linear(config.num_heads * config.dim_qkv, config.dim_model, bias=False)
-
-        if not self.is_cross_attention:
-            self.w_k = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
-            self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
 
     def init_weights(self) -> None:
         config = self.config
 
         self.w_q.weight.data.normal_(mean=0.0, std=(config.dim_model * config.dim_qkv) ** -0.5)
+        self.w_k.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
+        self.w_v.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
         self.w_o.weight.data.normal_(mean=0.0, std=(config.num_heads * config.dim_qkv) ** -0.5)
-
-        if not self.is_cross_attention:
-            self.w_k.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
-            self.w_v.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
 
     def forward(
         self,
@@ -271,10 +267,16 @@ class BaselineAttention(AttentionBase):
 
         if not self.is_cross_attention:
             attention_values: List[SequenceInputEmbeds] = self.w_q(input_embeds), self.w_k(input_embeds), self.w_v(input_embeds)
-            query, key, value = list(map(self.reshape_to_head_sensitive, attention_values))
         else:
             key, value = encoder_key_value_states
-            query: SequenceInputEmbeds = self.reshape_to_head_sensitive(self.w_q(input_embeds))
+
+            query: SequenceInputEmbeds = self.w_q(input_embeds)
+            key: SequenceInputEmbeds = self.w_k(self.reshape_to_head_insensitive(key))
+            value: SequenceInputEmbeds = self.w_v(self.reshape_to_head_insensitive(value))
+
+            attention_values: List[SequenceInputEmbeds] = (query, key, value)
+
+        query, key, value = list(map(self.reshape_to_head_sensitive, attention_values))
 
         attention_logits: MultiHeadedAttention = matmul(query, key.transpose(2, 3))
 
