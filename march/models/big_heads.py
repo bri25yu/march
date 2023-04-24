@@ -20,6 +20,7 @@ class BigHeadsTransformerConfig(TransformerConfig):
 
     head_scale_size: int = 2
 
+    dim_w_o_output_size: Union[None, int] = None
     # dim_w_o_output_size :=  num_heads * dim_qkv / dim_w_o_output_scaling
     dim_w_o_output_scaling: int = 1
 
@@ -31,7 +32,7 @@ class BigHeadsTransformerConfig(TransformerConfig):
         if self.dim_feedforward is None:
             self.dim_feedforward = self.dim_model * self.feedforward_scale
 
-        if self.dim_w_o_output_size == 1:
+        if self.dim_w_o_output_size is None:
             self.dim_w_o_output_size = self.num_heads * self.dim_qkv
         else:
             self.dim_w_o_output_size = self.num_heads * self.dim_qkv // self.dim_w_o_output_scaling
