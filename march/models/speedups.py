@@ -10,6 +10,11 @@ from march.models.utils import *
 from march.models.baseline import *
 
 
+def round_for_cuda(dim: int) -> int:
+    # https://twitter.com/cHHillee/status/1630274804795445248
+    return round(dim / 64) * 64
+
+
 class FastAttention(TransformerComponentBase):
     def __init__(self, config: TransformerConfig) -> None:
         super().__init__(config)
@@ -52,7 +57,7 @@ class FastFeedforward(BaselineFeedforward):
     def __init__(self, config: TransformerConfig) -> None:
         TransformerComponentBase.__init__(self, config)
 
-        hidden_dim = round(config.dim_feedforward / 64) * 64
+        hidden_dim = round_for_cuda(config.dim_feedforward)
         self.up_projection = Linear(config.dim_model, hidden_dim, bias=False)
         self.down_projection = Linear(hidden_dim, config.dim_model, bias=False)
 
@@ -148,8 +153,7 @@ class FastTransformerBase(TransformerBase):
 
         self.config = config
 
-        # https://twitter.com/cHHillee/status/1630274804795445248
-        embedding_size = round(VOCAB_SIZE / 64) * 64
+        embedding_size = round_for_cuda(VOCAB_SIZE)
         self.embedding: TensorType["D", "V"] = Linear(config.dim_model, embedding_size, bias=False)
         self.position_encoding = self.POSITION_ENCODING_CLS(config)
 
