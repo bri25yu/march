@@ -83,9 +83,10 @@ class BaselineT5Experiment(BaselineExperiment):
         return model
 
     def get_data_collator(self, tokenizer: PreTrainedTokenizerFast):
-        # Invert the mask for T5 use
+        # Invert the mask for T5, change the pad token id
+
         base_data_collator = DataCollatorForSeq2Seq(tokenizer)
-        bos_token_id = pad_token_id = tokenizer.convert_tokens_to_ids(EOS_TOKEN)
+        bos_token_id = pad_token_id = tokenizer.pad_token_id
         def data_collator(examples):
             for example in examples:
                 example["decoder_input_ids"] = [bos_token_id] + example["labels"][:-1]
