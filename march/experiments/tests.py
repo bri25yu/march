@@ -42,20 +42,18 @@ class MoreHeadsLessLayersExperiment(BaselineExperiment):
         return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
 
     def get_model(self) -> TransformerBase:
-        config = TransformerConfig(
-            num_layers=(TransformerConfig.num_layers * 3) // 4,
-            num_heads=TransformerConfig.num_heads * 2,
-        )
+        config = TransformerConfig()
+        config.num_layers = (config.num_layers * 3) // 4
+        config.num_heads = config.num_heads * 2
         return BaselineTransformer(config)
 
 
 class MoreHeadsLessQKVDimLessLayersExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = TransformerConfig(
-            dim_qkv=TransformerConfig.dim_qkv // 2,
-            num_layers=(TransformerConfig.num_layers * 3) // 4,
-            num_heads=TransformerConfig.num_heads * 4,
-        )
+        config = TransformerConfig()
+        config.dim_qkv = config.dim_qkv // 2
+        config.num_layers = (config.num_layers * 3) // 4
+        config.num_heads = config.num_heads * 4
         return BaselineTransformer(config)
 
 
