@@ -4,8 +4,9 @@ from types import MethodType
 
 from datasets import DatasetDict
 
-from transformers import PreTrainedTokenizerFast, Seq2SeqTrainingArguments, AutoTokenizer, AutoModelForSeq2SeqLM, AutoConfig
+from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, Seq2SeqTrainingArguments, AutoTokenizer, AutoModelForSeq2SeqLM, AutoConfig
 
+from march.tokenization import EOS_TOKEN
 from march.datasets.wikipedia import load_wikipedia_baseline, load_wikipedia_baseline_t5
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
 from march.experiments.base import ExperimentBase
@@ -80,3 +81,20 @@ class BaselineT5Experiment(BaselineExperiment):
         setattr(model, "count_parameters", MethodType(BaselineTransformer.count_parameters, model))
 
         return model
+
+    def get_data_collator(self, tokenizer: PreTrainedTokenizerFast):
+        # Invert the mask for T5 use
+        base_data_collator = DataCollatorForSeq2Seq(tokenizer)
+        bos_token_id = pad_token_id = tokenizer.convert_tokens_to_ids(EOS_TOKEN)
+        def data_collator(examples):
+            for example in examples:
+                example["decoder_input_ids"] = [bos_token_id] + example["labels"][:-1]
+
+            examples = base_data_collator(examples)
+
+            # 0 for should mask, 1 otherwise
+            examples["attention_mask"] = examples["input_ids"] != pad_token_id
+
+            return examples
+
+        return data_collator

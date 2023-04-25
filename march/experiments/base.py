@@ -93,19 +93,7 @@ class ExperimentBase(ABC):
     def load_default_tokenizer(self) -> PreTrainedTokenizerFast:
         return load_tokenizer()
 
-    def train(self) -> None:
-        training_arguments = self.get_training_arguments()
-
-        set_numpy_seed(training_arguments.seed)
-        set_torch_seed(training_arguments.seed)
-
-        with training_arguments.main_process_first():
-            tokenizer = self.load_default_tokenizer()
-            dataset_dict = self.load_dataset_dict(tokenizer)
-            self._validate_dataset_dict(dataset_dict)
-            model = self.get_model()
-            self._call_init_weights(model)
-
+    def get_data_collator(self, tokenizer: PreTrainedTokenizerFast):
         base_data_collator = DataCollatorForSeq2Seq(tokenizer)
         bos_token_id = pad_token_id = tokenizer.convert_tokens_to_ids(EOS_TOKEN)
         def data_collator(examples):
@@ -119,6 +107,22 @@ class ExperimentBase(ABC):
 
             return examples
 
+        return data_collator
+
+    def train(self) -> None:
+        training_arguments = self.get_training_arguments()
+
+        set_numpy_seed(training_arguments.seed)
+        set_torch_seed(training_arguments.seed)
+
+        with training_arguments.main_process_first():
+            tokenizer = self.load_default_tokenizer()
+            dataset_dict = self.load_dataset_dict(tokenizer)
+            self._validate_dataset_dict(dataset_dict)
+            model = self.get_model()
+            self._call_init_weights(model)
+
+        data_collator = self.get_data_collator(tokenizer)
         trainer = CustomLoggingSeq2SeqTrainer(
             model=model,
             args=training_arguments,
