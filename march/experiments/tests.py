@@ -21,16 +21,6 @@ from march.models.speedups import FastTransformer
 from march.experiments.baseline import BaselineExperiment, update_with_half_batch_size
 
 
-class MoreHeadsLessQKVDimLessLayersExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        default_config = TransformerConfig()
-        num_heads = default_config.num_heads * 2
-        dim_qkv = int(default_config.dim_qkv // 1.6)
-        dim_model = dim_qkv * num_heads
-        config = TransformerConfig(num_heads=num_heads,dim_model=dim_model, num_layers=default_config.num_layers // 2)
-        return BaselineTransformer(config)
-
-
 class MoreHeadsLessQKVDimExperiment(BaselineExperiment):
     def get_training_arguments(self) -> Seq2SeqTrainingArguments:
         default_training_arguments = self.load_default_training_arguments()
@@ -39,18 +29,38 @@ class MoreHeadsLessQKVDimExperiment(BaselineExperiment):
         return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
 
     def get_model(self) -> TransformerBase:
-        default_config = TransformerConfig()
-        num_heads = default_config.num_heads * 2
-        dim_qkv = int(default_config.dim_qkv // 2.5)
-        dim_model = dim_qkv * num_heads
-        config = TransformerConfig(num_heads=num_heads,dim_model=dim_model)
+        config = TransformerConfig(dim_qkv=TransformerConfig.dim_qkv // 2)
+        return BaselineTransformer(config)
+
+
+class MoreHeadsLessLayersExperiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments = update_with_half_batch_size(default_training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig(
+            num_layers=(TransformerConfig.num_layers * 3) // 4,
+            num_heads=TransformerConfig.num_heads * 2,
+        )
+        return BaselineTransformer(config)
+
+
+class MoreHeadsLessQKVDimLessLayersExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig(
+            dim_qkv=TransformerConfig.dim_qkv // 2,
+            num_layers=(TransformerConfig.num_layers * 3) // 4,
+            num_heads=TransformerConfig.num_heads * 4,
+        )
         return BaselineTransformer(config)
 
 
 class LessHeadsMoreQKVDimExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        default_config = TransformerConfig()
-        config = TransformerConfig(dim_qkv=default_config.dim_qkv * 2)
+        config = TransformerConfig(dim_qkv=TransformerConfig.dim_qkv * 2)
         return BaselineTransformer(config)
 
 
@@ -152,19 +162,6 @@ class APESumOverAverageExperiment(BaselineExperiment):
 class APEUnitVarianceExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
-        return APEUnitVarianceTransformer(config)
-
-
-class MoreHeadsLessLayersExperiment(BaselineExperiment):
-    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
-        default_training_arguments = self.load_default_training_arguments()
-        default_training_arguments = update_with_half_batch_size(default_training_arguments)
-
-        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
-
-    def get_model(self) -> TransformerBase:
-        default_config = TransformerConfig()
-        config = TransformerConfig(num_heads=int(default_config.num_heads * 3.4), num_layers=default_config.num_layers // 2)
         return APEUnitVarianceTransformer(config)
 
 
