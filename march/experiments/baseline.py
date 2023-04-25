@@ -1,5 +1,7 @@
 from typing import Any, Dict
 
+from types import MethodType
+
 from datasets import DatasetDict
 
 from transformers import PreTrainedTokenizerFast, Seq2SeqTrainingArguments, AutoTokenizer, AutoModelForSeq2SeqLM, AutoConfig
@@ -75,6 +77,6 @@ class BaselineT5Experiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = AutoConfig.from_pretrained(self.MODEL_NAME)
         model = AutoModelForSeq2SeqLM.from_config(config)
-        setattr(model, "count_parameters", BaselineTransformer.count_parameters)
+        setattr(model, "count_parameters", MethodType(BaselineTransformer.count_parameters, model))
 
         return model
