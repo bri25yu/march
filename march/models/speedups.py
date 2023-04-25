@@ -44,7 +44,7 @@ class FastAttention(TransformerComponentBase):
         else:  # Self attention
             key = value = input_embeds
 
-        attention_output = self.attention(
+        attention_output, _ = self.attention(
             query=input_embeds, key=key, value=value,
             key_padding_mask=attention_mask, is_causal=attention_mask is None,
             need_weights=False,
