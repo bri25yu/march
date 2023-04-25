@@ -30,8 +30,8 @@ class FastAttention(TransformerComponentBase):
     def init_weights(self) -> None:
         config = self.config
 
-        self.attention.in_proj_weight.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
-        self.attention.out_proj.weight.data.normal(mean=0.0, std=(config.num_heads * config.dim_qkv) ** -0.5)
+        self.attention.in_proj_weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
+        self.attention.out_proj.data.normal(mean=0.0, std=(config.num_heads * config.dim_qkv) ** -0.5)
 
     def forward(
         self,
