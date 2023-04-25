@@ -20,9 +20,13 @@ from march.models.sparse_seqlen_attention import NoSelfAttentionResidualTransfor
 from march.experiments.baseline import BaselineExperiment, update_with_half_batch_size
 
 
-class MoreHeadsLessLayersExperiment(BaselineExperiment):
+class MoreHeadsLessQKVDimLessLayersExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = TransformerConfig(num_layers=4, num_heads=16)
+        default_config = TransformerConfig()
+        num_heads = default_config.num_heads * 2
+        dim_qkv = int(default_config.dim_qkv // 1.6)
+        dim_model = dim_qkv * num_heads
+        config = TransformerConfig(num_heads=num_heads,dim_model=dim_model, num_layers=default_config.num_layers // 2)
         return BaselineTransformer(config)
 
 
@@ -34,13 +38,18 @@ class MoreHeadsLessQKVDimExperiment(BaselineExperiment):
         return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
 
     def get_model(self) -> TransformerBase:
-        config = TransformerConfig(dim_qkv=32)
+        default_config = TransformerConfig()
+        num_heads = default_config.num_heads * 2
+        dim_qkv = int(default_config.dim_qkv // 2.5)
+        dim_model = dim_qkv * num_heads
+        config = TransformerConfig(num_heads=num_heads,dim_model=dim_model)
         return BaselineTransformer(config)
 
 
 class LessHeadsMoreQKVDimExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = TransformerConfig(dim_qkv=128)
+        default_config = TransformerConfig()
+        config = TransformerConfig(dim_qkv=default_config.dim_qkv * 2)
         return BaselineTransformer(config)
 
 
@@ -145,7 +154,7 @@ class APEUnitVarianceExperiment(BaselineExperiment):
         return APEUnitVarianceTransformer(config)
 
 
-class MoreHeadsLessQKVDimLessLayersExperiment(BaselineExperiment):
+class MoreHeadsLessLayersExperiment(BaselineExperiment):
     def get_training_arguments(self) -> Seq2SeqTrainingArguments:
         default_training_arguments = self.load_default_training_arguments()
         default_training_arguments = update_with_half_batch_size(default_training_arguments)
@@ -153,7 +162,8 @@ class MoreHeadsLessQKVDimLessLayersExperiment(BaselineExperiment):
         return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
 
     def get_model(self) -> TransformerBase:
-        config = TransformerConfig(dim_qkv=32, num_layers=4, num_heads=24)
+        default_config = TransformerConfig()
+        config = TransformerConfig(num_heads=int(default_config.num_heads * 3.4), num_layers=default_config.num_layers // 2)
         return APEUnitVarianceTransformer(config)
 
 
@@ -254,55 +264,49 @@ class BigHeadsNoW_oExperiment(BaselineExperiment):
 
 class ReLUGatedLinearUnitExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        dim_model = 512
-        dim_feedforward = ((dim_model * 4) * 2) // 3
+        feedforward_scale = 4 * 2 / 3
         config = GatedLinearUnitTransformerConfig(
-            dim_model=dim_model, dim_feedforward=dim_feedforward, gate_fn=GateFunctions.RELU
+            feedforward_scale=feedforward_scale, gate_fn=GateFunctions.RELU
         )
         return GatedLinearUnitTransformer(config)
 
 
 class GELUGatedLinearUnitExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        dim_model = 512
-        dim_feedforward = ((dim_model * 4) * 2) // 3
+        feedforward_scale = 4 * 2 / 3
         config = GatedLinearUnitTransformerConfig(
-            dim_model=dim_model, dim_feedforward=dim_feedforward, gate_fn=GateFunctions.GELU
+            feedforward_scale=feedforward_scale, gate_fn=GateFunctions.GELU
         )
         return GatedLinearUnitTransformer(config)
 
 
 class SiLUGatedLinearUnitExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        dim_model = 512
-        dim_feedforward = ((dim_model * 4) * 2) // 3
+        feedforward_scale = 4 * 2 / 3
         config = GatedLinearUnitTransformerConfig(
-            dim_model=dim_model, dim_feedforward=dim_feedforward, gate_fn=GateFunctions.SILU
+            feedforward_scale=feedforward_scale, gate_fn=GateFunctions.SILU
         )
         return GatedLinearUnitTransformer(config)
 
 
 class MixedActExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        dim_model = 512
-        dim_feedforward = ((dim_model * 4) * 2) // 3
-        config = TransformerConfig(dim_model=dim_model, dim_feedforward=dim_feedforward)
+        feedforward_scale = 4 * 2 / 3
+        config = TransformerConfig(feedforward_scale=feedforward_scale)
         return MixedActTransformer(config)
 
 
 class MixedActSumOverMeanExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        dim_model = 512
-        dim_feedforward = ((dim_model * 4) * 2) // 3
-        config = TransformerConfig(dim_model=dim_model, dim_feedforward=dim_feedforward)
+        feedforward_scale = 4 * 2 / 3
+        config = TransformerConfig(feedforward_scale=feedforward_scale)
         return MixedActSumOverMeanTransformer(config)
 
 
 class MixedActSOMDropoutExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        dim_model = 512
-        dim_feedforward = ((dim_model * 4) * 2) // 3
-        config = TransformerConfig(dim_model=dim_model, dim_feedforward=dim_feedforward)
+        feedforward_scale = 4 * 2 / 3
+        config = TransformerConfig(feedforward_scale=feedforward_scale)
         return MixedActSOMDropoutTransformer(config)
 
 

@@ -48,7 +48,7 @@ class TransformerConfig(PretrainedConfig):
     num_layers: int = 24
     dim_qkv: int = 64
 
-    feedforward_scale: int = 4
+    feedforward_scale: Union[float, int] = 4
     dim_feedforward: Union[None, int] = None
     num_heads: Union[None, int] = None
     dropout_prob: float = 0.1
@@ -59,7 +59,7 @@ class TransformerConfig(PretrainedConfig):
             self.num_heads = self.dim_model // self.dim_qkv
 
         if self.dim_feedforward is None:
-            self.dim_feedforward = self.dim_model * self.feedforward_scale
+            self.dim_feedforward = int(self.dim_model * self.feedforward_scale)
 
 
 class TransformerComponentBase(Module):
@@ -127,14 +127,19 @@ class AttentionBase(TransformerComponentBase):
         config = self.config
 
         batch_size, sequence_length = input_embeds.size()[0], input_embeds.size()[1]
+
+        # Input embeds reshape to shape (N, L, H, D_kv) from (N, L, (H * D_kv))
         input_embeds = input_embeds.reshape(batch_size, sequence_length, config.num_heads, config.dim_qkv)
+        # Permute to shape (N, H, L, D_kv)
         input_embeds = input_embeds.permute(0, 2, 1, 3)
 
         return input_embeds
 
     def reshape_to_head_insensitive(self, input_embeds: MultiHeadedEmbeds) -> SequenceInputEmbeds:
+        # input_embeds input format (batch_size, num_heads, sequence_length, dim_qkv) (N, H, L, D_kv)
+        # permute to (N, L, H, D_kv)
         input_embeds = input_embeds.permute(0, 2, 1, 3)
         batch_size, sequence_length = input_embeds.size()[0], input_embeds.size()[1]
+        # reshape to (N, L, (H * D_kv))
         input_embeds = input_embeds.reshape(batch_size, sequence_length, -1)
-
         return input_embeds.contiguous()
