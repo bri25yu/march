@@ -48,6 +48,15 @@ class FastAttention(TransformerComponentBase):
         return AttentionOutput(attention_output, input_embeds)
 
 
+class FastFeedforward(BaselineFeedforward):
+    def __init__(self, config: TransformerConfig) -> None:
+        TransformerComponentBase.__init__(self, config)
+
+        hidden_dim = round(config.dim_feedforward / 64) * 64
+        self.up_projection = Linear(config.dim_model, hidden_dim, bias=False)
+        self.down_projection = Linear(hidden_dim, config.dim_model, bias=False)
+
+
 class FastEncoderBase(EncoderBase):
     def __init__(self, config: TransformerConfig) -> None:
         TransformerComponentBase.__init__(self, config)
@@ -179,12 +188,12 @@ class FastTransformerBase(TransformerBase):
 
 class FastEncoder(FastEncoderBase):
     ATTENTION_CLS = FastAttention
-    FEEDFORWARD_CLS = BaselineFeedforward
+    FEEDFORWARD_CLS = FastFeedforward
 
 
 class FastDecoder(FastDecoderBase):
     ATTENTION_CLS = FastAttention
-    FEEDFORWARD_CLS = BaselineFeedforward
+    FEEDFORWARD_CLS = FastFeedforward
 
 
 class FastTransformer(FastTransformerBase):
