@@ -245,17 +245,27 @@ class BaselineAttention(AttentionBase):
         super().__init__(config, is_cross_attention)
 
         self.w_q = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
-        self.w_k = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
-        self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
         self.w_o = Linear(config.num_heads * config.dim_qkv, config.dim_model, bias=False)
+
+        if self.is_cross_attention:
+            self.w_k = Linear(config.num_heads * config.dim_qkv, config.num_heads * config.dim_qkv, bias=False)
+            self.w_v = Linear(config.num_heads * config.dim_qkv, config.num_heads * config.dim_qkv, bias=False)
+        else:
+            self.w_k = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
+            self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
 
     def init_weights(self) -> None:
         config = self.config
 
         self.w_q.weight.data.normal_(mean=0.0, std=(config.dim_model * config.dim_qkv) ** -0.5)
-        self.w_k.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
-        self.w_v.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
         self.w_o.weight.data.normal_(mean=0.0, std=(config.num_heads * config.dim_qkv) ** -0.5)
+
+        if self.is_cross_attention:
+            self.w_k.weight.data.normal_(mean=0.0, std=(config.num_heads * config.dim_qkv) ** -0.5)
+            self.w_v.weight.data.normal_(mean=0.0, std=(config.num_heads * config.dim_qkv) ** -0.5)
+        else:
+            self.w_k.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
+            self.w_v.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
 
     def forward(
         self,
