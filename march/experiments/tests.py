@@ -16,6 +16,7 @@ from march.models.mixed_act import (
     MixedActSOMDropoutTransformer,
 )
 from march.models.sparse_seqlen_attention import NoSelfAttentionResidualTransformer
+from march.models.speedups import FastTransformer
 
 from march.experiments.baseline import BaselineExperiment, update_with_half_batch_size
 
@@ -314,3 +315,9 @@ class NoSelfAttentionResidualExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
         return NoSelfAttentionResidualTransformer(config)
+
+
+class FastTransformerExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        return FastTransformer(config)
