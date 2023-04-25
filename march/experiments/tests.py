@@ -15,6 +15,7 @@ from march.models.mixed_act import (
     MixedActSumOverMeanTransformer,
     MixedActSOMDropoutTransformer,
 )
+from march.models.no_key_value_weights_cross_attn import NoKeyValueWeightsCrossAttentionTransformer
 from march.models.sparse_seqlen_attention import NoSelfAttentionResidualTransformer
 from march.models.speedups import FastTransformer
 
@@ -318,3 +319,10 @@ class FastTransformerExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
         return FastTransformer(config)
+
+
+# Remove w_k and w_v from cross attention in the decoder
+class NoKeyValueWeightsCrossAttentionExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        return NoKeyValueWeightsCrossAttentionTransformer(config)
