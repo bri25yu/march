@@ -65,16 +65,16 @@ class BigHeadsFeedforward(BaselineFeedforward):
         self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False)
 
 
-class BigHeadsEncoderBase(EncoderBase):
+class BigHeadsEncoder(EncoderBase):
     ATTENTION_CLS = BigHeadsAttention
     FEEDFORWARD_CLS = BigHeadsFeedforward
 
 
-class BigHeadsDecoderBase(DecoderBase):
+class BigHeadsDecoder(DecoderBase):
     ATTENTION_CLS = BigHeadsAttention
     FEEDFORWARD_CLS = BigHeadsFeedforward
 
 
 class BigHeadsTransformer(BaselineTransformer):
-    ENCODER_CLS = BigHeadsEncoderBase
-    DECODER_CLS = BigHeadsDecoderBase
+    ENCODER_CLS = BigHeadsEncoder
+    DECODER_CLS = BigHeadsDecoder

@@ -18,6 +18,7 @@ from march.models.mixed_act import (
 from march.models.no_key_value_weights_cross_attn import NoKeyValueWeightsCrossAttentionTransformer
 from march.models.sparse_seqlen_attention import NoSelfAttentionResidualTransformer
 from march.models.speedups import FastTransformer
+from march.models.TPWeights import TPWeightsTransformer
 
 from march.experiments.baseline import BaselineExperiment, update_with_half_batch_size
 
@@ -326,3 +327,9 @@ class NoKeyValueWeightsCrossAttentionExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
         return NoKeyValueWeightsCrossAttentionTransformer(config)
+
+
+class TPWeightsExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig(dim_model=720,num_heads=12)
+        return TPWeightsTransformer(config)
