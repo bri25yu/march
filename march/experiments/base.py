@@ -25,9 +25,10 @@ class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
         modules_by_cls = lambda cls: [module for module in self.model.modules() if isinstance(module, cls)]
 
         layernorm_modules = modules_by_cls(LayerNorm)
-        logs["layernorm_mean"] = sum([m.weight.data.mean() for m in layernorm_modules]).item() / len(layernorm_modules)
-        logs["layernorm_max"] = sum([m.weight.data.max() for m in layernorm_modules]).item() / len(layernorm_modules)
-        logs["layernorm_min"] = sum([m.weight.data.min() for m in layernorm_modules]).item() / len(layernorm_modules)
+        if len(layernorm_modules) > 0:
+            logs["layernorm_mean"] = sum([m.weight.data.mean() for m in layernorm_modules]).item() / len(layernorm_modules)
+            logs["layernorm_max"] = sum([m.weight.data.max() for m in layernorm_modules]).item() / len(layernorm_modules)
+            logs["layernorm_min"] = sum([m.weight.data.min() for m in layernorm_modules]).item() / len(layernorm_modules)
 
         attention_modules = modules_by_cls(AttentionBase)
         def get_attn_weight_mean(weight_name: str) -> float:
@@ -36,13 +37,17 @@ class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
                 return sum(weights).item() / len(attention_modules)
             return 0.0
 
-        logs["attention_w_q_mean"] = get_attn_weight_mean("w_q")
-        logs["attention_w_k_mean"] = get_attn_weight_mean("w_k")
-        logs["attention_w_v_mean"] = get_attn_weight_mean("w_v")
-        logs["attention_w_o_mean"] = get_attn_weight_mean("w_o")
+        if len(attention_modules) > 0:
+            logs["attention_w_q_mean"] = get_attn_weight_mean("w_q")
+            logs["attention_w_k_mean"] = get_attn_weight_mean("w_k")
+            logs["attention_w_v_mean"] = get_attn_weight_mean("w_v")
+            logs["attention_w_o_mean"] = get_attn_weight_mean("w_o")
 
-        logs["position_encoding_mean"] = self.model.position_encoding.timing_table.data.mean().item()
-        logs["embedding_mean"] = self.model.embedding.weight.data.mean().item()
+        if hasattr(self.model, "position_encoding"):
+            logs["position_encoding_mean"] = self.model.position_encoding.timing_table.data.mean().item()
+
+        if hasattr(self.model, "embedding"):
+            logs["embedding_mean"] = self.model.embedding.weight.data.mean().item()
 
         return super().log(logs)
 
