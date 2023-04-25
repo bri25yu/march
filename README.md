@@ -25,6 +25,12 @@ We train models for 1000 steps, enough for the models to start learning and to m
 # Results
 More heads better (over number of layers, QKV dim, which layer), GLU better
 
+## Our re-implementation compared to T5-base baseline
+Our re-implementation has two differences compared to the T5-base baseline:
+1. We use absolute position embeddings while T5 uses relative attention position embeddings.
+    - Our position encodings require more parameters. For a max sequence length of 1024 and a dim_model of 768, we need 1024 * 768 ~ 800k parameters. For a relative attention num buckets of 32 and num_heads of 12, T5 uses 32 * 12 ~ 400 parameters.
+2. Our tokenizer is trained only on wikitext-103 which transfers tokenization benefits to the training wikipedia dataset. This results in more efficient representations per token for our model and more productive training.
+
 ## More heads
 Less layers - num layers from 6 to 4, num heads from 8 to 16. Slightly better, slightly faster, slightly more unstable (?)
 
