@@ -327,6 +327,21 @@ class NoKeyValueWeightsCrossAttentionExperiment(BaselineExperiment):
         return NoKeyValueWeightsCrossAttentionTransformer(config)
 
 
+class NoKeyValueWeightsCrossAttentionWithExtraHeadsExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        config.num_heads += 2
+        return NoKeyValueWeightsCrossAttentionTransformer(config)
+
+
+class NoKeyValueWeightsCrossAttentionWithExtraDimExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        config.dim_model += config.num_heads * 2
+        config.dim_qkv += 2
+        return NoKeyValueWeightsCrossAttentionTransformer(config)
+
+
 class TPWeightsExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(dim_model=720,num_heads=12,dim_qkv=720//12)
