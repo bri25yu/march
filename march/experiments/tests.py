@@ -110,12 +110,6 @@ class DatabaseFromLayersExperiment(BaselineExperiment):
 
 
 class DatabaseFromDimExperiment(BaselineExperiment):
-    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
-        default_training_arguments = self.load_default_training_arguments()
-        default_training_arguments = update_with_half_batch_size(default_training_arguments)
-
-        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
-
     def get_model(self) -> TransformerBase:
         config = DatabaseTransformerConfig()
         config.dim_model -= 64 * 3
