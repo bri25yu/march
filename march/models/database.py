@@ -13,6 +13,47 @@ class DatabaseTransformerConfig(TransformerConfig):
     num_database_states: int = 512
 
 
+class NoCrossAttnKeyValueWeightsAttention(BaselineAttention):
+    def forward(
+        self,
+        input_embeds: SequenceInputEmbeds,
+        attention_mask: SequenceInputIds=None,
+        encoder_key_value_states: KeyValueStates=None,
+    ) -> AttentionOutput:
+        config = self.config
+
+        if not self.is_cross_attention:
+            attention_values: List[SequenceInputEmbeds] = self.w_q(input_embeds), self.w_k(input_embeds), self.w_v(input_embeds)
+            query, key, value = list(map(self.reshape_to_head_sensitive, attention_values))
+        else:
+            key, value = encoder_key_value_states
+            query: SequenceInputEmbeds = self.reshape_to_head_sensitive(self.w_q(input_embeds))
+
+        attention_logits: MultiHeadedAttention = matmul(query, key.transpose(2, 3))
+
+        if attention_mask is not None:
+            if len(attention_mask.size()) == 2:
+                query_length = 1
+                batch_size, key_length = attention_mask.size()
+            elif len(attention_mask.size()) == 3:
+                batch_size, query_length, key_length = attention_mask.size()
+
+            attention_mask = attention_mask.reshape(batch_size, 1, query_length, key_length)
+            attention_mask = attention_mask.to(attention_logits.dtype) * finfo(attention_logits.dtype).min
+            attention_logits: MultiHeadedAttention = attention_logits + attention_mask
+
+        attention_probs: MultiHeadedAttention = attention_logits.softmax(dim=3)
+        attention_probs: MultiHeadedAttention = dropout(attention_probs, p=config.dropout_prob, training=self.training)
+
+        attention_values: MultiHeadedEmbeds = matmul(attention_probs, value)
+
+        attention_values: SequenceInputEmbeds = self.reshape_to_head_insensitive(attention_values)
+
+        attention_output: SequenceInputEmbeds = self.w_o(attention_values)
+
+        return AttentionOutput(attention_output, (key, value))
+
+
 class DatabaseEncoderBase(EncoderBase):
     def __init__(self, config: TransformerConfig) -> None:
         TransformerComponentBase.__init__(self, config)
@@ -124,12 +165,12 @@ class DatabaseDecoderBase(DecoderBase):
 
 
 class DatabaseEncoder(DatabaseEncoderBase):
-    ATTENTION_CLS = BaselineAttention
+    ATTENTION_CLS = NoCrossAttnKeyValueWeightsAttention
     FEEDFORWARD_CLS = BaselineFeedforward
 
 
 class DatabaseDecoder(DatabaseDecoderBase):
-    ATTENTION_CLS = BaselineAttention
+    ATTENTION_CLS = NoCrossAttnKeyValueWeightsAttention
     FEEDFORWARD_CLS = BaselineFeedforward
 
 
