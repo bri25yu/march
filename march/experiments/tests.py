@@ -224,6 +224,13 @@ class BigHeadsNoW_oExperiment(BaselineExperiment):
 # instead of concatenation
 
 
+# TODO Pooling strategy 
+
+
+# TODO Big heads reduce the number of heads instead of hidden dimensions
+# TODO Big heads reduce the number 
+
+
 class ReLUGatedLinearUnitExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         feedforward_scale = 4 * 2 / 3
@@ -308,5 +315,5 @@ class NoKeyValueWeightsCrossAttentionWithExtraDimExperiment(BaselineExperiment):
 
 class TPWeightsExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = TransformerConfig(dim_model=720,num_heads=12,dim_qkv=720//12)
+        config = TransformerConfig(dim_model=732,num_heads=12,dim_qkv=732//12)
         return TPWeightsTransformer(config)
