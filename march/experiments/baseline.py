@@ -46,26 +46,6 @@ class BaselineFP32Experiment(BaselineExperiment):
         return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
 
 
-class BestExperiment(BaselineExperiment):
-    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
-        default_training_arguments = self.load_default_training_arguments()
-
-        target_total_batch_size = 64 * 16
-        train_batch_size = 4
-        assert target_total_batch_size % train_batch_size == 0
-        gradient_accumulation_steps = target_total_batch_size // train_batch_size
-
-        default_training_arguments["per_device_train_batch_size"] = train_batch_size
-        default_training_arguments["per_device_eval_batch_size"] = train_batch_size * 2
-        default_training_arguments["gradient_accumulation_steps"] = gradient_accumulation_steps
-
-        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
-
-    def get_model(self) -> TransformerBase:
-        config = TransformerConfig(dim_model=1024, num_layers=48)  # Match t5-large
-        return BaselineTransformer(config)
-
-
 class BaselineT5Experiment(BaselineExperiment):
     MODEL_NAME = "t5-base"
 
@@ -99,3 +79,46 @@ class BaselineT5Experiment(BaselineExperiment):
             return examples
 
         return data_collator
+
+
+def modify_training_args_for_large_exp(training_arguments: Dict[str, Any]) -> Dict[str, Any]:
+    initial_batch_size = training_arguments["per_device_train_batch_size"]
+    initial_ga_steps = training_arguments["gradient_accumulation_steps"]
+    initial_examples_per_gpu = initial_batch_size * initial_ga_steps
+
+    new_examples_per_gpu = initial_examples_per_gpu * 4  # 1k steps is 4B tokens
+    new_batch_size = initial_batch_size // 4  # Lower the batch size for larger model
+    new_ga_steps = new_examples_per_gpu // 4
+
+    training_arguments.update({
+        "per_device_train_batch_size": new_batch_size,
+        "per_device_eval_batch_size": new_batch_size * 2,
+        "gradient_accumulation_steps": new_ga_steps,
+    })
+
+    return training_arguments
+
+
+class BaselineT5LargeExperiment(BaselineT5Experiment):
+    MODEL_NAME = "t5-large"
+
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        training_arguments = self.load_default_training_arguments()
+        training_arguments = modify_training_args_for_large_exp(training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **training_arguments)
+
+
+class BaselineLargeExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig(
+            dim_model=1024,
+            num_layers=48,
+        )
+        return BaselineTransformer(config)
+
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        training_arguments = self.load_default_training_arguments()
+        training_arguments = modify_training_args_for_large_exp(training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **training_arguments)
