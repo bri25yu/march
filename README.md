@@ -52,14 +52,27 @@ Different recombinations of input and output for position encoding. Generally wo
 ## GatedLinearUnit experiments
 All slightly better than the baseline and slightly more expensive.
 
-# Mixed Act
+## Mixed Act
 All slightly worse than the baseline, slightly more varied. 
 
-# No Self-Attention residual
+## No Self-Attention residual
 Makes training significantly worse and more varied, maybe we shouldn't sparsify attention with no residual
 
-# Database experiments
+## Database experiments
 Interesting idea, but not better in its current instantiation.
 
-# Unified attention
+## Unified attention
 Not very good, much less modeling capacity
+
+# Ideas TODO
+Sequence length reduction idea, every attention layer has (N, L, D) input but outputs (N, L, D_\prime). How would attention residuals work? No residuals on self attention with a deep network is disastrous. Maybe add a no-op in the keys and values? Have a zero value vector and a some corresponding key vector. The key vector could be learned or fixed. Previous work has tried zero key and zero value, but this is incorrect for bias-less models. Also a little bit hard to imagine for models with bias since in the softmax the dot product is 0. Would also be a crazy speedup
+
+Position encoding -- implement T5 relative attention encoding and rotary embeddings. 
+
+Run baseline on larger models, both T5 and custom implementation. 
+
+Albert -- one big boy layer multiple times.
+
+Encoder/decoder vs decoder-only paradigm. Would need a tad bit of dataset work for decoder-only, but it's just converting from text to tokens.
+
+Bottlenecks -- force model summarization in not the L dim but the D dim. Could go from something like 768 to 384 to 192 layer by layer or even the inverse. 768 is a huge representation for a single token. Maybe have the scaled up dims the same i.e. attention is still the same 768 = 12 heads by 64 qkv dim but the intermediate dim is like 192 and feedforward is the same 192 to 768 * 4 and back down to 192. 
