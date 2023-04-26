@@ -97,16 +97,14 @@ class InverseScalingHeadsConstantExperiment(BaselineExperiment):
 class DatabaseFromHeadsExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = DatabaseTransformerConfig()
-        config.num_database_states = config.dim_model * (config.num_layers // 2)
-
-        config.num_heads = config.num_heads // 2
+        config.num_heads = config.num_heads - 4
         return DatabaseTransformer(config)
 
 
 class DatabaseFromLayersExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = DatabaseTransformerConfig(num_layers=4)
-        config.num_database_states = config.dim_model * (config.num_layers // 2)
+        config = DatabaseTransformerConfig()
+        config.num_layers -= 6
 
         return DatabaseTransformer(config)
 
@@ -119,37 +117,9 @@ class DatabaseFromDimExperiment(BaselineExperiment):
         return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
 
     def get_model(self) -> TransformerBase:
-        config = DatabaseTransformerConfig(dim_model=448)
-        config.num_database_states = config.dim_model * (config.num_layers // 2)
-
-        return DatabaseTransformer(config)
-
-
-class DatabaseExperiment(BaselineExperiment):
-    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
-        default_training_arguments = self.load_default_training_arguments()
-        default_training_arguments = update_with_half_batch_size(default_training_arguments)
-
-        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
-
-    def get_model(self) -> TransformerBase:
         config = DatabaseTransformerConfig()
-        config.num_database_states = config.dim_model
-        return DatabaseTransformer(config)
+        config.dim_model -= 64 * 3
 
-
-class DatabaseFromHeads2Experiment(BaselineExperiment):
-    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
-        default_training_arguments = self.load_default_training_arguments()
-        default_training_arguments = update_with_half_batch_size(default_training_arguments)
-
-        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
-
-    def get_model(self) -> TransformerBase:
-        config = DatabaseTransformerConfig()
-        config.num_database_states = config.dim_model
-
-        config.num_heads = config.num_heads - 1
         return DatabaseTransformer(config)
 
 

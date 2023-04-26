@@ -10,7 +10,13 @@ DatabaseKeyValueStates = Tuple[DatabaseState, DatabaseState]
 
 @dataclass
 class DatabaseTransformerConfig(TransformerConfig):
-    num_database_states: int = 512
+    num_database_states: Union[None, int] = None
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+
+        if self.num_database_states is None:
+            self.num_database_states = self.dim_model
 
 
 class NoCrossAttnKeyValueWeightsAttention(BaselineAttention):
