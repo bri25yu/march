@@ -19,6 +19,7 @@ from march.models.no_key_value_weights_cross_attn import NoKeyValueWeightsCrossA
 from march.models.sparse_seqlen_attention import NoSelfAttentionResidualTransformer
 from march.models.speedups import FastTransformer
 from march.models.TPWeights import TPWeightsTransformer
+from march.models.big_heads_pooling import BigHeadsPoolingTransformerConfig, BigHeadsPoolingTransformer
 
 from march.experiments.baseline import BaselineExperiment, update_with_half_batch_size
 
@@ -138,7 +139,21 @@ class APEUnitVarianceExperiment(BaselineExperiment):
 # FF layer D_model -> 4 x D_model -> D_model
 class BigHeadsExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = BigHeadsTransformerConfig(dim_model=648,head_scale_size=2)
+        config = BigHeadsTransformerConfig(dim_model=636,head_scale_size=2)
+        return BaselineTransformer(config)
+
+
+# Same as above but reducing number of layers instead of hidden dimension
+class BigHeadsReduceLayersExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = BigHeadsTransformerConfig(num_layers=16,head_scale_size=2)
+        return BaselineTransformer(config)
+
+
+# Same as above but reducing number of heads in addition to hidden dim
+class BigHeadsReduceNumHeadsExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = BigHeadsTransformerConfig(dim_model=636,num_heads=8,head_scale_size=2)
         return BaselineTransformer(config)
 
 
@@ -160,6 +175,12 @@ class BigHeads3Experiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = BigHeadsTransformerConfig(dim_model=332,head_scale_size=12)
         return BaselineTransformer(config)
+
+
+class BigHeads3PoolingExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = BigHeadsPoolingTransformerConfig(dim_model=332,head_scale_size=12)
+        return BigHeadsPoolingTransformer(config)
 
 
 # Head size D_kv = D_kv_orig x 2 = D_model / 6, scaling down D_model to 564
@@ -223,9 +244,8 @@ class BigHeadsNoW_oExperiment(BaselineExperiment):
 # TODO add different recombination strategy for the heads such as addition for the head recombination
 # instead of concatenation
 
-
-# TODO Pooling strategy 
-
+# TODO Pooling strategy by adding the heads output together
+# Add relu to the w_o output
 
 # TODO Big heads reduce the number of heads instead of hidden dimensions
 # TODO Big heads reduce the number 
@@ -316,4 +336,10 @@ class NoKeyValueWeightsCrossAttentionWithExtraDimExperiment(BaselineExperiment):
 class TPWeightsExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(dim_model=732,num_heads=12,dim_qkv=732//12)
+        return TPWeightsTransformer(config)
+
+
+class TPWeightsReduceLayersExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig(num_layers=22)
         return TPWeightsTransformer(config)

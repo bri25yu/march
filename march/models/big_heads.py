@@ -48,7 +48,10 @@ class BigHeadsAttention(BaselineAttention):
         
         # END big heads attention
 
-        if not self.is_cross_attention:
+        if self.is_cross_attention:
+            self.w_k = Linear(config.num_heads * config.dim_qkv, config.num_heads * config.dim_qkv, bias=False)
+            self.w_v = Linear(config.num_heads * config.dim_qkv, config.num_heads * config.dim_qkv, bias=False)
+        else:
             self.w_k = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
             self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
 
