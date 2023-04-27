@@ -76,3 +76,11 @@ Albert -- one big boy layer multiple times.
 Encoder/decoder vs decoder-only paradigm. Would need a tad bit of dataset work for decoder-only, but it's just converting from text to tokens.
 
 Bottlenecks -- force model summarization in not the L dim but the D dim. Could go from something like 768 to 384 to 192 layer by layer or even the inverse. 768 is a huge representation for a single token. Maybe have the scaled up dims the same i.e. attention is still the same 768 = 12 heads by 64 qkv dim but the intermediate dim is like 192 and feedforward is the same 192 to 768 * 4 and back down to 192. 
+
+# Baseline V2
+
+- [TODO] More hidden dim less layers, generally more ablations on less layers
+- [TODO] Relative position encoding - T5 and rotary
+- GELU-GLU activation in FF
+- Round both embedding and FF layers to multiple of 64
+- No key/value cross attention map
