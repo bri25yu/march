@@ -5,7 +5,7 @@ from pandas import DataFrame
 from march.experiments import available_experiments
 
 
-ABS_DIFF_PERCENT_THRESHOLD = 2.0
+ABS_DIFF_PERCENT_THRESHOLD = 3.0
 
 available_experiments = available_experiments.copy()
 

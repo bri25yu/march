@@ -37,16 +37,10 @@ class MoreHeadsLessQKVDimExperiment(BaselineExperiment):
 
 
 class MoreHeadsLessLayersExperiment(BaselineExperiment):
-    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
-        default_training_arguments = self.load_default_training_arguments()
-        default_training_arguments = update_with_half_batch_size(default_training_arguments)
-
-        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
-
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
-        config.num_layers = (config.num_layers * 2) // 3
-        config.num_heads = config.num_heads * 2
+        config.num_layers = config.num_layers - 2
+        config.num_heads = config.num_heads + 2
         return BaselineTransformer(config)
 
 
@@ -59,8 +53,8 @@ class MoreHeadsLessLayers2Experiment(BaselineExperiment):
 
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
-        config.num_layers = (config.num_layers) // 2
-        config.num_heads = (config.num_heads * 11) // 4
+        config.num_layers = config.num_layers - 4
+        config.num_heads = config.num_heads + 4
         return BaselineTransformer(config)
 
 
@@ -73,8 +67,8 @@ class MoreHeadsLessLayers3Experiment(BaselineExperiment):
 
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
-        config.num_layers = (config.num_layers) // 4
-        config.num_heads = (config.num_heads) * 5
+        config.num_layers = config.num_layers - 8
+        config.num_heads = config.num_heads + 10
         return BaselineTransformer(config)
 
 
@@ -87,8 +81,8 @@ class MoreHeadsLessLayersNoKVExperiment(BaselineExperiment):
 
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
-        config.num_layers = (config.num_layers * 3) // 4
-        config.num_heads = config.num_heads * 2
+        config.num_layers = config.num_layers - 2
+        config.num_heads = config.num_heads + 5
         return NoKeyValueWeightsCrossAttentionTransformer(config)
 
 
@@ -101,8 +95,8 @@ class MoreHeadsLessLayersNoKV2Experiment(BaselineExperiment):
 
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
-        config.num_layers = (config.num_layers) // 2
-        config.num_heads = config.num_heads * 4
+        config.num_layers = config.num_layers - 4
+        config.num_heads = config.num_heads + 9
         return NoKeyValueWeightsCrossAttentionTransformer(config)
 
 
@@ -115,9 +109,42 @@ class MoreHeadsLessLayersNoKV3Experiment(BaselineExperiment):
 
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
-        config.num_layers = (config.num_layers) // 4
-        config.num_heads = config.num_heads * 9
+        config.num_layers = config.num_layers - 8
+        config.num_heads = config.num_heads + 19
         return NoKeyValueWeightsCrossAttentionTransformer(config)
+
+
+class MoreDimLessLayersExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        config.num_layers = config.num_layers - 4
+
+        extra_64 = 1
+        config.dim_model = config.dim_model + 64 * extra_64
+        config.num_heads = config.num_heads + extra_64
+        return BaselineTransformer(config)
+
+
+class MoreDimLessLayers2Experiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        config.num_layers = config.num_layers - 6
+
+        extra_64 = 2
+        config.dim_model = config.dim_model + 64 * extra_64
+        config.num_heads = config.num_heads + extra_64
+        return BaselineTransformer(config)
+
+
+class MoreDimLessLayers3Experiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        config.num_layers = config.num_layers - 10
+
+        extra_64 = 4
+        config.dim_model = config.dim_model + 64 * extra_64
+        config.num_heads = config.num_heads + extra_64
+        return BaselineTransformer(config)
 
 
 class MoreHeadsLessQKVDimLessLayersExperiment(BaselineExperiment):
