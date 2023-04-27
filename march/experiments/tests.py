@@ -19,7 +19,7 @@ from march.models.no_key_value_weights_cross_attn import NoKeyValueWeightsCrossA
 from march.models.sparse_seqlen_attention import NoSelfAttentionResidualTransformer
 from march.models.speedups import FastTransformer
 from march.models.TPWeights import TPWeightsTransformer
-from march.models.big_heads_pooling import BigHeadsPoolingTransformerConfig, BigHeadsPoolingTransformer
+from march.models.big_heads_summed import BigHeadsSummedTransformerConfig, BigHeadsSummedTransformer
 
 from march.experiments.baseline import BaselineExperiment, update_with_half_batch_size
 
@@ -157,6 +157,12 @@ class BigHeadsReduceNumHeadsExperiment(BaselineExperiment):
         return BaselineTransformer(config)
 
 
+class BigHeadsSummedExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = BigHeadsSummedTransformerConfig(dim_model=636,head_scale_size=2)
+        return BigHeadsSummedTransformer(config)
+
+
 # Head size D_kv = D_kv_orig x 6 = D_model / 2, scaling down D_model to 444
 # w_o is from D_kv_orig x 6 x 12 -> D_model
 # AKA w_o is from D_model x 6 -> D_model
@@ -165,6 +171,12 @@ class BigHeads2Experiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = BigHeadsTransformerConfig(dim_model=444,head_scale_size=6)
         return BaselineTransformer(config)
+
+
+class BigHeads2SummedExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = BigHeadsSummedTransformerConfig(dim_model=444,head_scale_size=6)
+        return BigHeadsSummedTransformer(config)
 
 
 # Head size D_kv = D_kv_orig x 12 = D_model, scaling down D_model to 332
@@ -177,10 +189,10 @@ class BigHeads3Experiment(BaselineExperiment):
         return BaselineTransformer(config)
 
 
-class BigHeads3PoolingExperiment(BaselineExperiment):
+class BigHeads3SummedExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = BigHeadsPoolingTransformerConfig(dim_model=332,head_scale_size=12)
-        return BigHeadsPoolingTransformer(config)
+        config = BigHeadsSummedTransformerConfig(dim_model=332,head_scale_size=12)
+        return BigHeadsSummedTransformer(config)
 
 
 # Head size D_kv = D_kv_orig x 2 = D_model / 6, scaling down D_model to 564
@@ -244,7 +256,6 @@ class BigHeadsNoW_oExperiment(BaselineExperiment):
 # TODO add different recombination strategy for the heads such as addition for the head recombination
 # instead of concatenation
 
-# TODO Pooling strategy by adding the heads output together
 # Add relu to the w_o output
 
 # TODO Big heads reduce the number of heads instead of hidden dimensions
