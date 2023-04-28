@@ -64,6 +64,12 @@ Interesting idea, but not better in its current instantiation.
 ## Unified attention
 Not very good, much less modeling capacity
 
+## Big heads
+Bigheads3 experiment -- perhaps too poorly conditioned, possible to revisit and improve.
+
+## Baseline Large
+The relative patterning of experiments stays the same when moving from the base exps 220M params to the large exps 740M params, very cool to see. 
+
 # Ideas TODO
 Sequence length reduction idea, every attention layer has (N, L, D) input but outputs (N, L, D_\prime). How would attention residuals work? No residuals on self attention with a deep network is disastrous. Maybe add a no-op in the keys and values? Have a zero value vector and a some corresponding key vector. The key vector could be learned or fixed. Previous work has tried zero key and zero value, but this is incorrect for bias-less models. Also a little bit hard to imagine for models with bias since in the softmax the dot product is 0. Would also be a crazy speedup
 
