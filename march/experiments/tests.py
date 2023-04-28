@@ -267,7 +267,7 @@ class MoreHeadsMoreDimLessLayers3Experiment(BaselineExperiment):
 
         less_layers = 14
         extra_64 = 3
-        extra_num_heads = 14
+        extra_num_heads = 15
 
         config.num_layers = config.num_layers - less_layers
 
@@ -294,6 +294,12 @@ class MoreHeadsMoreDimLessLayers4Experiment(BaselineExperiment):
 
 
 class MoreHeadsMoreDimLessLayers5Experiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments = update_with_double_batch_size(default_training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
 
