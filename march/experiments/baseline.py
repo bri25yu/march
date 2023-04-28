@@ -12,6 +12,17 @@ from march.models.baseline import TransformerBase, BaselineTransformer, Transfor
 from march.experiments.base import ExperimentBase
 
 
+def update_with_double_batch_size(training_arguments_dict: Dict[str, Any]) -> Dict[str, Any]:
+    original_batch_size = training_arguments_dict["per_device_train_batch_size"]
+    original_grad_accumulation = training_arguments_dict["gradient_accumulation_steps"]
+
+    training_arguments_dict["per_device_train_batch_size"] = original_batch_size * 2
+    training_arguments_dict["per_device_eval_batch_size"] = original_batch_size
+    training_arguments_dict["gradient_accumulation_steps"] = original_grad_accumulation // 2
+
+    return training_arguments_dict
+
+
 def update_with_half_batch_size(training_arguments_dict: Dict[str, Any]) -> Dict[str, Any]:
     original_batch_size = training_arguments_dict["per_device_train_batch_size"]
     original_grad_accumulation = training_arguments_dict["gradient_accumulation_steps"]

@@ -21,7 +21,7 @@ from march.models.speedups import FastTransformer
 from march.models.TPWeights import TPWeightsTransformer
 from march.models.big_heads_summed import BigHeadsSummedTransformerConfig, BigHeadsSummedTransformer
 
-from march.experiments.baseline import BaselineExperiment, update_with_half_batch_size
+from march.experiments.baseline import BaselineExperiment, update_with_double_batch_size, update_with_half_batch_size
 
 
 class MoreHeadsLessQKVDimExperiment(BaselineExperiment):
@@ -73,12 +73,6 @@ class MoreHeadsLessLayers3Experiment(BaselineExperiment):
 
 
 class MoreHeadsLessLayers4Experiment(BaselineExperiment):
-    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
-        default_training_arguments = self.load_default_training_arguments()
-        default_training_arguments = update_with_half_batch_size(default_training_arguments)
-
-        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
-
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
         config.num_layers = config.num_layers - 12
@@ -87,12 +81,6 @@ class MoreHeadsLessLayers4Experiment(BaselineExperiment):
 
 
 class MoreHeadsLessLayers5Experiment(BaselineExperiment):
-    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
-        default_training_arguments = self.load_default_training_arguments()
-        default_training_arguments = update_with_half_batch_size(default_training_arguments)
-
-        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
-
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
         config.num_layers = config.num_layers - 16
@@ -101,12 +89,6 @@ class MoreHeadsLessLayers5Experiment(BaselineExperiment):
 
 
 class MoreHeadsLessLayers6Experiment(BaselineExperiment):
-    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
-        default_training_arguments = self.load_default_training_arguments()
-        default_training_arguments = update_with_half_batch_size(default_training_arguments)
-
-        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
-
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
         config.num_layers = config.num_layers - 20
