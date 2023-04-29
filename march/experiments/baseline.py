@@ -102,6 +102,15 @@ class BaselineT5v1_1Experiment(BaselineT5Experiment):
         return model
 
 
+class BaselineT5v1_1WithDropoutExperiment(BaselineT5v1_1Experiment):
+    def get_model(self) -> TransformerBase:
+        config = AutoConfig.from_pretrained(self.MODEL_NAME)
+        model = AutoModelForSeq2SeqLM.from_config(config)
+        setattr(model, "count_parameters", MethodType(BaselineTransformer.count_parameters, model))
+
+        return model
+
+
 def modify_training_args_for_large_exp(training_arguments: Dict[str, Any]) -> Dict[str, Any]:
     initial_batch_size = training_arguments["per_device_train_batch_size"]
     initial_ga_steps = training_arguments["gradient_accumulation_steps"]
@@ -146,6 +155,16 @@ class BaselineLargeExperiment(BaselineExperiment):
 
 
 class BaselineT5v1_1LargeExperiment(BaselineT5v1_1Experiment):
+    MODEL_NAME = "google/t5-v1_1-large"
+
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        training_arguments = self.load_default_training_arguments()
+        training_arguments = modify_training_args_for_large_exp(training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **training_arguments)
+
+
+class BaselineT5v1_1LargeWithDropoutExperiment(BaselineT5v1_1WithDropoutExperiment):
     MODEL_NAME = "google/t5-v1_1-large"
 
     def get_training_arguments(self) -> Seq2SeqTrainingArguments:
