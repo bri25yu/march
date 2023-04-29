@@ -153,7 +153,7 @@ class FastTransformerBase(TransformerBase):
 
         self.config = config
 
-        embedding_size = round_for_cuda(VOCAB_SIZE)
+        embedding_size = round_for_cuda(config.vocab_size)
         self.embedding: TensorType["D", "V"] = Linear(config.dim_model, embedding_size, bias=False)
         self.position_encoding = self.POSITION_ENCODING_CLS(config)
 

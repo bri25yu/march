@@ -9,7 +9,7 @@ from torch.nn.functional import dropout, embedding, relu
 
 from transformers.modeling_outputs import Seq2SeqLMOutput
 
-from march.tokenization import MAX_LENGTH, VOCAB_SIZE
+from march.tokenization import MAX_LENGTH
 from march.models.utils import *
 
 
@@ -23,7 +23,6 @@ __all__ = [
     "finfo",
     "matmul",
     "Seq2SeqLMOutput",
-    "VOCAB_SIZE",
     "AbsolutePositionEncoding",
     "EncoderBase",
     "DecoderBase",
@@ -184,7 +183,7 @@ class TransformerBase(TransformerComponentBase):
 
         self.config = config
 
-        self.embedding: TensorType["D", "V"] = Linear(config.dim_model, VOCAB_SIZE, bias=False)
+        self.embedding: TensorType["D", "V"] = Linear(config.dim_model, config.vocab_size, bias=False)
         self.position_encoding = self.POSITION_ENCODING_CLS(config)
 
         self.encoder = self.ENCODER_CLS(config)
