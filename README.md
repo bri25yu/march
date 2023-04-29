@@ -85,8 +85,10 @@ Bottlenecks -- force model summarization in not the L dim but the D dim. Could g
 
 # Baseline V2
 
-- [TODO] More hidden dim less layers, generally more ablations on less layers
 - [TODO] Relative position encoding - T5 and rotary
+  - https://arxiv.org/abs/1803.02155
+  - https://arxiv.org/abs/2009.13658
+  - https://arxiv.org/abs/2104.09864
 - GELU-GLU activation in FF
 - Round both embedding and FF layers to multiple of 64
 - No key/value cross attention map
