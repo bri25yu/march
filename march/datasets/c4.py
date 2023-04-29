@@ -19,7 +19,7 @@ C4_FULL_NAME = "c4_full"
 C4_BASELINE_NAME = "c4_baseline"
 
 
-def create_c4_full(tokenizer: PreTrainedTokenizerFast, push_to_hub_name: str) -> None:
+def create_c4_helper(tokenizer: PreTrainedTokenizerFast, push_to_hub_name: str) -> None:
     sentinel_start_id = tokenizer.convert_tokens_to_ids(EXTRA_ID_TOKENS[-1])
 
     def tokenize_fn(examples: Dict[str, List[str]]) -> Dict[str, List[int]]:
@@ -64,12 +64,12 @@ def create_c4_full(tokenizer: PreTrainedTokenizerFast, push_to_hub_name: str) ->
 
 def create_c4_full() -> None:
     tokenizer = load_c4_tokenizer()
-    create_c4_full(tokenizer, C4_FULL_NAME)
+    create_c4_helper(tokenizer, C4_FULL_NAME)
 
 
 def create_c4_full_t5() -> None:
     tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=1024)
-    create_c4_full(tokenizer, f"{C4_FULL_NAME}_t5")
+    create_c4_helper(tokenizer, f"{C4_FULL_NAME}_t5")
 
 
 def create_baseline_from_full(dataset_dict: DatasetDict) -> DatasetDict:
