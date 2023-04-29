@@ -1,4 +1,3 @@
-# march
 Model ARCHitecture experiments
 
 * toc
