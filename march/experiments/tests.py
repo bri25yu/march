@@ -622,6 +622,12 @@ class TPWeightsReduceLayersExperiment(BaselineExperiment):
 
 
 class FFDimHalfToLayersExperiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments = update_with_half_batch_size(default_training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(feedforward_scale=0.5)
         config.num_layers = config.num_layers + 24
@@ -630,6 +636,12 @@ class FFDimHalfToLayersExperiment(BaselineExperiment):
 
 
 class FFDimHalfToDimExperiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments = update_with_half_batch_size(default_training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
     def get_model(self) -> TransformerBase:
         base_dim = TransformerConfig.dim_model
         config = TransformerConfig(feedforward_scale=0.5, dim_model=base_dim + 64 * 4)
@@ -638,6 +650,12 @@ class FFDimHalfToDimExperiment(BaselineExperiment):
 
 
 class FFDimSameToLayersExperiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments = update_with_half_batch_size(default_training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(feedforward_scale=1.0)
         config.num_layers = config.num_layers + 18
@@ -646,6 +664,12 @@ class FFDimSameToLayersExperiment(BaselineExperiment):
 
 
 class FFDimSameToDimExperiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments = update_with_half_batch_size(default_training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
     def get_model(self) -> TransformerBase:
         base_dim = TransformerConfig.dim_model
         config = TransformerConfig(feedforward_scale=1.0, dim_model=base_dim + 64 * 3)
@@ -654,6 +678,12 @@ class FFDimSameToDimExperiment(BaselineExperiment):
 
 
 class FFDimDoubleToLayersExperiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments = update_with_half_batch_size(default_training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(feedforward_scale=2.0)
         config.num_layers = config.num_layers + 8
@@ -662,6 +692,12 @@ class FFDimDoubleToLayersExperiment(BaselineExperiment):
 
 
 class FFDimDoubleToDimExperiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments = update_with_half_batch_size(default_training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
     def get_model(self) -> TransformerBase:
         base_dim = TransformerConfig.dim_model
         config = TransformerConfig(feedforward_scale=2.0, dim_model=base_dim + 64 * 2)
@@ -670,6 +706,12 @@ class FFDimDoubleToDimExperiment(BaselineExperiment):
 
 
 class FFDimOctupleFromLayersExperiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments = update_with_half_batch_size(default_training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(feedforward_scale=8.0)
         config.num_layers = config.num_layers - 10
@@ -678,6 +720,12 @@ class FFDimOctupleFromLayersExperiment(BaselineExperiment):
 
 
 class FFDimOctupleFromDimExperiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments = update_with_half_batch_size(default_training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
     def get_model(self) -> TransformerBase:
         base_dim = TransformerConfig.dim_model
         config = TransformerConfig(feedforward_scale=8.0, dim_model=base_dim - 64 * 3)
