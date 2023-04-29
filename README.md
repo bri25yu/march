@@ -1,11 +1,14 @@
 # march
 Model ARCHitecture experiments
 
+* toc
+{:toc}
+
 Research conducted under Prof. Kurt Keutzer at Berkeley Artificial Intelligence Research (BAIR). 
 
 <img src="http://bair.berkeley.edu/images/BAIR_Logo_BlueType_Tag.png" width="525" height="280">
 
-Example setup:
+## Example setup
 ```bash
 git clone https://github.com/bri25yu/march
 cd march
@@ -32,19 +35,45 @@ Our re-implementation has two differences compared to the T5-base baseline:
 2. Our tokenizer is trained only on wikitext-103 which transfers tokenization benefits to the training wikipedia dataset. This results in more efficient representations per token for our model and more productive training.
 
 ## More heads less layers is better
-More heads less layers better
+
+<details>
+<summary></summary>
+
 ![](readme_resources/more_heads_less_layers.png)
 
+</details>
+
 ## More heads less layers with no cross-attention key/value weights is better
+
+<details>
+<summary></summary>
+
 ![](readme_resources/more_heads_less_layers_no_kv.png)
 
+</details>
+
 ## More model dimension less layers is better
+
+<details>
+<summary></summary>
+
 ![](readme_resources/more_dim_less_layers.png)
+
+</details>
+
+## More model dimension and more heads less layers is better
+
+<details>
+<summary></summary>
+
+![](readme_resources/more_heads_more_dim_less_layers.png)
+
+</details>
 
 ## Baseline Large
 The relative patterning of experiments stays the same when moving from the base exps 220M params to the large exps 740M params, very cool to see. 
 
-# Ideas TODO
+# Ideas
 Sequence length reduction idea, every attention layer has (N, L, D) input but outputs (N, L, D_\prime). How would attention residuals work? No residuals on self attention with a deep network is disastrous. Maybe add a no-op in the keys and values? Have a zero value vector and a some corresponding key vector. The key vector could be learned or fixed. Previous work has tried zero key and zero value, but this is incorrect for bias-less models. Also a little bit hard to imagine for models with bias since in the softmax the dot product is 0. Would also be a crazy speedup
 
 Albert -- one big boy layer multiple times.

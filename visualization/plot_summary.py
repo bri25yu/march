@@ -61,7 +61,7 @@ def plot_comparative_experiment(
         experiment_path = EXP_NAMES_TO_PATH[experiment_name]
 
         num_params = get_property_values(experiment_path, "train/num_params")[1][0]
-        num_params_M = round(num_params / (10e6))  # Assume xxxM params
+        num_params_M = round(num_params / (1e6))  # Assume xxxM params
         legend_label_full = f"{legend_label} ({num_params_M}M params)"
 
         for property_name, ax in zip(property_names, axs):
