@@ -6,7 +6,6 @@ from datasets import DatasetDict
 
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, Seq2SeqTrainingArguments, AutoTokenizer, AutoModelForSeq2SeqLM, AutoConfig
 
-from march.tokenization import EOS_TOKEN
 from march.datasets.wikipedia import load_wikipedia_baseline, load_wikipedia_baseline_t5
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
 from march.experiments.base import ExperimentBase
