@@ -1,27 +1,21 @@
 from transformers import Seq2SeqTrainingArguments
 
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
-from march.models.scaling_heads import ScalingHeadsTransformer, InverseScalingHeadsTransformer
 from march.models.unified_attention import UnifiedAttentionTransformer
-from march.models.scaling_heads_constant import ScalingHeadsConstantTransformer, InverseScalingHeadsConstantTransformer
 from march.models.database import DatabaseTransformerConfig, DatabaseTransformer
 from march.models.absolute_position_embeddings import APESumOverAverageTransformer, APEUnitVarianceTransformer
 from march.models.big_heads import BigHeadsTransformer, BigHeadsTransformerConfig
 from march.models.mixed_act import (
-    GatedLinearUnitTransformer,
-    GatedLinearUnitTransformerConfig,
-    GateFunctions,
     MixedActTransformer,
     MixedActSumOverMeanTransformer,
     MixedActSOMDropoutTransformer,
 )
-from march.models.no_key_value_weights_cross_attn import NoKeyValueWeightsCrossAttentionTransformer
 from march.models.sparse_seqlen_attention import NoSelfAttentionResidualTransformer
 from march.models.speedups import FastTransformer
 from march.models.TPWeights import TPWeightsTransformer
 from march.models.big_heads_summed import BigHeadsSummedTransformerConfig, BigHeadsSummedTransformer
 
-from march.experiments.baseline import BaselineExperiment, update_with_double_batch_size, update_with_half_batch_size
+from march.experiments.baseline import BaselineExperiment, update_with_half_batch_size
 
 
 class MoreHeadsLessQKVDimExperiment(BaselineExperiment):
@@ -51,34 +45,10 @@ class LessHeadsMoreQKVDimExperiment(BaselineExperiment):
         return BaselineTransformer(config)
 
 
-class ScalingHeadsExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TransformerConfig()
-        return ScalingHeadsTransformer(config)
-
-
-class InverseScalingHeadsExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TransformerConfig()
-        return InverseScalingHeadsTransformer(config)
-
-
 class UnifiedAttentionExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(num_heads=12)
         return UnifiedAttentionTransformer(config)
-
-
-class ScalingHeadsConstantExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TransformerConfig()
-        return ScalingHeadsConstantTransformer(config)
-
-
-class InverseScalingHeadsConstantExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TransformerConfig()
-        return InverseScalingHeadsConstantTransformer(config)
 
 
 class DatabaseFromHeadsExperiment(BaselineExperiment):
@@ -248,33 +218,6 @@ class BigHeadsNoW_oExperiment(BaselineExperiment):
 # TODO Big heads reduce the number 
 
 
-class ReLUGatedLinearUnitExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        feedforward_scale = 4 * 2 / 3
-        config = GatedLinearUnitTransformerConfig(
-            feedforward_scale=feedforward_scale, gate_fn=GateFunctions.RELU
-        )
-        return GatedLinearUnitTransformer(config)
-
-
-class GELUGatedLinearUnitExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        feedforward_scale = 4 * 2 / 3
-        config = GatedLinearUnitTransformerConfig(
-            feedforward_scale=feedforward_scale, gate_fn=GateFunctions.GELU
-        )
-        return GatedLinearUnitTransformer(config)
-
-
-class SiLUGatedLinearUnitExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        feedforward_scale = 4 * 2 / 3
-        config = GatedLinearUnitTransformerConfig(
-            feedforward_scale=feedforward_scale, gate_fn=GateFunctions.SILU
-        )
-        return GatedLinearUnitTransformer(config)
-
-
 class MixedActExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         feedforward_scale = 4 * 2 / 3
@@ -306,28 +249,6 @@ class FastTransformerExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
         return FastTransformer(config)
-
-
-# Remove w_k and w_v from cross attention in the decoder
-class NoKeyValueWeightsCrossAttentionExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TransformerConfig()
-        return NoKeyValueWeightsCrossAttentionTransformer(config)
-
-
-class NoKeyValueWeightsCrossAttentionWithExtraHeadsExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TransformerConfig()
-        config.num_heads += 2
-        return NoKeyValueWeightsCrossAttentionTransformer(config)
-
-
-class NoKeyValueWeightsCrossAttentionWithExtraDimExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TransformerConfig()
-        config.dim_model += config.num_heads * 2
-        config.dim_qkv += 2
-        return NoKeyValueWeightsCrossAttentionTransformer(config)
 
 
 class TPWeightsExperiment(BaselineExperiment):

@@ -1,4 +1,4 @@
-Model ARCHitecture experiments
+**M**odel **ARCH**itecture experiments
 
 * toc
 {:toc}
@@ -66,6 +66,37 @@ Our re-implementation has two differences compared to the T5-base baseline:
 <summary></summary>
 
 ![](readme_resources/more_heads_more_dim_less_layers.png)
+
+</details>
+
+## Number of heads per layer does not affect performance
+
+<details>
+<summary></summary>
+
+The outlier is the situation where the first 6 layers in the encoder and decoder have much fewer heads than the last 6 layers. This may signal that there is a requirement for more granular attention in the initial layers. 
+
+![](readme_resources/scaling_heads.png)
+
+</details>
+
+## Gated Linear Units are better
+
+<details>
+<summary></summary>
+
+This is a successful replication of [Shazeer et al, Feb 2020](https://arxiv.org/abs/2002.05202).
+
+![](readme_resources/gated_linear_units.png)
+
+</details>
+
+## Cross-attention key/value weights on the encoder have no effect on performance
+
+<details>
+<summary></summary>
+
+![](readme_resources/no_cross_attention_kv_weights.png)
 
 </details>
 
