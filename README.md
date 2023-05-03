@@ -19,19 +19,57 @@ deepspeed run.py
 ```
 
 # Experimental Setup
+
+<details>
+<summary></summary>
+
 All of the following experiments are over constant data budget, model parameters, and compute unless noted otherwise. The data budget is determined by the number of steps taken and the number of tokens per step, for a total number of tokens seen over training. The model parameters is determined by counting the total number of trainable parameters in a model prior to training. The compute is approximated by how long the run took. All experiments are run on an 8 GPU DGX node consisting of 8 NVIDIA A5000 GPUs.
 
-We train models for 1000 steps, enough for the models to start learning and to make their behavior/performance differentiable from other models. Every step, the model sees 1M tokens, Every experiment sees 1000 steps * 1M tokens per step = 1B tokens. The baseline model has around 220M parameters to match with [t5-base](https://huggingface.co/t5-base) and by default every subsequent model matches this budget. 
+We train models for 1000 steps, enough for the models to start learning and to make their behavior/performance differentiable from other models. Every step, the model sees 1M tokens. Every experiment sees 1000 steps * 1M tokens per step = 1B tokens. We use the [Wikipedia](https://huggingface.co/datasets/wikipedia) dataset.
 
+The baseline model has around 220M parameters to match with [t5-base](https://huggingface.co/t5-base) and by default every subsequent model matches this budget. Specifically, the baseline model has an encoder-decoder architecture, absolute position embeddings for the position encoding, 12 layers each in the encoder and decoder (for 24 layers total), 768 model dimension, 64 query-key-value dimension (for an equivalent 12 attention heads), and 768 * 4 = 3072 feedforward dimension.
+
+The models are optimized using AdamW using 90% old gradient in the gradient exponential moving average (EMA) and 95% old hessian approximiation in the hessian approximation EMA (equivalently 10% new gradient and 5% new hessian approx). We use a constant learning rate schedule and a learning rate value of 1e-4. 
+
+The models are trained in BF16, with exceptions noted otherwise. 
+
+</details>
+
+</br><hr></br>
 
 # Results
-More heads better (over number of layers, QKV dim, which layer), GLU better
+## FP32 vs BF16 makes no difference
 
-## Our re-implementation compared to T5-base baseline
+<details>
+<summary></summary>
+
+![](readme_resources/model_training_precision.png)
+
+</details>
+
+</br><hr></br>
+
+## Our re-implementation is comparable to the T5 baseline
+
+<details>
+<summary></summary>
+
+![](readme_resources/baseline_t5.png)
+
+We compare our reimplementation with the implementation in [Raffel et al, Oct 2019](https://arxiv.org/abs/1910.10683).
+
 Our re-implementation has two differences compared to the T5-base baseline:
 1. We use absolute position embeddings while T5 uses relative attention position embeddings.
     - Our position encodings require more parameters. For a max sequence length of 1024 and a dim_model of 768, we need 1024 * 768 ~ 800k parameters. For a relative attention num buckets of 32 and num_heads of 12, T5 uses 32 * 12 ~ 400 parameters.
 2. Our tokenizer is trained only on wikitext-103 which transfers tokenization benefits to the training wikipedia dataset. This results in more efficient representations per token for our model and more productive training.
+
+The relative patterning of experiments stays the same when moving from the base exps 220M params to the large exps 740M params, very cool to see. 
+
+Obviously as training continues, the t5 baseline will outmatch our implementation. We postulate that this difference is due to the difference in positional encoding. This is reflected in the fact that our model quickly overfits i.e. train loss < val loss very early on, while the t5 model does not over fit i.e. train loss > val loss. Critically, the train loss should be > val loss since dropout is applied during training. 
+
+</details>
+
+</br><hr></br>
 
 ## More heads less layers is better
 
@@ -42,6 +80,8 @@ Our re-implementation has two differences compared to the T5-base baseline:
 
 </details>
 
+</br><hr></br>
+
 ## More heads less layers with no cross-attention key/value weights is better
 
 <details>
@@ -50,6 +90,8 @@ Our re-implementation has two differences compared to the T5-base baseline:
 ![](readme_resources/more_heads_less_layers_no_kv.png)
 
 </details>
+
+</br><hr></br>
 
 ## More model dimension less layers is better
 
@@ -60,6 +102,8 @@ Our re-implementation has two differences compared to the T5-base baseline:
 
 </details>
 
+</br><hr></br>
+
 ## More model dimension and more heads less layers is better
 
 <details>
@@ -69,7 +113,9 @@ Our re-implementation has two differences compared to the T5-base baseline:
 
 </details>
 
-## Number of heads per layer does not affect performance
+</br><hr></br>
+
+## Number of heads per layer does not affect performance, only total heads does
 
 <details>
 <summary></summary>
@@ -79,6 +125,8 @@ The outlier is the situation where the first 6 layers in the encoder and decoder
 ![](readme_resources/scaling_heads.png)
 
 </details>
+
+</br><hr></br>
 
 ## Gated Linear Units are better
 
@@ -91,6 +139,8 @@ This is a successful replication of [Shazeer et al, Feb 2020](https://arxiv.org/
 
 </details>
 
+</br><hr></br>
+
 ## Cross-attention key/value weights on the encoder have no effect on performance
 
 <details>
@@ -100,8 +150,19 @@ This is a successful replication of [Shazeer et al, Feb 2020](https://arxiv.org/
 
 </details>
 
-## Baseline Large
-The relative patterning of experiments stays the same when moving from the base exps 220M params to the large exps 740M params, very cool to see. 
+</br><hr></br>
+
+## Less feedforward dimension, more model dim or more layers better
+
+<details>
+<summary></summary>
+
+![](readme_resources/ffdim.png)
+
+</details>
+
+</br><hr></br>
+
 
 # Ideas
 Sequence length reduction idea, every attention layer has (N, L, D) input but outputs (N, L, D_\prime). How would attention residuals work? No residuals on self attention with a deep network is disastrous. Maybe add a no-op in the keys and values? Have a zero value vector and a some corresponding key vector. The key vector could be learned or fixed. Previous work has tried zero key and zero value, but this is incorrect for bias-less models. Also a little bit hard to imagine for models with bias since in the softmax the dot product is 0. Would also be a crazy speedup
