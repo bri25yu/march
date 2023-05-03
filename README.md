@@ -76,12 +76,14 @@ Obviously as training continues, the t5 baseline will outmatch our implementatio
 <hr>
 <br>
 
-## More heads less layers is better
+## Gated Linear Units are better
 
 <details>
 <summary></summary>
 
-![](readme_resources/more_heads_less_layers.png)
+This is a successful replication of [Shazeer et al, Feb 2020](https://arxiv.org/abs/2002.05202).
+
+![](readme_resources/gated_linear_units.png)
 
 </details>
 
@@ -89,12 +91,25 @@ Obviously as training continues, the t5 baseline will outmatch our implementatio
 <hr>
 <br>
 
-## More heads less layers with no cross-attention key/value weights is better
+## Cross-attention key/value weights on the encoder have no effect on performance
 
 <details>
 <summary></summary>
 
-![](readme_resources/more_heads_less_layers_no_kv.png)
+![](readme_resources/no_cross_attention_kv_weights.png)
+
+</details>
+
+<br>
+<hr>
+<br>
+
+## More heads less layers is better
+
+<details>
+<summary></summary>
+
+![](readme_resources/more_heads_less_layers.png)
 
 </details>
 
@@ -143,27 +158,12 @@ The outlier is the situation where the first 6 layers in the encoder and decoder
 <hr>
 <br>
 
-## Gated Linear Units are better
+## More heads less layers with no cross-attention key/value weights is better
 
 <details>
 <summary></summary>
 
-This is a successful replication of [Shazeer et al, Feb 2020](https://arxiv.org/abs/2002.05202).
-
-![](readme_resources/gated_linear_units.png)
-
-</details>
-
-<br>
-<hr>
-<br>
-
-## Cross-attention key/value weights on the encoder have no effect on performance
-
-<details>
-<summary></summary>
-
-![](readme_resources/no_cross_attention_kv_weights.png)
+![](readme_resources/more_heads_less_layers_no_kv.png)
 
 </details>
 
