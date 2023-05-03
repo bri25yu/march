@@ -46,7 +46,7 @@ The models are trained in BF16, with exceptions noted otherwise.
 
 </details>
 
----
+<br><hr><br>
 
 ## Our re-implementation is comparable to the T5 baseline
 
@@ -68,7 +68,7 @@ Obviously as training continues, the t5 baseline will outmatch our implementatio
 
 </details>
 
----
+<br><hr><br>
 
 ## More heads less layers is better
 
@@ -79,7 +79,7 @@ Obviously as training continues, the t5 baseline will outmatch our implementatio
 
 </details>
 
----
+<br><hr><br>
 
 ## More heads less layers with no cross-attention key/value weights is better
 
@@ -90,7 +90,7 @@ Obviously as training continues, the t5 baseline will outmatch our implementatio
 
 </details>
 
----
+<br><hr><br>
 
 ## More model dimension less layers is better
 
@@ -101,7 +101,7 @@ Obviously as training continues, the t5 baseline will outmatch our implementatio
 
 </details>
 
----
+<br><hr><br>
 
 ## More model dimension and more heads less layers is better
 
@@ -112,7 +112,7 @@ Obviously as training continues, the t5 baseline will outmatch our implementatio
 
 </details>
 
----
+<br><hr><br>
 
 ## Number of heads per layer does not affect performance, only total heads does
 
@@ -125,7 +125,7 @@ The outlier is the situation where the first 6 layers in the encoder and decoder
 
 </details>
 
----
+<br><hr><br>
 
 ## Gated Linear Units are better
 
@@ -138,7 +138,7 @@ This is a successful replication of [Shazeer et al, Feb 2020](https://arxiv.org/
 
 </details>
 
----
+<br><hr><br>
 
 ## Cross-attention key/value weights on the encoder have no effect on performance
 
@@ -149,7 +149,7 @@ This is a successful replication of [Shazeer et al, Feb 2020](https://arxiv.org/
 
 </details>
 
----
+<br><hr><br>
 
 ## Less feedforward dimension, more model dim or more layers better
 
@@ -160,7 +160,7 @@ This is a successful replication of [Shazeer et al, Feb 2020](https://arxiv.org/
 
 </details>
 
----
+<br><hr><br>
 
 
 # Ideas
