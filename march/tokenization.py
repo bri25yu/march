@@ -63,7 +63,7 @@ def load_wikitext_tokenizer() -> PreTrainedTokenizerFast:
 
 
 def train_c4_tokenizer() -> None:
-    c4_train_dataset = load_dataset("c4", "en")["train"]
+    c4_train_dataset = load_dataset("c4", "en")["train"]["text"]
     train_tokenizer(c4_train_dataset, C4_TOKENIZER_FILE, C4_VOCAB_SIZE)
 
 
