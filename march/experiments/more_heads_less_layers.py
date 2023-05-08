@@ -59,3 +59,10 @@ class MoreHeadsLessLayers6Experiment(BaselineExperiment):
         config.num_layers = config.num_layers - 20
         config.num_heads = config.num_heads + 66
         return BaselineTransformer(config)
+
+class MoreHeadsLessLayers7Experiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        config.num_layers = config.num_layers - 22
+        config.num_heads = config.num_heads + 112
+        return BaselineTransformer(config)

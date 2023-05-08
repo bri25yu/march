@@ -66,3 +66,20 @@ class MoreDimLessLayers5Experiment(BaselineExperiment):
         config.dim_model = config.dim_model + 64 * extra_64
         config.num_heads = config.num_heads + extra_64
         return BaselineTransformer(config)
+
+
+class MoreDimLessLayers6Experiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments = update_with_double_batch_size(default_training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        config.num_layers = config.num_layers - 22
+
+        extra_64 = 32
+        config.dim_model = config.dim_model + 64 * extra_64
+        config.num_heads = config.num_heads + extra_64
+        return BaselineTransformer(config)

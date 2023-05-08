@@ -67,3 +67,17 @@ class MoreHeadsLessLayersNoKV6Experiment(BaselineExperiment):
         config.num_layers = config.num_layers - 20
         config.num_heads = config.num_heads + 170
         return NoKeyValueWeightsCrossAttentionTransformer(config)
+
+
+class MoreHeadsLessLayersNoKV7Experiment(BaselineExperiment):
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        default_training_arguments = self.load_default_training_arguments()
+        default_training_arguments = update_with_half_batch_size(default_training_arguments)
+
+        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        config.num_layers = config.num_layers - 22
+        config.num_heads = config.num_heads + 372
+        return NoKeyValueWeightsCrossAttentionTransformer(config)

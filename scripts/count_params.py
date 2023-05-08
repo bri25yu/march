@@ -1,6 +1,9 @@
 from march.experiments.baseline import *
 from march.experiments.tests import *
-
+from march.experiments.more_heads_less_layers_no_kv import *
+from march.experiments.more_heads_less_layers import *
+from march.experiments.more_dim_less_layers import *
+from march.experiments.more_heads_more_dim_less_layers import *
 
 experiments_to_check = [
 ]
