@@ -34,9 +34,9 @@ class TPEmbeddingsAttention(TransformerComponentBase):
         # by the attention output. Normalized later also so it doesn't matter too much.
         self.role_embeddings.data.normal_(mean=0.0, std=1.0)
 
-        # Init to mean 0 variance 1 / d_model ** -0.5, we are summing over D_model in the weight
-        # multiplication, so we need to scale by 1 / d_model ** -0.5
-        self.w_r.weight.data.normal_(mean=0.0, std=(self.config.d_model) ** -0.5)
+        # Init to mean 0 variance 1 / dim_model ** -0.5, we are summing over dim_model in the weight
+        # multiplication, so we need to scale by 1 / dim_model ** -0.5
+        self.w_r.weight.data.normal_(mean=0.0, std=(self.config.dim_model) ** -0.5)
 
     def forward(
         self,
