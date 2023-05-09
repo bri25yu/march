@@ -10,7 +10,7 @@ from tokenizers.processors import TemplateProcessing
 
 from datasets import load_dataset, Dataset
 
-from transformers import PreTrainedTokenizerFast
+from transformers import PreTrainedTokenizerFast, AutoTokenizer
 
 from march import CONFIG_DIR
 
@@ -68,7 +68,6 @@ def train_c4_tokenizer() -> None:
 
 
 def load_c4_tokenizer() -> PreTrainedTokenizerFast:
-    tokenizer = PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(C4_TOKENIZER_FILE))
-    tokenizer.pad_token_id = tokenizer.convert_tokens_to_ids(EOS_TOKEN)
-
+    tokenizer = AutoTokenizer.from_pretrained("google/t5-base")
+    # Replaced c4 custom trained tokenizer
     return tokenizer
