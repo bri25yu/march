@@ -65,7 +65,7 @@ class TPEmbeddingsAttention(TransformerComponentBase):
         # (N, H, L, D_kv)
 
         # Do concatenation of role embeddings 
-        selected_roles: SequenceInputEmbeds = AttentionBase.reshape_to_head_insensitive(selected_role_heads)
+        selected_roles: SequenceInputEmbeds = self.reshape_to_head_insensitive(selected_role_heads)
         # (N, L, H * D_kv) == (N, L, D)
 
         # Compute tensor product representation with hadamard product of roles and fillers
@@ -87,6 +87,16 @@ class TPEmbeddingsAttention(TransformerComponentBase):
         input_embeds = input_embeds.permute(0, 2, 1, 3)
 
         return input_embeds
+    
+
+    def reshape_to_head_insensitive(self, input_embeds: MultiHeadedEmbeds) -> SequenceInputEmbeds:
+        # input_embeds input format (batch_size, num_heads, sequence_length, dim_qkv) (N, H, L, D_kv)
+        # permute to (N, L, H, D_kv)
+        input_embeds = input_embeds.permute(0, 2, 1, 3)
+        batch_size, sequence_length = input_embeds.size()[0], input_embeds.size()[1]
+        # reshape to (N, L, (H * D_kv))
+        input_embeds = input_embeds.reshape(batch_size, sequence_length, -1)
+        return input_embeds.contiguous()
 
 
 class TPEmbeddingsEncoder(EncoderBase):
