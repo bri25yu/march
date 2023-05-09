@@ -102,7 +102,7 @@ class TPEmbeddingsAttention(TransformerComponentBase):
         return input_embeds.contiguous()
 
 
-class TPEmbeddingsEncoder(EncoderBase):
+class TPEmbeddingsBaselineEncoder(EncoderBase):
     ATTENTION_CLS = BaselineAttention
     FEEDFORWARD_CLS = BaselineFeedforward
     ROLE_ATTENTION_CLS = TPEmbeddingsAttention
@@ -146,7 +146,7 @@ class TPEmbeddingsEncoder(EncoderBase):
         return AttentionOutput(input_embeds=input_embeds, key_value_states=encoder_key_value_states)
 
 
-class TPEmbeddingsDecoder(DecoderBase):
+class TPEmbeddingsBaselineDecoder(DecoderBase):
     ATTENTION_CLS = BaselineAttention
     FEEDFORWARD_CLS = BaselineFeedforward
     ROLE_ATTENTION_CLS = TPEmbeddingsAttention
@@ -202,17 +202,17 @@ class TPEmbeddingsDecoder(DecoderBase):
 
 
 class TPEmbeddingsBaselineTransformer(BaselineTransformer):
-    ENCODER_CLS = TPEmbeddingsEncoder
-    DECODER_CLS = TPEmbeddingsDecoder
+    ENCODER_CLS = TPEmbeddingsBaselineEncoder
+    DECODER_CLS = TPEmbeddingsBaselineDecoder
 
 
 # TP Embeddings baseline with only the encoder having access to the role embeddings
 class TPEmbeddingsBaselineEncoderTransformer(BaselineTransformer):
-    ENCODER_CLS = TPEmbeddingsEncoder
+    ENCODER_CLS = TPEmbeddingsBaselineEncoder
     DECODER_CLS = BaselineDecoder
 
 
 # TP Embeddings baseline with only the decoder having access to the role embeddings
 class TPEmbeddingsBaselineDecoderTransformer(BaselineTransformer):
     ENCODER_CLS = BaselineEncoder
-    DECODER_CLS = TPEmbeddingsDecoder
+    DECODER_CLS = TPEmbeddingsBaselineDecoder

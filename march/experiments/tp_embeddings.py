@@ -26,14 +26,14 @@ class TPEmbeddingsBaseline4Experiment(BaselineExperiment):
         config = TPEmbeddingsConfig(num_layers=6,num_roles=1335)
         return TPEmbeddingsBaselineTransformer(config)
 
-#TODO run based on success of prev
-class TPEmbeddingsBaselineEncoderExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TPEmbeddingsConfig(num_layers=6,num_roles=1335)
-        return TPEmbeddingsBaselineTransformer(config)
 
-#TODO run based on success of prev
-class TPEmbeddingsBaselineDecoderExperiment(BaselineExperiment):
+class TPEmbeddingsBaseline3EncoderExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = TPEmbeddingsConfig(num_layers=6,num_roles=1335)
-        return TPEmbeddingsBaselineTransformer(config)
+        config = TPEmbeddingsConfig(num_layers=12,num_roles=445)
+        return TPEmbeddingsBaselineEncoderTransformer(config)
+
+
+class TPEmbeddingsBaseline3DecoderExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TPEmbeddingsConfig(num_layers=12,num_roles=445)
+        return TPEmbeddingsBaselineDecoderTransformer(config)
