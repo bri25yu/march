@@ -1,0 +1,39 @@
+from march.models.TPEmbeddings import *
+
+from march.experiments.baseline import *
+
+
+class TPEmbeddingsBaselineExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TPEmbeddingsConfig(num_layers=20,num_roles=89)
+        return TPEmbeddingsBaselineTransformer(config)
+
+
+class TPEmbeddingsBaseline2Experiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TPEmbeddingsConfig(num_layers=16,num_roles=222)
+        return TPEmbeddingsBaselineTransformer(config)
+
+
+class TPEmbeddingsBaseline3Experiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TPEmbeddingsConfig(num_layers=12,num_roles=445)
+        return TPEmbeddingsBaselineTransformer(config)
+
+
+class TPEmbeddingsBaseline4Experiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TPEmbeddingsConfig(num_layers=6,num_roles=1335)
+        return TPEmbeddingsBaselineTransformer(config)
+
+#TODO run based on success of prev
+class TPEmbeddingsBaselineEncoderExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TPEmbeddingsConfig(num_layers=6,num_roles=1335)
+        return TPEmbeddingsBaselineTransformer(config)
+
+#TODO run based on success of prev
+class TPEmbeddingsBaselineDecoderExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TPEmbeddingsConfig(num_layers=6,num_roles=1335)
+        return TPEmbeddingsBaselineTransformer(config)

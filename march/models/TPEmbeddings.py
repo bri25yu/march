@@ -5,7 +5,10 @@ from torch.nn import Parameter, Linear
 from torch import zeros
 
 
-__all__ = ["TPEmbeddingsTransformer", "TPEmbeddingsConfig"]
+__all__ = ["TPEmbeddingsBaselineTransformer", 
+"TPEmbeddingsBaselineEncoderTransformer", 
+"TPEmbeddingsBaselineDecoderTransformer", 
+"TPEmbeddingsConfig"]
 
 
 # Reimplementing the Tensor Product Transformer with discrete role embeddings
@@ -198,6 +201,18 @@ class TPEmbeddingsDecoder(DecoderBase):
         return AttentionOutput(input_embeds=input_embeds, key_value_states=None)
 
 
-class TPEmbeddingsTransformer(BaselineTransformer):
+class TPEmbeddingsBaselineTransformer(BaselineTransformer):
     ENCODER_CLS = TPEmbeddingsEncoder
+    DECODER_CLS = TPEmbeddingsDecoder
+
+
+# TP Embeddings baseline with only the encoder having access to the role embeddings
+class TPEmbeddingsBaselineEncoderTransformer(BaselineTransformer):
+    ENCODER_CLS = TPEmbeddingsEncoder
+    DECODER_CLS = BaselineDecoder
+
+
+# TP Embeddings baseline with only the decoder having access to the role embeddings
+class TPEmbeddingsBaselineDecoderTransformer(BaselineTransformer):
+    ENCODER_CLS = BaselineEncoder
     DECODER_CLS = TPEmbeddingsDecoder

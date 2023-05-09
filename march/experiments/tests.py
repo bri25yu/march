@@ -262,27 +262,3 @@ class TPWeightsReduceLayersExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(num_layers=22)
         return TPWeightsTransformer(config)
-
-
-class TPEmbeddingsBaseExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TPEmbeddingsConfig(num_layers=20,num_roles=89)
-        return TPEmbeddingsTransformer(config)
-
-
-class TPEmbeddingsBase2Experiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TPEmbeddingsConfig(num_layers=16,num_roles=222)
-        return TPEmbeddingsTransformer(config)
-
-
-class TPEmbeddingsBase3Experiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TPEmbeddingsConfig(num_layers=12,num_roles=445)
-        return TPEmbeddingsTransformer(config)
-
-
-class TPEmbeddingsBase4Experiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TPEmbeddingsConfig(num_layers=6,num_roles=1335)
-        return TPEmbeddingsTransformer(config)
