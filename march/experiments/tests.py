@@ -13,7 +13,6 @@ from march.models.mixed_act import (
 from march.models.sparse_seqlen_attention import NoSelfAttentionResidualTransformer
 from march.models.speedups import FastTransformer
 from march.models.TPWeights import TPWeightsTransformer
-from march.models.TPEmbeddings import TPEmbeddingsTransformer, TPEmbeddingsConfig
 from march.models.big_heads_summed import BigHeadsSummedTransformerConfig, BigHeadsSummedTransformer
 
 from march.experiments.baseline import BaselineExperiment, update_with_half_batch_size
