@@ -67,11 +67,6 @@ def create_c4_full() -> None:
     create_c4_helper(tokenizer, C4_FULL_NAME)
 
 
-def create_c4_full_t5() -> None:
-    tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=1024)
-    create_c4_helper(tokenizer, f"{C4_FULL_NAME}_t5")
-
-
 def create_baseline_from_full(dataset_dict: DatasetDict) -> DatasetDict:
     return DatasetDict({
         "train": dataset_dict["train"].select(range(NUM_TRAIN_EXAMPLES)),
@@ -85,15 +80,5 @@ def create_c4_baseline() -> None:
     dataset_dict.push_to_hub(C4_BASELINE_NAME)
 
 
-def create_c4_baseline_t5() -> None:
-    dataset_dict = load_dataset(f"hlillemark/{C4_FULL_NAME}_t5")
-    dataset_dict = create_baseline_from_full(dataset_dict)
-    dataset_dict.push_to_hub(f"{C4_BASELINE_NAME}_t5")
-
-
 def load_c4_baseline() -> DatasetDict:
     return load_dataset(f"hlillemark/{C4_BASELINE_NAME}")
-
-
-def load_c4_baseline_t5() -> DatasetDict:
-    return load_dataset(f"hlillemark/{C4_BASELINE_NAME}_t5")

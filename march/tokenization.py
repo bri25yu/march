@@ -68,6 +68,6 @@ def train_c4_tokenizer() -> None:
 
 
 def load_c4_tokenizer() -> PreTrainedTokenizerFast:
-    tokenizer = AutoTokenizer.from_pretrained("google/t5-base")
+    tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=1024)
     # Replaced c4 custom trained tokenizer
     return tokenizer
