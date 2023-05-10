@@ -5,6 +5,7 @@ from march.experiments.more_heads_less_layers import *
 from march.experiments.more_dim_less_layers import *
 from march.experiments.more_heads_more_dim_less_layers import *
 from march.experiments.tp_embeddings_before_w_o import *
+from march.experiments.less_params import *
 
 experiments_to_check = [
 ]
