@@ -3,7 +3,7 @@ from march.models.TPEmbeddings import *
 from march.experiments.baseline import *
 
 
-class TPEmbeddingsBaselineExperiment(BaselineExperiment):
+class TPEmbeddingsBaseline1Experiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TPEmbeddingsConfig(num_layers=20,num_roles=89)
         return TPEmbeddingsBaselineTransformer(config)

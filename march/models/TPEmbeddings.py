@@ -44,7 +44,7 @@ class TPEmbeddingsAttention(TransformerComponentBase):
     def forward(
         self,
         input_embeds: SequenceInputEmbeds,
-    ) -> AttentionOutput:
+    ) -> SequenceInputEmbeds:
         # input_embeds is the output of normal attention
         # (N, L, D)
 
