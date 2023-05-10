@@ -8,23 +8,22 @@ from enum import Enum
 
 __all__ = ["TPEmbeddingsBeforeW_oEncDecSharedTransformer",
     "TPEmbeddingsBeforeW_oEncDecNotSharedTransformer",
-    "TPEmbeddingsBeforeW_oConfig",
-    "RoleDecoderType"]
+    "TPEmbeddingsBeforeW_oConfig"]
 
 
 # TPEmbeddings but with the role embeddings applied 
 # directly to the attention output instead of after the w_o linear layer.
 
-class RoleDecoderType(Enum):
-    SELF_ATTENTION = 0
-    CROSS_ATTENTION = 1
-    BOTH = 2
+# class RoleDecoderType(Enum):
+#     SELF_ATTENTION = 0
+#     CROSS_ATTENTION = 1
+#     BOTH = 2
 
 
 @dataclass
 class TPEmbeddingsBeforeW_oConfig(TransformerConfig):
     num_roles: int = 100
-    role_attention_type: RoleDecoderType = RoleDecoderType.SELF_ATTENTION
+    role_attention_type: int = 0
 
 
 class TPEmbeddingsBeforeW_oAttentionComponent(TransformerComponentBase):
@@ -171,21 +170,21 @@ class TPEmbeddingsBeforeW_oDecoder(DecoderBase):
 
         # Init same as decoder base, but share role attention layers if applicable based on the enum
         match config.role_attention_type:
-            case RoleDecoderType.SELF_ATTENTION:
+            case 0: # RoleDecoderType.SELF_ATTENTION
                 self.self_attention_layers: List[AttentionBase] = ModuleList(
                     [self.ROLE_ATTENTION_CLS(config, is_cross_attention=False, shared_role_embeddings=shared_role_embeddings) for _ in range(config.num_layers // 2)]
                 )
                 self.cross_attention_layers: List[AttentionBase] = ModuleList(
                     [self.ATTENTION_CLS(config, is_cross_attention=True) for _ in range(config.num_layers // 2)]
                 )
-            case RoleDecoderType.CROSS_ATTENTION:
+            case 1: # RoleDecoderType.CROSS_ATTENTION
                 self.self_attention_layers: List[AttentionBase] = ModuleList(
                     [self.ATTENTION_CLS(config, is_cross_attention=False) for _ in range(config.num_layers // 2)]
                 )
                 self.cross_attention_layers: List[AttentionBase] = ModuleList(
                     [self.ROLE_ATTENTION_CLS(config, is_cross_attention=True, shared_role_embeddings=shared_role_embeddings) for _ in range(config.num_layers // 2)]
                 )
-            case RoleDecoderType.BOTH:
+            case 2: # RoleDecoderType.BOTH
                 self.self_attention_layers: List[AttentionBase] = ModuleList(
                     [self.ROLE_ATTENTION_CLS(config, is_cross_attention=False, shared_role_embeddings=shared_role_embeddings) for _ in range(config.num_layers // 2)]
                 )

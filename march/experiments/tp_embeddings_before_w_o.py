@@ -17,13 +17,13 @@ class TPEmbeddingsBeforeW_oEncDecShared2Experiment(BaselineExperiment):
 
 class TPEmbeddingsBeforeW_oEncDecSharedCross2Experiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = TPEmbeddingsBeforeW_oConfig(num_layers=24,num_roles=10000,role_attention_type=RoleDecoderType.CROSS_ATTENTION)
+        config = TPEmbeddingsBeforeW_oConfig(num_layers=24,num_roles=10000,role_attention_type=1)
         return TPEmbeddingsBeforeW_oEncDecSharedTransformer(config)
 
 
 class TPEmbeddingsBeforeW_oEncDecSharedBoth2Experiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
-        config = TPEmbeddingsBeforeW_oConfig(num_layers=24,num_roles=10000,role_attention_type=RoleDecoderType.BOTH)
+        config = TPEmbeddingsBeforeW_oConfig(num_layers=24,num_roles=10000,role_attention_type=2)
         return TPEmbeddingsBeforeW_oEncDecSharedTransformer(config)
 
 
