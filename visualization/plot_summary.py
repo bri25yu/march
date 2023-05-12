@@ -75,7 +75,7 @@ def plot_comparative_experiment(
         "Training loss curves over the 1000 step budget",
         "Validation loss curves over the 1000 step budget",
         "Validation loss curves fit to a scaling law",
-        "Extrapolated validation loss over 1M step budget",
+        "Extrapolated validation perplexity over 1M step budget",
     ]
 
     if not save_name.endswith(".pdf"): save_name += ".pdf"
@@ -101,7 +101,7 @@ def plot_comparative_experiment(
     table_ax = axs_dict["table_ax"]
     axs = [train_loss_ax, val_loss_ax, scaling_law_steps_ax, scaling_law_all_ax]
 
-    stats_df = DataFrame(columns=["Experiment", "Scaling law", "PPL at 1k steps", "PPL at 10k steps", "PPL at 100k steps", "PPL at 300k steps", "PPL at 1M steps"])
+    stats_df = DataFrame(columns=["Experiment", "Scaling law", "Mean L1 residual", "PPL at 1k steps", "PPL at 10k steps", "PPL at 100k steps", "PPL at 300k steps", "PPL at 1M steps"])
 
     for experiment_name, legend_label in tqdm(zip(experiment_names, legend_labels), desc="Plotting", total=len(experiment_names)):
         experiment_path = EXP_NAMES_TO_PATH[experiment_name]
@@ -117,15 +117,7 @@ def plot_comparative_experiment(
         val_loss_ax.plot(val_steps, val_losses, label=legend_label_full)
         scaling_law_baseline = scaling_law_steps_ax.plot(val_steps, val_losses, label=legend_label_full)[0]
 
-        # Assume eval loss is the last values plotted
-        scaling_law_plotter = ScalingLawForCompute(
-            train_losses,
-            train_steps,
-            val_losses,
-            val_steps,
-            legend_label,
-            stats_df,
-        )
+        scaling_law_plotter = ScalingLawForCompute(val_steps, val_losses, legend_label, stats_df)
         scaling_law_plotter.plot_over_steps(scaling_law_steps_ax, scaling_law_baseline.get_color())
         scaling_law_plotter.plot_over_all(scaling_law_all_ax)
 
@@ -137,6 +129,7 @@ def plot_comparative_experiment(
         ax.set_title(ax_title)
         ax.legend()
 
+    scaling_law_all_ax.autoscale()
     scaling_law_all_ax.set_xscale("log")
     scaling_law_all_ax.set_xlabel("Steps with a log scale")
     scaling_law_all_ax.xaxis.set_major_formatter(steps_log_scale_formatter)
