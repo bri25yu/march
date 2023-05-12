@@ -2,6 +2,8 @@ from typing import Dict, List
 
 from datasets import DatasetDict, load_dataset
 
+from transformers import PreTrainedTokenizerFast
+
 from march.tokenization import EXTRA_ID_TOKENS, MAX_LENGTH, load_c4_tokenizer
 from march.datasets.span_corrupt_utils import create_span_corrupt_inputs
 
