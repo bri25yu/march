@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from numpy import arange, exp, ndarray, power
+from numpy import arange, exp, log, ndarray, power
 
 from pandas import DataFrame
 
@@ -40,10 +40,13 @@ class ScalingLawForCompute:
             y_hat = self.fit_function(self.steps, *params)
             y = self.eval_loss
             abs_diff = abs(y - y_hat)
-            # max_diff = abs_diff.max()
-            mean_diff = abs_diff.mean()
 
-            return mean_diff
+            # Cauchy loss rho(z) = ln(1 + z)
+            loss_unreduced = log(1 + abs_diff)
+
+            loss = loss_unreduced.mean()
+
+            return loss
 
         ranges = [
             (8.0, 12.0),
@@ -69,11 +72,11 @@ class ScalingLawForCompute:
             "Experiment": self.legend_label,
             "Scaling law": f"{a:.2f}(t ** -{b:.3f}) - {c:.2f}",
             "Mean L1 residual": f"{residual:.3f}",
-            "PPL at 1k steps": get_val_str(1_000),
-            "PPL at 10k steps": get_val_str(10_000),
-            "PPL at 100k steps": get_val_str(100_000),
-            "PPL at 300k steps": get_val_str(300_000),
-            "PPL at 1M steps": get_val_str(1_000_000),
+            "PPL at 1k": get_val_str(1_000),
+            "PPL at 10k": get_val_str(10_000),
+            "PPL at 100k": get_val_str(100_000),
+            "PPL at 300k": get_val_str(300_000),
+            "PPL at 1M": get_val_str(1_000_000),
         }
 
     def plot_over_steps(self, ax: Axes, color: str) -> None:

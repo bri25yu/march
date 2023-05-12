@@ -101,7 +101,7 @@ def plot_comparative_experiment(
     table_ax = axs_dict["table_ax"]
     axs = [train_loss_ax, val_loss_ax, scaling_law_steps_ax, scaling_law_all_ax]
 
-    stats_df = DataFrame(columns=["Experiment", "Scaling law", "Mean L1 residual", "PPL at 1k steps", "PPL at 10k steps", "PPL at 100k steps", "PPL at 300k steps", "PPL at 1M steps"])
+    stats_df = DataFrame(columns=["Experiment", "Scaling law", "Mean L1 residual", "PPL at 1k", "PPL at 10k", "PPL at 100k", "PPL at 300k", "PPL at 1M"])
 
     for experiment_name, legend_label in tqdm(zip(experiment_names, legend_labels), desc="Plotting", total=len(experiment_names)):
         experiment_path = EXP_NAMES_TO_PATH[experiment_name]
@@ -141,6 +141,7 @@ def plot_comparative_experiment(
         bbox=[0, 0, 1, 1],
     )
     table_ax.axis("off")
+    table_ax.set_title("Scaling law fit details and perplexity (PPL) predictions")
     table.auto_set_font_size(False)
     table.set_fontsize(FONT_SIZE + 4)
     table.auto_set_column_width(col=list(range(len(stats_df.index))))

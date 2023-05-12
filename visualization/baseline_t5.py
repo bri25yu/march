@@ -9,9 +9,9 @@ plot_comparative_experiment(
         "BaselineT5LargeExperiment",
     ],
     legend_labels=[
-        "Baseline (our reimplementation)",
+        "Baseline (ours)",
         "t5-base",
-        "Baseline large (our reimplementation)",
+        "Baseline large (ours)",
         "t5-large",
     ],
     title="Our reimplementation and t5 baseline",
