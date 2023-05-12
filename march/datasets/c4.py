@@ -14,7 +14,7 @@ AVERAGE_SPAN_LENGTH = 3
 C4_T5_NAME = "c4_t5"
 
 
-def create_c4(tokenizer: PreTrainedTokenizerFast) -> None:
+def create_c4(tokenizer: PreTrainedTokenizerFast, test: bool=False) -> None:
     sentinel_start_id = tokenizer.convert_tokens_to_ids(EXTRA_ID_TOKENS[-1])
 
     def tokenize_fn(examples: Dict[str, List[str]]) -> Dict[str, List[int]]:
@@ -41,8 +41,13 @@ def create_c4(tokenizer: PreTrainedTokenizerFast) -> None:
 
         return outputs
 
-
-    dataset_dict = load_dataset("c4", "en")
+    if test:
+        dataset_dict = DatasetDict({
+            "train": load_dataset("c4", "en", split="train[:100000]"),
+            "validation": load_dataset("c4", "en", split="validation[:10000]"),
+        })
+    else:
+        dataset_dict = load_dataset("c4", "en")
     print(f"Raw C4\n{dataset_dict}")
 
     tokenized_dataset_dict = dataset_dict.map(tokenize_fn, batched=True, remove_columns=dataset_dict["train"].column_names, desc="Tokenizing", num_proc=16)
@@ -54,7 +59,11 @@ def create_c4(tokenizer: PreTrainedTokenizerFast) -> None:
     span_corrupted_dataset_dict = packed_dataset_dict.map(apply_span_corruption, batched=True, num_proc=16, desc="Applying span corruption")
     print(f"Span corrupted C4\n{span_corrupted_dataset_dict}")
 
-    span_corrupted_dataset_dict.push_to_hub(C4_T5_NAME)
+    if test:
+        push_to_hub_name = f"{C4_T5_NAME}_test"
+    else:
+        push_to_hub_name = C4_T5_NAME
+    span_corrupted_dataset_dict.push_to_hub(push_to_hub_name)
 
 
 def load_c4() -> DatasetDict:
