@@ -203,3 +203,11 @@ Bottlenecks -- force model summarization in not the L dim but the D dim. Could g
 - GELU-GLU activation in FF
 - Round both embedding and FF layers to multiple of 64
 - No key/value cross attention map
+
+# Notes 20230512
+1. L/f to do explicit summarization
+   1. discrete number of "summarization", i.e. only once
+   2. apply many times keep L same size
+2. Seq length summ
+   1. avoid residuals - have separate layer for deletion outside of attention or from attn output
+3. Magnitude scaling residual, maybe using attn output?
