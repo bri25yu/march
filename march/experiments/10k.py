@@ -5,12 +5,12 @@ from datasets import DatasetDict
 from march.experiments.base import ExperimentBase
 from march.tokenization import load_c4_tokenizer
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
-from march.datasets.c4 import load_c4_baseline
+from march.datasets.c4 import load_c4
 
 
 class BaselineExperiment_10k(ExperimentBase):
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
-        return load_c4_baseline()
+        return load_c4()
 
     def get_training_arguments(self) -> Seq2SeqTrainingArguments:
         default_training_arguments = self.load_default_training_arguments()

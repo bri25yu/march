@@ -11,15 +11,10 @@ from march.datasets.span_corrupt_utils import create_span_corrupt_inputs
 MASK_PROB = 0.15
 AVERAGE_SPAN_LENGTH = 3
 
-# 100k steps * 1024 examples per batch = 102,400,000
-NUM_TRAIN_EXAMPLES = 102,400,000
-NUM_VAL_EXAMPLES = 10,000
-
-C4_FULL_NAME = "c4_full"
-C4_BASELINE_NAME = "c4_baseline"
+C4_T5_NAME = "c4_t5"
 
 
-def create_c4_helper(tokenizer: PreTrainedTokenizerFast, push_to_hub_name: str) -> None:
+def create_c4(tokenizer: PreTrainedTokenizerFast) -> None:
     sentinel_start_id = tokenizer.convert_tokens_to_ids(EXTRA_ID_TOKENS[-1])
 
     def tokenize_fn(examples: Dict[str, List[str]]) -> Dict[str, List[int]]:
@@ -59,26 +54,8 @@ def create_c4_helper(tokenizer: PreTrainedTokenizerFast, push_to_hub_name: str) 
     span_corrupted_dataset_dict = packed_dataset_dict.map(apply_span_corruption, batched=True, num_proc=16, desc="Applying span corruption")
     print(f"Span corrupted C4\n{span_corrupted_dataset_dict}")
 
-    span_corrupted_dataset_dict.push_to_hub(push_to_hub_name)
+    span_corrupted_dataset_dict.push_to_hub(C4_T5_NAME)
 
 
-def create_c4_full() -> None:
-    tokenizer = load_c4_tokenizer()
-    create_c4_helper(tokenizer, C4_FULL_NAME)
-
-
-def create_baseline_from_full(dataset_dict: DatasetDict) -> DatasetDict:
-    return DatasetDict({
-        "train": dataset_dict["train"].select(range(NUM_TRAIN_EXAMPLES)),
-        "validation": dataset_dict["validation"].select(range(NUM_VAL_EXAMPLES)),
-    })
-
-
-def create_c4_baseline() -> None:
-    dataset_dict = load_dataset(f"hlillemark/{C4_FULL_NAME}")
-    dataset_dict = create_baseline_from_full(dataset_dict)
-    dataset_dict.push_to_hub(C4_BASELINE_NAME)
-
-
-def load_c4_baseline() -> DatasetDict:
-    return load_dataset(f"hlillemark/{C4_BASELINE_NAME}")
+def load_c4() -> DatasetDict:
+    return load_dataset(f"hlillemark/{C4_T5_NAME}")
