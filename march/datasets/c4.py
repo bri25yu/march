@@ -11,10 +11,13 @@ from march.datasets.span_corrupt_utils import create_span_corrupt_inputs
 MASK_PROB = 0.15
 AVERAGE_SPAN_LENGTH = 3
 
-C4_T5_NAME = "c4_t5"
+# 10k steps * 1024 examples per batch = 10,240,000
+NUM_TRAIN_EXAMPLES = 10_240_000
+NUM_VAL_EXAMPLES = 10_000
+C4_T5_10M_NAME = "c4_t5_10m"  # C4 with 10M train examples
 
 
-def create_c4(test: bool=False) -> None:
+def create_c4_10m(test: bool=False) -> None:
     tokenizer: PreTrainedTokenizerFast = load_c4_tokenizer()
 
     sentinel_start_id = tokenizer.convert_tokens_to_ids(EXTRA_ID_TOKENS[-1])
@@ -49,24 +52,31 @@ def create_c4(test: bool=False) -> None:
             "validation": load_dataset("c4", "en", split="validation[:10000]"),
         })
     else:
-        dataset_dict = load_dataset("c4", "en")
+        dataset_dict = DatasetDict({
+            "train": load_dataset("c4", "en", split=f"train[:{3 * NUM_TRAIN_EXAMPLES}]"),
+            "validation": load_dataset("c4", "en", split=f"validation[:{3 * NUM_VAL_EXAMPLES}]"),
+        })
     print(f"Raw C4\n{dataset_dict}")
 
     tokenized_dataset_dict = dataset_dict.map(tokenize_fn, batched=True, remove_columns=dataset_dict["train"].column_names, desc="Tokenizing", num_proc=16)
     print(f"Tokenized C4\n{tokenized_dataset_dict}")
 
     packed_dataset_dict = tokenized_dataset_dict.map(pack_fn, batched=True, desc="Packing", num_proc=16)
+    packed_dataset_dict = DatasetDict({
+        "train": packed_dataset_dict["train"].select(range(NUM_TRAIN_EXAMPLES)),
+        "validation": packed_dataset_dict["validation"].select(range(NUM_VAL_EXAMPLES)),
+    })
     print(f"Packed C4\n{packed_dataset_dict}")
 
     span_corrupted_dataset_dict = packed_dataset_dict.map(apply_span_corruption, batched=True, num_proc=16, desc="Applying span corruption")
     print(f"Span corrupted C4\n{span_corrupted_dataset_dict}")
 
     if test:
-        push_to_hub_name = f"{C4_T5_NAME}_test"
+        push_to_hub_name = f"{C4_T5_10M_NAME}_test"
     else:
-        push_to_hub_name = C4_T5_NAME
+        push_to_hub_name = C4_T5_10M_NAME
     span_corrupted_dataset_dict.push_to_hub(push_to_hub_name)
 
 
 def load_c4() -> DatasetDict:
-    return load_dataset(f"hlillemark/{C4_T5_NAME}")
+    return load_dataset(f"hlillemark/{C4_T5_10M_NAME}")
