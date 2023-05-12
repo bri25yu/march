@@ -22,9 +22,6 @@ MAX_LENGTH = 1024
 WIKITEXT_VOCAB_SIZE = 30000
 WIKITEXT_TOKENIZER_FILE = join(CONFIG_DIR, "tokenizer_wikitext_103.json")
 
-C4_VOCAB_SIZE = 32000
-C4_TOKENIZER_FILE = join(CONFIG_DIR, "tokenizer_c4.json")
-
 
 def train_tokenizer(train_dataset: Dataset, tokenizer_path: str, vocab_size: int) -> None:
     tokenizer = Tokenizer(BPE(byte_fallback=True))
@@ -62,12 +59,6 @@ def load_wikitext_tokenizer() -> PreTrainedTokenizerFast:
     return tokenizer
 
 
-def train_c4_tokenizer() -> None:
-    c4_train_dataset = load_dataset("c4", "en")["train"]["text"]
-    train_tokenizer(c4_train_dataset, C4_TOKENIZER_FILE, C4_VOCAB_SIZE)
-
-
 def load_c4_tokenizer() -> PreTrainedTokenizerFast:
     tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=1024)
-    # Replaced c4 custom trained tokenizer
     return tokenizer
