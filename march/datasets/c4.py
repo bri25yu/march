@@ -2,8 +2,6 @@ from typing import Dict, List
 
 from datasets import DatasetDict, load_dataset
 
-from transformers import PreTrainedTokenizerFast, AutoTokenizer
-
 from march.tokenization import EXTRA_ID_TOKENS, MAX_LENGTH, load_c4_tokenizer
 from march.datasets.span_corrupt_utils import create_span_corrupt_inputs
 
@@ -14,7 +12,9 @@ AVERAGE_SPAN_LENGTH = 3
 C4_T5_NAME = "c4_t5"
 
 
-def create_c4(tokenizer: PreTrainedTokenizerFast, test: bool=False) -> None:
+def create_c4(test: bool=False) -> None:
+    tokenizer: PreTrainedTokenizerFast = load_c4_tokenizer()
+
     sentinel_start_id = tokenizer.convert_tokens_to_ids(EXTRA_ID_TOKENS[-1])
 
     def tokenize_fn(examples: Dict[str, List[str]]) -> Dict[str, List[int]]:
