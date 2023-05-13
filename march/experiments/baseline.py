@@ -6,7 +6,7 @@ from datasets import DatasetDict
 
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, Seq2SeqTrainingArguments, AutoTokenizer, AutoModelForSeq2SeqLM, AutoConfig
 
-from march.datasets.wikipedia import load_wikipedia_baseline, load_wikipedia_baseline_t5
+from march.datasets.c4 import load_c4
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
 from march.experiments.base import ExperimentBase
 
@@ -35,7 +35,7 @@ def update_with_half_batch_size(training_arguments_dict: Dict[str, Any]) -> Dict
 
 class BaselineExperiment(ExperimentBase):
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
-        return load_wikipedia_baseline()
+        return load_c4()
 
     def get_training_arguments(self) -> Seq2SeqTrainingArguments:
         default_training_arguments = self.load_default_training_arguments()
@@ -63,7 +63,7 @@ class BaselineT5Experiment(BaselineExperiment):
         return AutoTokenizer.from_pretrained(self.MODEL_NAME, model_max_length=1024)
 
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
-        return load_wikipedia_baseline_t5()
+        return load_c4()
 
     def get_model(self) -> TransformerBase:
         config = AutoConfig.from_pretrained(self.MODEL_NAME)

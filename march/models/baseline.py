@@ -9,7 +9,7 @@ from torch.nn.functional import dropout, embedding, relu
 
 from transformers.modeling_outputs import Seq2SeqLMOutput
 
-from march.tokenization import MAX_LENGTH
+from march.datasets.c4 import MAX_LENGTH
 from march.models.utils import *
 
 

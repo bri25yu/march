@@ -64,7 +64,6 @@ We compare our reimplementation with the implementation in [Raffel et al, Oct 20
 Our re-implementation has two differences compared to the T5-base baseline:
 1. We use absolute position embeddings while T5 uses relative attention position embeddings.
     - Our position encodings require more parameters. For a max sequence length of 1024 and a dim_model of 768, we need 1024 * 768 ~ 800k parameters. For a relative attention num buckets of 32 and num_heads of 12, T5 uses 32 * 12 ~ 400 parameters.
-2. Our tokenizer is trained only on wikitext-103 which transfers tokenization benefits to the training wikipedia dataset. This results in more efficient representations per token for our model and more productive training.
 
 The relative patterning of experiments stays the same when moving from the base exps 220M params to the large exps 740M params, very cool to see. 
 

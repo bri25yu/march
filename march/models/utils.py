@@ -11,7 +11,7 @@ from torch.nn import Module, Parameter
 from transformers.configuration_utils import PretrainedConfig
 from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
 
-from march.tokenization import WIKITEXT_VOCAB_SIZE
+from march.datasets.c4 import VOCAB_SIZE
 
 
 __all__ = [
@@ -54,7 +54,7 @@ class TransformerConfig(PretrainedConfig):
     dim_feedforward: Union[None, int] = None
     num_heads: Union[None, int] = None
     dropout_prob: float = 0.1
-    vocab_size: int = WIKITEXT_VOCAB_SIZE
+    vocab_size: int = VOCAB_SIZE
 
     def __post_init__(self) -> None:
         if self.num_heads is None:

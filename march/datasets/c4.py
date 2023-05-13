@@ -2,9 +2,8 @@ from typing import Dict, List
 
 from datasets import DatasetDict, load_dataset
 
-from transformers import PreTrainedTokenizerFast
+from transformers import AutoTokenizer, PreTrainedTokenizerFast
 
-from march.tokenization import EXTRA_ID_TOKENS, MAX_LENGTH, load_c4_tokenizer
 from march.datasets.span_corrupt_utils import create_span_corrupt_inputs
 
 
@@ -15,6 +14,17 @@ AVERAGE_SPAN_LENGTH = 3
 NUM_TRAIN_EXAMPLES = 10_240_000
 NUM_VAL_EXAMPLES = 10_000
 C4_T5_10M_NAME = "c4_t5_10m"  # C4 with 10M train examples
+
+EOS_TOKEN = "</s>"
+EXTRA_ID_TOKENS = [f"<extra_id_{i}>" for i in reversed(range(100))]
+MAX_LENGTH = 1024
+
+VOCAB_SIZE = 32100  # len(load_c4_tokenizer())
+
+
+def load_c4_tokenizer() -> PreTrainedTokenizerFast:
+    tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=1024)
+    return tokenizer
 
 
 def create_c4_10m(test: bool=False) -> None:

@@ -16,7 +16,7 @@ from torch import manual_seed as set_torch_seed
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, PrinterCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
 
 from march import CONFIG_DIR, RESULTS_DIR
-from march.tokenization import EOS_TOKEN, load_wikitext_tokenizer
+from march.datasets.c4 import EOS_TOKEN, load_c4_tokenizer
 from march.models.baseline import TransformerBase, LayerNorm, AttentionBase
 
 
@@ -119,7 +119,7 @@ class ExperimentBase(ABC):
         return args_dict
 
     def load_default_tokenizer(self) -> PreTrainedTokenizerFast:
-        return load_wikitext_tokenizer()
+        return load_c4_tokenizer()
 
     def get_data_collator(self, tokenizer: PreTrainedTokenizerFast):
         base_data_collator = DataCollatorForSeq2Seq(tokenizer)
