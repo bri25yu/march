@@ -1,17 +1,5 @@
-from transformers import Seq2SeqTrainingArguments
-
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
-from march.models.unified_attention import UnifiedAttentionTransformer
-from march.models.database import DatabaseTransformerConfig, DatabaseTransformer
-from march.models.absolute_position_embeddings import APESumOverAverageTransformer, APEUnitVarianceTransformer
 from march.models.big_heads import BigHeadsTransformer, BigHeadsTransformerConfig
-from march.models.mixed_act import (
-    MixedActTransformer,
-    MixedActSumOverMeanTransformer,
-    MixedActSOMDropoutTransformer,
-)
-from march.models.sparse_seqlen_attention import NoSelfAttentionResidualTransformer
-from march.models.speedups import FastTransformer
 from march.models.TPWeights import TPWeightsTransformer
 from march.models.big_heads_summed import BigHeadsSummedTransformerConfig, BigHeadsSummedTransformer
 
@@ -37,47 +25,6 @@ class LessHeadsMoreQKVDimExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(dim_qkv=TransformerConfig.dim_qkv * 2)
         return BaselineTransformer(config)
-
-
-class UnifiedAttentionExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TransformerConfig(num_heads=12)
-        return UnifiedAttentionTransformer(config)
-
-
-class DatabaseFromHeadsExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = DatabaseTransformerConfig()
-        config.num_heads = config.num_heads - 4
-        return DatabaseTransformer(config)
-
-
-class DatabaseFromLayersExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = DatabaseTransformerConfig()
-        config.num_layers -= 6
-
-        return DatabaseTransformer(config)
-
-
-class DatabaseFromDimExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = DatabaseTransformerConfig()
-        config.dim_model -= 64 * 3
-
-        return DatabaseTransformer(config)
-
-
-class APESumOverAverageExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TransformerConfig()
-        return APESumOverAverageTransformer(config)
-
-
-class APEUnitVarianceExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TransformerConfig()
-        return APEUnitVarianceTransformer(config)
 
 
 # Targeted experiments for BigHeadsTransformer:
@@ -210,39 +157,6 @@ class BigHeadsNoW_oExperiment(BaselineExperiment):
 
 # TODO Big heads reduce the number of heads instead of hidden dimensions
 # TODO Big heads reduce the number 
-
-
-class MixedActExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        feedforward_scale = 4 * 2 / 3
-        config = TransformerConfig(feedforward_scale=feedforward_scale)
-        return MixedActTransformer(config)
-
-
-class MixedActSumOverMeanExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        feedforward_scale = 4 * 2 / 3
-        config = TransformerConfig(feedforward_scale=feedforward_scale)
-        return MixedActSumOverMeanTransformer(config)
-
-
-class MixedActSOMDropoutExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        feedforward_scale = 4 * 2 / 3
-        config = TransformerConfig(feedforward_scale=feedforward_scale)
-        return MixedActSOMDropoutTransformer(config)
-
-
-class NoSelfAttentionResidualExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TransformerConfig()
-        return NoSelfAttentionResidualTransformer(config)
-
-
-class FastTransformerExperiment(BaselineExperiment):
-    def get_model(self) -> TransformerBase:
-        config = TransformerConfig()
-        return FastTransformer(config)
 
 
 class TPWeightsExperiment(BaselineExperiment):

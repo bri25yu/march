@@ -142,21 +142,6 @@ This is a successful replication of [Shazeer et al, Feb 2020](https://arxiv.org/
 <hr>
 <br>
 
-## Number of heads per layer does not affect performance, only total heads does
-
-<details>
-<summary></summary>
-
-The outlier is the situation where the first 6 layers in the encoder and decoder have much fewer heads than the last 6 layers. This may signal that there is a requirement for more granular attention in the initial layers. 
-
-![](readme_resources/scaling_heads.png)
-
-</details>
-
-<br>
-<hr>
-<br>
-
 ## More heads less layers with no cross-attention key/value weights is better
 
 <details>

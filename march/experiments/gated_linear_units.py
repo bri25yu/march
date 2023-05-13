@@ -1,6 +1,6 @@
 from march.experiments.baseline import *
 
-from march.models.mixed_act import (
+from march.models.gated_linear_units import (
     GatedLinearUnitTransformer,
     GatedLinearUnitTransformerConfig,
     GateFunctions,
