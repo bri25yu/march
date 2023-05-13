@@ -66,12 +66,6 @@ class MoreHeadsMoreDimLessLayers4Experiment(BaselineExperiment):
 
 
 class MoreHeadsMoreDimLessLayers5Experiment(BaselineExperiment):
-    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
-        default_training_arguments = self.load_default_training_arguments()
-        default_training_arguments = update_with_double_batch_size(default_training_arguments)
-
-        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
-
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
 
@@ -88,12 +82,6 @@ class MoreHeadsMoreDimLessLayers5Experiment(BaselineExperiment):
 
 
 class MoreHeadsMoreDimLessLayers6Experiment(BaselineExperiment):
-    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
-        default_training_arguments = self.load_default_training_arguments()
-        default_training_arguments = update_with_double_batch_size(default_training_arguments)
-
-        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
-
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
 
