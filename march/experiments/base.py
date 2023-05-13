@@ -165,7 +165,7 @@ class ExperimentBase(ABC):
         trainer.train()
 
     def _validate_dataset_dict(self, dataset_dict: DatasetDict) -> None:
-        expected_splits = ["train", "validation", "test"]
+        expected_splits = ["train", "validation"]
         actual_splits = list(dataset_dict)
         assert set(expected_splits) == set(actual_splits), f"Expected dataset dict to have splits {expected_splits}, but got {actual_splits}."
 
