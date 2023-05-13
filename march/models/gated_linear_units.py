@@ -61,6 +61,5 @@ class GatedLinearUnitDecoder(DecoderBase):
 
 
 class GatedLinearUnitTransformer(TransformerBase):
-    POSITION_ENCODING_CLS = AbsolutePositionEncoding
     ENCODER_CLS = GatedLinearUnitEncoder
     DECODER_CLS = GatedLinearUnitDecoder

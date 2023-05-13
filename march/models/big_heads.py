@@ -1,5 +1,3 @@
-from abc import abstractmethod
-
 from march.models.baseline import *
 from march.models.utils import *
 

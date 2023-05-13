@@ -4,12 +4,11 @@ from torchtyping import TensorType
 from abc import abstractmethod
 
 from torch import finfo, long, matmul, ones, triu
-from torch.nn import CrossEntropyLoss, Linear, ModuleList, Parameter
+from torch.nn import CrossEntropyLoss, Embedding, Linear, ModuleList
 from torch.nn.functional import dropout, embedding, relu
 
 from transformers.modeling_outputs import Seq2SeqLMOutput
 
-from march.datasets.c4 import MAX_LENGTH
 from march.models.utils import *
 
 
@@ -35,27 +34,6 @@ __all__ = [
 ]
 
 
-class AbsolutePositionEncoding(TransformerComponentBase):
-    def __init__(self, config: TransformerConfig) -> None:
-        super().__init__(config)
-
-        self.timing_table = Parameter(FloatTensor(MAX_LENGTH, config.dim_model))
-
-    def init_weights(self) -> None:
-        config = self.config
-
-        self.timing_table.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
-
-    def forward(self, inputs: SequenceInputEmbeds) -> SequenceInputEmbeds:
-        inputs: SequenceInputEmbeds = dropout(inputs, p=self.config.dropout_prob, training=self.training)
-
-        sequence_length = inputs.size()[1]
-        timing: SequenceInputEmbeds = self.timing_table[None, :sequence_length, :]
-        timing: SequenceInputEmbeds = dropout(timing, p=self.config.dropout_prob, training=self.training)
-
-        return (inputs + timing) / 2
-
-
 class EncoderBase(TransformerComponentBase):
     @property
     @abstractmethod
@@ -72,7 +50,7 @@ class EncoderBase(TransformerComponentBase):
 
         self.layernorms = ModuleList([LayerNorm(config) for _ in range(config.num_layers + 1)])
         self.self_attention_layers: List[AttentionBase] = ModuleList(
-            [self.ATTENTION_CLS(config, is_cross_attention=False) for _ in range(config.num_layers // 2)]
+            [self.ATTENTION_CLS(config, is_cross_attention=False, has_relative_attention_bias=i==0) for i in range(config.num_layers // 2)]
         )
         self.feedforward_layers: List[TransformerComponentBase] = ModuleList(
             [self.FEEDFORWARD_CLS(config) for _ in range(config.num_layers // 2)]
@@ -118,7 +96,7 @@ class DecoderBase(TransformerComponentBase):
 
         self.layernorms = ModuleList([LayerNorm(config) for _ in range(((config.num_layers // 2) * 3) + 1)])
         self.self_attention_layers: List[AttentionBase] = ModuleList(
-            [self.ATTENTION_CLS(config, is_cross_attention=False) for _ in range(config.num_layers // 2)]
+            [self.ATTENTION_CLS(config, is_cross_attention=False, has_relative_attention_bias=i==0) for i in range(config.num_layers // 2)]
         )
         self.cross_attention_layers: List[AttentionBase] = ModuleList(
             [self.ATTENTION_CLS(config, is_cross_attention=True) for _ in range(config.num_layers // 2)]
@@ -165,11 +143,6 @@ class DecoderBase(TransformerComponentBase):
 class TransformerBase(TransformerComponentBase):
     @property
     @abstractmethod
-    def POSITION_ENCODING_CLS(self) -> TransformerComponentBase:
-        pass
-
-    @property
-    @abstractmethod
     def ENCODER_CLS(self) -> Type[EncoderBase]:
         pass
 
@@ -184,7 +157,6 @@ class TransformerBase(TransformerComponentBase):
         self.config = config
 
         self.embedding: TensorType["D", "V"] = Linear(config.dim_model, config.vocab_size, bias=False)
-        self.position_encoding = self.POSITION_ENCODING_CLS(config)
 
         self.encoder = self.ENCODER_CLS(config)
         self.decoder = self.DECODER_CLS(config)
@@ -202,11 +174,9 @@ class TransformerBase(TransformerComponentBase):
         config = self.config
 
         input_embeds: SequenceInputEmbeds = embedding(input_ids, self.embedding.weight)
-        input_embeds: SequenceInputEmbeds = self.position_encoding(input_embeds)
         encoder_outputs: AttentionOutput = self.encoder(input_embeds, attention_mask)
 
         decoder_input_embeds: SequenceInputEmbeds = embedding(decoder_input_ids, self.embedding.weight)
-        decoder_input_embeds: SequenceInputEmbeds = self.position_encoding(decoder_input_embeds)
         decoder_attention_mask = self.create_decoder_attention_mask(decoder_input_ids)
         decoder_outputs: AttentionOutput = self.decoder(
             decoder_input_embeds, decoder_attention_mask, encoder_outputs.key_value_states, attention_mask,
@@ -240,8 +210,10 @@ class TransformerBase(TransformerComponentBase):
 
 
 class BaselineAttention(AttentionBase):
-    def __init__(self, config: TransformerConfig, is_cross_attention: bool) -> None:
+    def __init__(self, config: TransformerConfig, is_cross_attention: bool, has_relative_attention_bias: bool=False) -> None:
         super().__init__(config, is_cross_attention)
+
+        self.has_relative_attention_bias = has_relative_attention_bias
 
         self.w_q = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
         self.w_o = Linear(config.num_heads * config.dim_qkv, config.dim_model, bias=False)
@@ -252,6 +224,9 @@ class BaselineAttention(AttentionBase):
         else:
             self.w_k = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
             self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
+
+        if self.has_relative_attention_bias:
+            self.relative_attention_bias = Embedding(self.relative_attention_num_buckets, self.n_heads)
 
     def init_weights(self) -> None:
         config = self.config
@@ -265,6 +240,11 @@ class BaselineAttention(AttentionBase):
         else:
             self.w_k.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
             self.w_v.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
+
+        if self.has_relative_attention_bias:
+            self.relative_attention_bias.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
+
+    # TODO implement relative position bias
 
     def forward(
         self,
@@ -347,6 +327,5 @@ class BaselineDecoder(DecoderBase):
 
 
 class BaselineTransformer(TransformerBase):
-    POSITION_ENCODING_CLS = AbsolutePositionEncoding
     ENCODER_CLS = BaselineEncoder
     DECODER_CLS = BaselineDecoder

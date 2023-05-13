@@ -56,6 +56,9 @@ class TransformerConfig(PretrainedConfig):
     dropout_prob: float = 0.1
     vocab_size: int = VOCAB_SIZE
 
+    relative_attention_num_buckets: int = 32
+    relative_attention_max_distance: int = 128
+
     def __post_init__(self) -> None:
         if self.num_heads is None:
             assert self.dim_model % self.dim_qkv == 0, f"Dimensionality of the model must be divisible by dimensionality of the queries, keys, and values."

@@ -1,5 +1,3 @@
-from abc import abstractmethod
-
 from march.models.baseline import *
 from march.models.utils import *
 
@@ -7,6 +5,7 @@ from march.models.utils import *
 __all__ = ["NoKeyValueWeightsCrossAttentionTransformer"]
 
 
+# TODO update with new attn relative position bias
 class NoKeyValueWeightsCrossAttention(AttentionBase):
     def __init__(self, config: TransformerConfig, is_cross_attention: bool) -> None:
         super().__init__(config, is_cross_attention)
@@ -103,6 +102,5 @@ class NoKeyValueWeightsCrossAttentionDecoder(DecoderBase):
 
 
 class NoKeyValueWeightsCrossAttentionTransformer(TransformerBase):
-    POSITION_ENCODING_CLS = AbsolutePositionEncoding
     ENCODER_CLS = BaselineEncoder
     DECODER_CLS = NoKeyValueWeightsCrossAttentionDecoder
