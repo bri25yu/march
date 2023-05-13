@@ -22,7 +22,6 @@ __all__ = [
     "finfo",
     "matmul",
     "Seq2SeqLMOutput",
-    "AbsolutePositionEncoding",
     "EncoderBase",
     "DecoderBase",
     "TransformerBase",
