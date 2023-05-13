@@ -10,7 +10,7 @@
     "seed": 42,
     "adam_beta2": 0.95,
     "eval_steps": 20,
-    "max_steps": 1000,
+    "max_steps": 10000,
     "learning_rate": 1e-4,
     "lr_scheduler_type": "constant",
     "log_level": "error",
