@@ -225,7 +225,7 @@ class BaselineAttention(AttentionBase):
             self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
 
         if self.has_relative_attention_bias:
-            self.relative_attention_bias = Embedding(self.relative_attention_num_buckets, self.n_heads)
+            self.relative_attention_bias = Embedding(config.relative_attention_num_buckets, config.num_heads)
 
     def init_weights(self) -> None:
         config = self.config

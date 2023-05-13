@@ -19,7 +19,7 @@ EOS_TOKEN = "</s>"
 EXTRA_ID_TOKENS = [f"<extra_id_{i}>" for i in reversed(range(100))]
 MAX_LENGTH = 1024
 
-VOCAB_SIZE = 32100  # len(load_c4_tokenizer())
+VOCAB_SIZE = 32128  # len(load_c4_tokenizer()) = 32000 vocab + 100 sentinel tokens rounded to the nearest multiple of 64
 
 
 def load_c4_tokenizer() -> PreTrainedTokenizerFast:
