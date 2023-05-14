@@ -110,7 +110,7 @@ ALL_LAYERNORM_LAYERS.append(LayerNorm)
 @dataclass
 class AttentionOutput:
     input_embeds: SequenceInputEmbeds
-    key_value_states: Union[KeyValueStates, List[KeyValueStates]]
+    position_bias: MultiHeadedAttention
 
 
 class AttentionBase(TransformerComponentBase):
@@ -124,8 +124,8 @@ class AttentionBase(TransformerComponentBase):
         self,
         input_embeds: SequenceInputEmbeds,
         attention_mask: SequenceInputIds,
-        encoder_key_value_states: KeyValueStates=None,
-        encoder_attention_mask: SequenceInputIds=None,
+        position_bias: MultiHeadedAttention=None,
+        encoder_hidden_state: SequenceInputEmbeds=None,
     ) -> AttentionOutput:
         pass
 

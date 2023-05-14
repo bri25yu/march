@@ -3,7 +3,9 @@ from torchtyping import TensorType
 
 from abc import abstractmethod
 
-from torch import finfo, long, matmul, ones, triu
+from math import log as math_log
+
+from torch import abs, arange, finfo, full_like, log as torch_log, long, matmul, min, ones, triu, where, zeros_like
 from torch.nn import CrossEntropyLoss, Embedding, Linear, ModuleList
 from torch.nn.functional import dropout, embedding, relu
 
@@ -58,7 +60,7 @@ class EncoderBase(TransformerComponentBase):
     def forward(self, input_embeds: SequenceInputEmbeds, attention_mask: SequenceInputIds) -> AttentionOutput:
         config: TransformerConfig = self.config
 
-        encoder_key_value_states: List[KeyValueStates] = []
+        position_bias = None
         for i in range(config.num_layers // 2):
             self_attention_layernorm: LayerNorm = self.layernorms[2 * i]
             self_attention_layer: AttentionBase = self.self_attention_layers[i]
@@ -66,9 +68,9 @@ class EncoderBase(TransformerComponentBase):
             feedforward_layer: TransformerComponentBase = self.feedforward_layers[i]
 
             normed_input_embeds: SequenceInputEmbeds = self_attention_layernorm(input_embeds)
-            self_attention_output: AttentionOutput = self_attention_layer(normed_input_embeds, attention_mask)
+            self_attention_output: AttentionOutput = self_attention_layer(normed_input_embeds, attention_mask, position_bias)
             input_embeds: SequenceInputEmbeds = input_embeds + dropout(self_attention_output.input_embeds, p=config.dropout_prob, training=self.training)
-            encoder_key_value_states.append(self_attention_output.key_value_states)
+            position_bias = self_attention_output.position_bias
 
             normed_input_embeds: SequenceInputEmbeds = feedforward_layernorm(input_embeds)
             feedforward_output: SequenceInputEmbeds = feedforward_layer(normed_input_embeds)
@@ -76,7 +78,7 @@ class EncoderBase(TransformerComponentBase):
 
         input_embeds: SequenceInputEmbeds = self.layernorms[-1](input_embeds)
 
-        return AttentionOutput(input_embeds=input_embeds, key_value_states=encoder_key_value_states)
+        return AttentionOutput(input_embeds=input_embeds, position_bias=None)
 
 
 class DecoderBase(TransformerComponentBase):
@@ -108,26 +110,27 @@ class DecoderBase(TransformerComponentBase):
         self,
         input_embeds: SequenceInputEmbeds,
         attention_mask: SequenceInputIds,
-        encoder_key_value_states: List[KeyValueStates],
+        encoder_hidden_state: SequenceInputEmbeds,
         encoder_attention_mask: SequenceInputIds,
     ) -> AttentionOutput:
         config: TransformerConfig = self.config
 
+        position_bias = None
         for i in range(config.num_layers // 2):
             self_attention_layernorm: LayerNorm = self.layernorms[2 * i]
             self_attention_layer: AttentionBase = self.self_attention_layers[i]
             cross_attention_layernorm: LayerNorm = self.layernorms[2 * i + 1]
-            cross_attention_key_value_states = encoder_key_value_states[i]
             cross_attention_layer: AttentionBase = self.cross_attention_layers[i]
             feedforward_layernorm: LayerNorm = self.layernorms[2 * i + 2]
             feedforward_layer: TransformerComponentBase = self.feedforward_layers[i]
 
             normed_input_embeds: SequenceInputEmbeds = self_attention_layernorm(input_embeds)
-            self_attention_output: AttentionOutput = self_attention_layer(normed_input_embeds, attention_mask)
+            self_attention_output: AttentionOutput = self_attention_layer(normed_input_embeds, attention_mask, position_bias)
             input_embeds: SequenceInputEmbeds = input_embeds + dropout(self_attention_output.input_embeds, p=config.dropout_prob, training=self.training)
+            position_bias = self_attention_output.position_bias
 
             normed_input_embeds: SequenceInputEmbeds = cross_attention_layernorm(input_embeds)
-            cross_attention_output: AttentionOutput = cross_attention_layer(normed_input_embeds, encoder_attention_mask, cross_attention_key_value_states)
+            cross_attention_output: AttentionOutput = cross_attention_layer(normed_input_embeds, encoder_attention_mask, encoder_hidden_state=encoder_hidden_state)
             input_embeds: SequenceInputEmbeds = input_embeds + dropout(cross_attention_output.input_embeds, p=config.dropout_prob, training=self.training)
 
             normed_input_embeds: SequenceInputEmbeds = feedforward_layernorm(input_embeds)
@@ -136,7 +139,7 @@ class DecoderBase(TransformerComponentBase):
 
         input_embeds: SequenceInputEmbeds = self.layernorms[-1](input_embeds)
 
-        return AttentionOutput(input_embeds=input_embeds, key_value_states=None)
+        return AttentionOutput(input_embeds=input_embeds, position_bias=None)
 
 
 class TransformerBase(TransformerComponentBase):
@@ -174,11 +177,12 @@ class TransformerBase(TransformerComponentBase):
 
         input_embeds: SequenceInputEmbeds = embedding(input_ids, self.embedding.weight)
         encoder_outputs: AttentionOutput = self.encoder(input_embeds, attention_mask)
+        encoder_hidden_state = encoder_outputs.input_embeds
 
         decoder_input_embeds: SequenceInputEmbeds = embedding(decoder_input_ids, self.embedding.weight)
         decoder_attention_mask = self.create_decoder_attention_mask(decoder_input_ids)
         decoder_outputs: AttentionOutput = self.decoder(
-            decoder_input_embeds, decoder_attention_mask, encoder_outputs.key_value_states, attention_mask,
+            decoder_input_embeds, decoder_attention_mask, encoder_hidden_state, attention_mask,
         )
 
         sequence_output = decoder_outputs.input_embeds
@@ -247,18 +251,17 @@ class BaselineAttention(AttentionBase):
         self,
         input_embeds: SequenceInputEmbeds,
         attention_mask: SequenceInputIds=None,
-        encoder_key_value_states: KeyValueStates=None,
+        position_bias: MultiHeadedAttention=None,
+        encoder_hidden_state: SequenceInputEmbeds=None,
     ) -> AttentionOutput:
         config = self.config
 
         if not self.is_cross_attention:
             attention_values: List[SequenceInputEmbeds] = self.w_q(input_embeds), self.w_k(input_embeds), self.w_v(input_embeds)
         else:
-            key, value = encoder_key_value_states
-
             query: SequenceInputEmbeds = self.w_q(input_embeds)
-            key: SequenceInputEmbeds = self.w_k(self.reshape_to_head_insensitive(key))
-            value: SequenceInputEmbeds = self.w_v(self.reshape_to_head_insensitive(value))
+            key: SequenceInputEmbeds = self.w_k(encoder_hidden_state)
+            value: SequenceInputEmbeds = self.w_v(encoder_hidden_state)
 
             attention_values: List[SequenceInputEmbeds] = (query, key, value)
 
@@ -280,7 +283,9 @@ class BaselineAttention(AttentionBase):
             attention_mask = attention_mask.to(attention_logits.dtype) * finfo(attention_logits.dtype).min
             attention_logits: MultiHeadedAttention = attention_logits + attention_mask
 
-        if self.has_relative_attention_bias:
+        if position_bias is not None:
+            attention_logits: MultiHeadedAttention = attention_logits + position_bias
+        elif self.has_relative_attention_bias:
             position_bias = self.compute_bias(query_length, key_length)
             attention_logits: MultiHeadedAttention = attention_logits + position_bias
 
@@ -293,8 +298,9 @@ class BaselineAttention(AttentionBase):
 
         attention_output: SequenceInputEmbeds = self.w_o(attention_values)
 
-        return AttentionOutput(attention_output, (key, value))
+        return AttentionOutput(attention_output, position_bias)
 
+    # Copied and reformatted from https://github.com/huggingface/transformers/blob/main/src/transformers/models/t5/modeling_t5.py
     @staticmethod
     def _relative_position_bucket(relative_position, bidirectional=True, num_buckets=32, max_distance=128):
         """
@@ -320,10 +326,10 @@ class BaselineAttention(AttentionBase):
         relative_buckets = 0
         if bidirectional:
             num_buckets //= 2
-            relative_buckets += (relative_position > 0).to(torch.long) * num_buckets
-            relative_position = torch.abs(relative_position)
+            relative_buckets += (relative_position > 0).to(long) * num_buckets
+            relative_position = abs(relative_position)
         else:
-            relative_position = -torch.min(relative_position, torch.zeros_like(relative_position))
+            relative_position = -min(relative_position, zeros_like(relative_position))
         # now relative_position is in the range [0, inf)
 
         # half of the buckets are for exact increments in positions
@@ -332,28 +338,32 @@ class BaselineAttention(AttentionBase):
 
         # The other half of the buckets are for logarithmically bigger bins in positions up to max_distance
         relative_position_if_large = max_exact + (
-            torch.log(relative_position.float() / max_exact)
-            / math.log(max_distance / max_exact)
+            torch_log(relative_position.float() / max_exact)
+            / math_log(max_distance / max_exact)
             * (num_buckets - max_exact)
-        ).to(torch.long)
-        relative_position_if_large = torch.min(
-            relative_position_if_large, torch.full_like(relative_position_if_large, num_buckets - 1)
+        ).to(long)
+        relative_position_if_large = min(
+            relative_position_if_large, full_like(relative_position_if_large, num_buckets - 1)
         )
 
-        relative_buckets += torch.where(is_small, relative_position, relative_position_if_large)
+        relative_buckets += where(is_small, relative_position, relative_position_if_large)
         return relative_buckets
 
+    # Copied and reformatted from https://github.com/huggingface/transformers/blob/main/src/transformers/models/t5/modeling_t5.py
     def compute_bias(self, query_length, key_length):
         """Compute binned relative position bias"""
+        config = self.config
+        bidirectional = not self.is_cross_attention
+
         device = self.relative_attention_bias.weight.device
-        context_position = torch.arange(query_length, dtype=torch.long, device=device)[:, None]
-        memory_position = torch.arange(key_length, dtype=torch.long, device=device)[None, :]
+        context_position = arange(query_length, dtype=long, device=device)[:, None]
+        memory_position = arange(key_length, dtype=long, device=device)[None, :]
         relative_position = memory_position - context_position  # shape (query_length, key_length)
         relative_position_bucket = self._relative_position_bucket(
             relative_position,  # shape (query_length, key_length)
-            bidirectional=(not self.is_decoder),
-            num_buckets=self.relative_attention_num_buckets,
-            max_distance=self.relative_attention_max_distance,
+            bidirectional=bidirectional,
+            num_buckets=config.relative_attention_num_buckets,
+            max_distance=config.relative_attention_max_distance,
         )
         values = self.relative_attention_bias(relative_position_bucket)  # shape (query_length, key_length, num_heads)
         values = values.permute([2, 0, 1]).unsqueeze(0)  # shape (1, num_heads, query_length, key_length)
