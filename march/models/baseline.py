@@ -269,24 +269,19 @@ class BaselineAttention(AttentionBase):
 
         attention_logits: MultiHeadedAttention = matmul(query, key.transpose(2, 3))
 
-        if attention_mask is None:
-            batch_size, query_length, _ = input_embeds.size()
-            key_length = query_length
-        elif len(attention_mask.size()) == 2:
-            query_length = 1
-            batch_size, key_length = attention_mask.size()
-        elif len(attention_mask.size()) == 3:
-            batch_size, query_length, key_length = attention_mask.size()
+        # Infer is_decoder from attention mask size
+        is_decoder = len(attention_mask.size()) == 3
 
+        batch_size, _, query_length, key_length = attention_logits.size()
         if attention_mask is not None:
-            attention_mask = attention_mask.reshape(batch_size, 1, query_length, key_length)
+            attention_mask = attention_mask.reshape(batch_size, 1, -1, key_length)
             attention_mask = attention_mask.to(attention_logits.dtype) * finfo(attention_logits.dtype).min
             attention_logits: MultiHeadedAttention = attention_logits + attention_mask
 
         if position_bias is not None:
             attention_logits: MultiHeadedAttention = attention_logits + position_bias
         elif self.has_relative_attention_bias:
-            position_bias = self.compute_bias(query_length, key_length)
+            position_bias = self.compute_bias(query_length, key_length, is_decoder)
             attention_logits: MultiHeadedAttention = attention_logits + position_bias
 
         attention_probs: MultiHeadedAttention = attention_logits.softmax(dim=3)
@@ -350,10 +345,10 @@ class BaselineAttention(AttentionBase):
         return relative_buckets
 
     # Copied and reformatted from https://github.com/huggingface/transformers/blob/main/src/transformers/models/t5/modeling_t5.py
-    def compute_bias(self, query_length, key_length):
+    def compute_bias(self, query_length: int, key_length: int, is_decoder: bool):
         """Compute binned relative position bias"""
         config = self.config
-        bidirectional = not self.is_cross_attention
+        bidirectional = not is_decoder
 
         device = self.relative_attention_bias.weight.device
         context_position = arange(query_length, dtype=long, device=device)[:, None]

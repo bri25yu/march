@@ -1,6 +1,6 @@
 from numpy.random import seed as set_numpy_seed
 
-from torch import equal, long, manual_seed as set_torch_seed, ones, rand, randint, set_grad_enabled
+from torch import equal, long, manual_seed as set_torch_seed, rand, randint, set_grad_enabled
 
 from transformers.models.t5.modeling_t5 import T5Attention
 
@@ -50,19 +50,11 @@ D = reimpl_attn.config.dim_model
 
 input_ids = randint(0, reimpl_model.config.vocab_size, (N, L), dtype=long)
 input_embeds = t5_model.shared(input_ids)
-
-attention_mask = ones((N, L), dtype=long)
-t5_attn_mask = t5_model.get_extended_attention_mask(1.0 - attention_mask, (N, L))
-
 encoder_hidden_state = rand((N, L, D))
+
+attention_mask = reimpl_model.create_decoder_attention_mask(input_ids)
+t5_attn_mask = t5_model.get_extended_attention_mask(1.0 - attention_mask, (N, L))
 
 reimpl_outputs = reimpl_attn(input_embeds, attention_mask, encoder_hidden_state=encoder_hidden_state).input_embeds
 t5_outputs = t5_attn(input_embeds, t5_attn_mask, key_value_states=encoder_hidden_state)[0]
-
-
-if not equal(reimpl_outputs, t5_outputs):
-    print()
-    print("reimpl outputs\n", reimpl_outputs[0, 0, :10])
-    print("t5 outputs\n", t5_outputs[0, 0, :10])
-    print("diff\n", reimpl_outputs[0, 0, :10] - t5_outputs[0, 0, :10])
-    assert False
+assert equal(reimpl_outputs, t5_outputs)
