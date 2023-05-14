@@ -108,7 +108,7 @@ class ExperimentBase(ABC):
             new_grad_accumulation = original_grad_accumulation // scale
         else:  # Dec batch size, inc grad accumulation
             inv_scale = int(pow(2, -pow_scale))
-            assert original_batch_size % scale == 0, f"Power scale factor of 1 / 2 ** {-pow_scale} = 1 / {inv_scale} is too powerful for the current batch size {original_batch_size}"
+            assert original_batch_size % inv_scale == 0, f"Power scale factor of 1 / 2 ** {-pow_scale} = 1 / {inv_scale} is too powerful for the current batch size {original_batch_size}"
             new_batch_size = original_batch_size // inv_scale
             new_grad_accumulation = original_grad_accumulation * inv_scale
 
