@@ -71,6 +71,8 @@ class EncoderBase(TransformerComponentBase):
     def forward(self, input_embeds: SequenceInputEmbeds, attention_mask: SequenceInputIds) -> AttentionOutput:
         config: TransformerConfig = self.config
 
+        input_embeds = dropout(input_embeds, p=config.dropout_prob, training=self.training)
+
         position_bias = None
         for i in range(config.num_layers // 2):
             self_attention_layernorm: LayerNorm = self.layernorms[2 * i]
@@ -88,6 +90,7 @@ class EncoderBase(TransformerComponentBase):
             input_embeds: SequenceInputEmbeds = input_embeds + dropout(feedforward_output, p=config.dropout_prob, training=self.training)
 
         input_embeds: SequenceInputEmbeds = self.layernorms[-1](input_embeds)
+        input_embeds = dropout(input_embeds, p=config.dropout_prob, training=self.training)
 
         return AttentionOutput(input_embeds=input_embeds, position_bias=None)
 
@@ -139,6 +142,8 @@ class DecoderBase(TransformerComponentBase):
     ) -> AttentionOutput:
         config: TransformerConfig = self.config
 
+        input_embeds = dropout(input_embeds, p=config.dropout_prob, training=self.training)
+
         position_bias = None
         for i in range(config.num_layers // 2):
             self_attention_layernorm: LayerNorm = self.layernorms[2 * i]
@@ -162,6 +167,7 @@ class DecoderBase(TransformerComponentBase):
             input_embeds: SequenceInputEmbeds = input_embeds + dropout(feedforward_output, p=config.dropout_prob, training=self.training)
 
         input_embeds: SequenceInputEmbeds = self.layernorms[-1](input_embeds)
+        input_embeds = dropout(input_embeds, p=config.dropout_prob, training=self.training)
 
         return AttentionOutput(input_embeds=input_embeds, position_bias=None)
 
