@@ -93,7 +93,8 @@ class LayerNorm(TransformerComponentBase):
         self.weight: TensorType["D"] = Parameter(FloatTensor(config.dim_model,))
         self.variance_epsilon = eps
 
-    def init_weights(self) -> None:
+    def _init_weights(self) -> None:
+        # We use _init_weights rather than init_weights to have the encoder/decoder handle all the weight inits
         self.weight.data.fill_(1.0)
 
     def forward(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:

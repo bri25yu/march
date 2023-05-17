@@ -57,6 +57,17 @@ class EncoderBase(TransformerComponentBase):
             [self.FEEDFORWARD_CLS(config) for _ in range(config.num_layers // 2)]
         )
 
+    def init_weights(self) -> None:
+        # Match t5 weight init ordering
+        # attn -> ln -> ff -> ln
+        for i in range(self.config.num_layers // 2):
+            self.self_attention_layers[i]._init_weights()
+            self.layernorms[2 * i]._init_weights()
+            self.feedforward_layers[i]._init_weights()
+            self.layernorms[2 * i + 1]._init_weights()
+
+        self.layernorms[-1]._init_weights()
+
     def forward(self, input_embeds: SequenceInputEmbeds, attention_mask: SequenceInputIds) -> AttentionOutput:
         config: TransformerConfig = self.config
 
@@ -105,6 +116,19 @@ class DecoderBase(TransformerComponentBase):
         self.feedforward_layers: List[TransformerComponentBase] = ModuleList(
             [self.FEEDFORWARD_CLS(config) for _ in range(config.num_layers // 2)]
         )
+
+    def init_weights(self) -> None:
+        # Match t5 weight init ordering
+        # attn -> ln -> attn -> ln -> ff -> ln
+        for i in range(self.config.num_layers // 2):
+            self.self_attention_layers[i]._init_weights()
+            self.layernorms[2 * i]._init_weights()
+            self.cross_attention_layers[i]._init_weights()
+            self.layernorms[2 * i + 1]._init_weights()
+            self.feedforward_layers[i]._init_weights()
+            self.layernorms[2 * i + 2]._init_weights()
+
+        self.layernorms[-1]._init_weights()
 
     def forward(
         self,
@@ -231,18 +255,14 @@ class BaselineAttention(AttentionBase):
         if self.has_relative_attention_bias:
             self.relative_attention_bias = Embedding(config.relative_attention_num_buckets, config.num_heads)
 
-    def init_weights(self) -> None:
+    def _init_weights(self) -> None:
+        # We use _init_weights rather than init_weights to have the encoder/decoder handle all the weight inits
         config = self.config
 
         self.w_q.weight.data.normal_(mean=0.0, std=(config.dim_model * config.dim_qkv) ** -0.5)
+        self.w_k.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
+        self.w_v.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
         self.w_o.weight.data.normal_(mean=0.0, std=(config.num_heads * config.dim_qkv) ** -0.5)
-
-        if self.is_cross_attention:
-            self.w_k.weight.data.normal_(mean=0.0, std=(config.num_heads * config.dim_qkv) ** -0.5)
-            self.w_v.weight.data.normal_(mean=0.0, std=(config.num_heads * config.dim_qkv) ** -0.5)
-        else:
-            self.w_k.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
-            self.w_v.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
@@ -372,7 +392,8 @@ class BaselineFeedforward(TransformerComponentBase):
         self.up_projection = Linear(config.dim_model, config.dim_feedforward, bias=False)
         self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False)
 
-    def init_weights(self) -> None:
+    def _init_weights(self) -> None:
+        # We use _init_weights rather than init_weights to have the encoder/decoder handle all the weight inits
         config = self.config
 
         self.up_projection.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)

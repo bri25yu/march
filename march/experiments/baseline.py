@@ -1,8 +1,9 @@
-from typing import Any, Dict
-
 from types import MethodType
 
 from datasets import DatasetDict
+
+from torch import manual_seed as set_torch_seed
+from torch.nn import Module
 
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, Seq2SeqTrainingArguments, AutoTokenizer, AutoModelForSeq2SeqLM, AutoConfig
 
@@ -66,6 +67,12 @@ class BaselineT5Experiment(BaselineExperiment):
             return examples
 
         return data_collator
+
+    def _call_init_weights(self, model: TransformerBase, seed: int) -> None:
+        # Special HF T5 model weight re-init
+        set_torch_seed(seed)
+
+        model.apply(model._init_weights)
 
 
 class BaselineT5LargeExperiment(BaselineT5Experiment):

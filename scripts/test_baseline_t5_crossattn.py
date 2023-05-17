@@ -1,5 +1,3 @@
-from numpy.random import seed as set_numpy_seed
-
 from torch import equal, long, manual_seed as set_torch_seed, rand, randint, set_grad_enabled
 
 from transformers.models.t5.modeling_t5 import T5Attention
@@ -9,37 +7,22 @@ from march.models.baseline import BaselineAttention
 from march.experiments.baseline import BaselineExperiment, BaselineT5Experiment
 
 
-SEED = 42
-set_numpy_seed(SEED)
-set_torch_seed(SEED)
-
 set_grad_enabled(False)
+
+SEED = 42
 
 print("Initializing reimpl and t5 models")
 reimpl_model = BaselineExperiment().get_model()
 t5_model = BaselineT5Experiment().get_model()
 
-
 reimpl_attn = BaselineAttention(reimpl_model.config, is_cross_attention=True, has_relative_attention_bias=False)
 t5_attn = T5Attention(t5_model.config, has_relative_attention_bias=False)
 t5_attn.is_decoder = True
 
-print("Matching params")
-total_matched_params = 0
-
-reimpl_attn.w_q.weight.copy_(t5_attn.q.weight)
-reimpl_attn.w_k.weight.copy_(t5_attn.k.weight)
-reimpl_attn.w_v.weight.copy_(t5_attn.v.weight)
-reimpl_attn.w_o.weight.copy_(t5_attn.o.weight)
-
-total_matched_params += reimpl_attn.w_q.weight.numel()
-total_matched_params += reimpl_attn.w_k.weight.numel()
-total_matched_params += reimpl_attn.w_v.weight.numel()
-total_matched_params += reimpl_attn.w_o.weight.numel()
-
-target_matched_params = reimpl_model.__class__.count_parameters(reimpl_attn)
-assert total_matched_params == target_matched_params, (f"{total_matched_params:,}", f"{target_matched_params:,}")
-
+set_torch_seed(SEED)
+reimpl_attn._init_weights()
+set_torch_seed(SEED)
+t5_model._init_weights(t5_attn)
 
 # Test equality
 reimpl_attn.eval()

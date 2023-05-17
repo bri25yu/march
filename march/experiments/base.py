@@ -12,6 +12,7 @@ from numpy.random import seed as set_numpy_seed
 
 from torch.cuda import device_count
 from torch import manual_seed as set_torch_seed
+from torch.nn import Module
 
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, PrinterCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
 
@@ -148,7 +149,7 @@ class ExperimentBase(ABC):
             dataset_dict = self.load_dataset_dict(tokenizer)
             self._validate_dataset_dict(dataset_dict)
             model = self.get_model()
-            self._call_init_weights(model)
+            self._call_init_weights(model, training_arguments.seed)
 
         data_collator = self.get_data_collator(tokenizer)
         trainer = CustomLoggingSeq2SeqTrainer(
@@ -173,11 +174,14 @@ class ExperimentBase(ABC):
         actual_columns = dataset_dict["train"].column_names
         assert set(expected_columns) == set(actual_columns), f"Expected dataset to have columns {expected_columns}, but got {actual_columns}."
 
-    def _call_init_weights(self, model: TransformerBase) -> None:
-        for module in model.modules():
-            if not hasattr(module, "init_weights"): continue
+    def _call_init_weights(self, model: TransformerBase, seed: int) -> None:
+        set_torch_seed(seed)
 
+        def init_weight_helper(module: Module):
+            if not hasattr(module, "init_weights"): return
             try:
                 module.init_weights()
             except NotImplementedError:
                 pass
+
+        model.apply(init_weight_helper)
