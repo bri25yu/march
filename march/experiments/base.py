@@ -90,7 +90,12 @@ class ExperimentBase(ABC):
         args_dict = json.load(open(join(CONFIG_DIR, "default_training_arguments.json")))
 
         num_gpus = device_count()
-        assert num_gpus == 8, "Training models is supposed to occur on a DGX node of 8 GPUs!"
+        if num_gpus == 8:
+            pass
+        elif num_gpus == 4:
+            args_dict["gradient_accumulation_steps"] = args_dict["gradient_accumulation_steps"] * 2
+        else:
+            raise ValueError(f"The number of GPUs must be 4 or 8, but got {num_gpus}")
 
         deepspeed_config = json.load(open(join(CONFIG_DIR, "deepspeed.json")))
         args_dict["deepspeed"] = deepspeed_config
