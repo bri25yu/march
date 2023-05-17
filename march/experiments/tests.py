@@ -176,3 +176,9 @@ class NoFFExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
         return NoFFTransformer(config)
+
+
+class NoFFParamMatchExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig(dim_model=1088)
+        return NoFFTransformer(config)
