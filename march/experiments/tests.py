@@ -2,6 +2,7 @@ from march.models.baseline import TransformerBase, BaselineTransformer, Transfor
 from march.models.big_heads import BigHeadsTransformer, BigHeadsTransformerConfig
 from march.models.TPWeights import TPWeightsTransformer
 from march.models.big_heads_summed import BigHeadsSummedTransformerConfig, BigHeadsSummedTransformer
+from march.models.no_ff import NoFFTransformer
 
 from march.experiments.baseline import BaselineExperiment
 
@@ -169,3 +170,9 @@ class TPWeightsReduceLayersExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(num_layers=22)
         return TPWeightsTransformer(config)
+
+
+class NoFFExperiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        return NoFFTransformer(config)
