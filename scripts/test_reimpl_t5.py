@@ -3,7 +3,7 @@ from torch import equal, long, manual_seed as set_torch_seed, randint, ones
 from march.models.baseline import *
 from march.models.utils import *
 
-from march.experiments.baseline import BaselineExperiment, BaselineT5Experiment, ExperimentBase
+from march.experiments.baseline import BaselineExperiment, BaselineT5Experiment
 
 
 SEED = 42
