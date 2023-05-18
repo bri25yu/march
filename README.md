@@ -39,19 +39,6 @@ The models are trained in BF16, with exceptions noted otherwise.
 
 
 # Results
-## FP32 vs BF16 makes no difference
-
-<details>
-<summary></summary>
-
-![](readme_resources/model_training_precision.png)
-
-</details>
-
-<br>
-<hr>
-<br>
-
 ## Our re-implementation is comparable to the T5 baseline
 
 <details>
@@ -61,13 +48,18 @@ The models are trained in BF16, with exceptions noted otherwise.
 
 We compare our reimplementation with the implementation in [Raffel et al, Oct 2019](https://arxiv.org/abs/1910.10683).
 
-Our re-implementation has two differences compared to the T5-base baseline:
-1. We use absolute position embeddings while T5 uses relative attention position embeddings.
-    - Our position encodings require more parameters. For a max sequence length of 1024 and a dim_model of 768, we need 1024 * 768 ~ 800k parameters. For a relative attention num buckets of 32 and num_heads of 12, T5 uses 32 * 12 ~ 400 parameters.
+</details>
 
-The relative patterning of experiments stays the same when moving from the base exps 220M params to the large exps 740M params, very cool to see. 
+<br>
+<hr>
+<br>
 
-Obviously as training continues, the t5 baseline will outmatch our implementation. We postulate that this difference is due to the difference in positional encoding. This is reflected in the fact that our model quickly overfits i.e. train loss < val loss very early on, while the t5 model does not over fit i.e. train loss > val loss. Critically, the train loss should be > val loss since dropout is applied during training. 
+## FP32 vs BF16 makes no difference
+
+<details>
+<summary></summary>
+
+![](readme_resources/model_training_precision.png)
 
 </details>
 
@@ -90,32 +82,6 @@ This is a successful replication of [Shazeer et al, Feb 2020](https://arxiv.org/
 <hr>
 <br>
 
-## Cross-attention key/value weights on the encoder have no effect on performance
-
-<details>
-<summary></summary>
-
-![](readme_resources/no_cross_attention_kv_weights.png)
-
-</details>
-
-<br>
-<hr>
-<br>
-
-## More heads less layers is better
-
-<details>
-<summary></summary>
-
-![](readme_resources/more_heads_less_layers.png)
-
-</details>
-
-<br>
-<hr>
-<br>
-
 ## More model dimension less layers is better
 
 <details>
@@ -128,147 +94,3 @@ This is a successful replication of [Shazeer et al, Feb 2020](https://arxiv.org/
 <br>
 <hr>
 <br>
-
-## More model dimension and more heads less layers is better
-
-<details>
-<summary></summary>
-
-![](readme_resources/more_heads_more_dim_less_layers.png)
-
-</details>
-
-<br>
-<hr>
-<br>
-
-## More heads less layers with no cross-attention key/value weights is better
-
-<details>
-<summary></summary>
-
-![](readme_resources/more_heads_less_layers_no_kv.png)
-
-</details>
-
-<br>
-<hr>
-<br>
-
-## Less feedforward dimension, more model dim or more layers better
-
-<details>
-<summary></summary>
-
-![](readme_resources/ffdim.png)
-
-</details>
-
-<br>
-<hr>
-<br>
-
-
-# Ideas
-Sequence length reduction idea, every attention layer has (N, L, D) input but outputs (N, L, D_\prime). How would attention residuals work? No residuals on self attention with a deep network is disastrous. Maybe add a no-op in the keys and values? Have a zero value vector and a some corresponding key vector. The key vector could be learned or fixed. Previous work has tried zero key and zero value, but this is incorrect for bias-less models. Also a little bit hard to imagine for models with bias since in the softmax the dot product is 0. Would also be a crazy speedup
-
-Albert -- one big boy layer multiple times.
-
-Encoder/decoder vs decoder-only paradigm. Would need a tad bit of dataset work for decoder-only, but it's just converting from text to tokens.
-
-Bottlenecks -- force model summarization in not the L dim but the D dim. Could go from something like 768 to 384 to 192 layer by layer or even the inverse. 768 is a huge representation for a single token. Maybe have the scaled up dims the same i.e. attention is still the same 768 = 12 heads by 64 qkv dim but the intermediate dim is like 192 and feedforward is the same 192 to 768 * 4 and back down to 192. 
-
-# Baseline V2
-
-- [TODO] Relative position encoding - T5 and rotary
-  - https://arxiv.org/abs/1803.02155
-  - https://arxiv.org/abs/2009.13658
-  - https://arxiv.org/abs/2104.09864
-- GELU-GLU activation in FF
-- Round both embedding and FF layers to multiple of 64
-- No key/value cross attention map
-
-# Notes 20230512
-1. L/f to do explicit summarization
-   1. discrete number of "summarization", i.e. only once
-   2. apply many times keep L same size
-2. Seq length summ
-   1. avoid residuals - have separate layer for deletion outside of attention or from attn output
-3. Magnitude scaling residual, maybe using attn output?
-
-# Runs 20230513
-BaselineT5Experiment
-BaselineT5LargeExperiment
-
-BaselineExperiment
-BaselineFP32Experiment
-BaselineLargeExperiment
-
-ReLUGatedLinearUnitExperiment
-GELUGatedLinearUnitExperiment
-SiLUGatedLinearUnitExperiment
-
-TODO update with new attn relative position bias
-NoKeyValueWeightsCrossAttentionExperiment
-NoKeyValueWeightsCrossAttentionWithExtraHeadsExperiment
-NoKeyValueWeightsCrossAttentionWithExtraDimExperiment
-
-LessParamsLessLayers1Experiment
-LessParamsLessLayers2Experiment
-LessParamsLessLayers3Experiment
-LessParamsLessLayers4Experiment
-LessParamsLessD_Model1Experiment
-LessParamsLessD_Model2Experiment
-LessParamsLessD_ModelSameHeads1Experiment
-LessParamsLessD_ModelSameHeads2Experiment
-
-MoreParamsMoreLayers1Experiment
-MoreParamsMoreLayers2Experiment
-MoreParamsMoreD_model1Experiment
-MoreParamsMoreD_model2Experiment
-MoreParamsMoreD_modelSameHeads1Experiment
-MoreParamsMoreD_modelSameHeads2Experiment
-
-MoreDimLessLayersExperiment
-MoreDimLessLayers2Experiment
-MoreDimLessLayers3Experiment
-MoreDimLessLayers4Experiment
-MoreDimLessLayers5Experiment
-MoreDimLessLayers6Experiment
-
-MoreHeadsLessLayersExperiment
-MoreHeadsLessLayers2Experiment
-MoreHeadsLessLayers3Experiment
-MoreHeadsLessLayers4Experiment
-MoreHeadsLessLayers5Experiment
-MoreHeadsLessLayers6Experiment
-MoreHeadsLessLayers7Experiment
-
-MoreHeadsMoreDimLessLayersExperiment
-MoreHeadsMoreDimLessLayers2Experiment
-MoreHeadsMoreDimLessLayers3Experiment
-MoreHeadsMoreDimLessLayers4Experiment
-MoreHeadsMoreDimLessLayers5Experiment
-MoreHeadsMoreDimLessLayers6Experiment
-
-FFDimHalfToLayersExperiment
-FFDimHalfToDimExperiment
-FFDimSameToLayersExperiment
-FFDimSameToDimExperiment
-FFDimDoubleToLayersExperiment
-FFDimDoubleToDimExperiment
-FFDimOctupleFromLayersExperiment
-FFDimOctupleFromDimExperiment
-
-MoreHeadsLessLayersNoKVExperiment
-MoreHeadsLessLayersNoKV2Experiment
-MoreHeadsLessLayersNoKV3Experiment
-MoreHeadsLessLayersNoKV4Experiment
-MoreHeadsLessLayersNoKV5Experiment
-MoreHeadsLessLayersNoKV6Experiment
-MoreHeadsLessLayersNoKV7Experiment
-
-ScalingHeadsExperiment
-InverseScalingHeadsExperiment
-ScalingHeadsConstantExperiment
-InverseScalingHeadsConstantExperiment

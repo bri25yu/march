@@ -5,8 +5,8 @@ plot_comparative_experiment(
     experiment_names=[
         "BaselineExperiment",
         "BaselineT5Experiment",
-        "BaselineLargeExperiment",
-        "BaselineT5LargeExperiment",
+        # "BaselineLargeExperiment",
+        # "BaselineT5LargeExperiment",
     ],
     legend_labels=[
         "Baseline (ours)",
