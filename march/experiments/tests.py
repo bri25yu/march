@@ -1,17 +1,12 @@
-from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
+from march.models.baseline import TransformerBase, TransformerConfig
 from march.models.no_ff import NoFFTransformer
 from march.models.values_relu import ValuesReluTransformer, ValuesReluFirstFFTransformer
 
 from march.experiments.baseline import BaselineExperiment
 
-from transformers import Seq2SeqTrainingArguments
-
 
 class NoFFExperiment(BaselineExperiment):
-    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
-        default_training_arguments = self.load_default_training_arguments()
-        default_training_arguments["max_steps"] = 1000
-        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+    NUM_STEPS = 1_000
 
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
@@ -19,10 +14,7 @@ class NoFFExperiment(BaselineExperiment):
 
 
 class NoFFParamMatchExperiment(BaselineExperiment):
-    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
-        default_training_arguments = self.load_default_training_arguments()
-        default_training_arguments["max_steps"] = 1000
-        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+    NUM_STEPS = 1_000
 
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(dim_model=1088)
@@ -30,18 +22,24 @@ class NoFFParamMatchExperiment(BaselineExperiment):
 
 
 class ValuesReluExperiment(BaselineExperiment):
+    NUM_STEPS = 1_000
+
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
         return ValuesReluTransformer(config)
 
 
 class ValuesReluNoUpProjExperiment(BaselineExperiment):
+    NUM_STEPS = 1_000
+
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(dim_model=960, feedforward_scale=1)
         return ValuesReluTransformer(config)
-    
+
 
 class ValuesReluFirstFFExperiment(BaselineExperiment):
+    NUM_STEPS = 1_000
+
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(dim_model=1024)
         return ValuesReluFirstFFTransformer(config)

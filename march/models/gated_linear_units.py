@@ -1,4 +1,4 @@
-from torch.nn.functional import gelu, relu, silu, sigmoid
+from torch.nn.functional import gelu, relu, silu
 
 from march.models.utils import *
 from march.models.baseline import *
@@ -30,7 +30,7 @@ class GatedLinearUnitFeedforward(TransformerComponentBase):
         self.gate_projection = Linear(config.dim_model, config.dim_feedforward, bias=False)
         self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False)
 
-    def init_weights(self) -> None:
+    def _init_weights(self) -> None:
         config = self.config
 
         self.up_projection.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)

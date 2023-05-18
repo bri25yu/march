@@ -54,11 +54,12 @@ class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
 
 
 class ExperimentBase(ABC):
-    def __init__(self, batch_size_pow_scale: int=0) -> None:
+    def __init__(self, batch_size_pow_scale: int=0, use_fp32: bool=False) -> None:
         super().__init__()
 
         # For self.load_default_training_arguments
         self.batch_size_pow_scale = batch_size_pow_scale
+        self.use_fp32 = use_fp32
 
     @abstractmethod
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
@@ -121,6 +122,9 @@ class ExperimentBase(ABC):
         args_dict["per_device_train_batch_size"] = new_batch_size
         args_dict["per_device_eval_batch_size"] = 2 * new_batch_size
         args_dict["gradient_accumulation_steps"] = new_grad_accumulation
+
+        if self.use_fp32 is True:
+            args_dict["bf16"] = False
 
         return args_dict
 

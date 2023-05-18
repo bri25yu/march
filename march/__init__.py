@@ -19,7 +19,11 @@ os.environ["TRANSFORMERS_CACHE"] = CACHE_DIR
 os.environ["HF_DATASETS_CACHE"] = CACHE_DIR
 
 
-def run(experiment_name: Union[None, str]=None, batch_size_pow_scale: int=0) -> None:
+def run(
+    experiment_name: Union[None, str]=None,
+    batch_size_pow_scale: int=0,
+    use_fp32: bool=False
+) -> None:
     """
     batch_size_pow_scale: int
         Will multiply the default batch size by 2 ** batch_size_pow_scale.
@@ -27,6 +31,9 @@ def run(experiment_name: Union[None, str]=None, batch_size_pow_scale: int=0) -> 
             => new_batch_size = original_batch_size * (2 ** batch_size_pow_scale)
                 = 8 * (2 ** 2) = 32
         Default value is 0 or a scaling factor of 2 ** 0 = 1.
+    use_fp32: bool
+        The default experiment precision is bf16. Setting this flag to true will turn off
+        bf16 and use fp32 instead.
 
     """
     from march.experiments import available_experiments
@@ -55,7 +62,7 @@ def run(experiment_name: Union[None, str]=None, batch_size_pow_scale: int=0) -> 
     finished = False
     while not finished:
         try:
-            experiment = experiment_cls(batch_size_pow_scale=batch_size_pow_scale)
+            experiment = experiment_cls(batch_size_pow_scale=batch_size_pow_scale, use_fp32=use_fp32)
             experiment.train()
             finished = True
         except RuntimeError as e:
