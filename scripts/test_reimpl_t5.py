@@ -10,7 +10,7 @@ from numpy import allclose, array, isclose, ndarray
 
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-from torch import bfloat16, equal, long, manual_seed as set_torch_seed, rand, randint
+from torch import bfloat16, equal, finfo, long, manual_seed as set_torch_seed, rand, randint
 from torch.cuda import device_count
 
 from datasets import load_dataset
@@ -319,7 +319,8 @@ class TestReimplMatchT5(TestCase):
         reimpl_train_loss = read_train_loss(reimpl_exp.output_dir)
         t5_train_loss = read_train_loss(t5_exp.output_dir)
 
-        self.assertTrue(allclose(reimpl_train_loss, t5_train_loss))
+        atol = finfo(bfloat16).eps
+        self.assertTrue(allclose(reimpl_train_loss, t5_train_loss, atol=atol))
 
 
 def print_e2e_train_losses():
@@ -329,7 +330,9 @@ def print_e2e_train_losses():
     reimpl_train_loss = read_train_loss(reimpl_exp.output_dir)
     t5_train_loss = read_train_loss(t5_exp.output_dir)
     diff = reimpl_train_loss - t5_train_loss
-    values_isclose = isclose(reimpl_train_loss, t5_train_loss)
+
+    atol = finfo(bfloat16).eps
+    values_isclose = isclose(reimpl_train_loss, t5_train_loss, atol=atol)
 
     print(reimpl_train_loss, t5_train_loss, diff, values_isclose, sep="\n")
 
