@@ -66,10 +66,10 @@ class TestReimplMatchT5Units(TestCase):
         self.input_embeds = t5_model.shared(self.input_ids)
         self.encoder_hidden_state = rand((N, L, D))
 
-        self.attention_mask = ones((N, L), dtype=long)
-        self.t5_attention_mask = t5_model.get_extended_attention_mask(1.0 - self.attention_mask, (N, L))
-        self.decoder_attention_mask = reimpl_model.create_decoder_attention_mask(self.input_ids)
-        self.t5_decoder_attention_mask = t5_model.get_extended_attention_mask(1.0 - self.decoder_attention_mask, (N, L))
+        self.attention_mask = randint(0, 2, (N, L), dtype=bool)
+        self.t5_attention_mask = t5_model.get_extended_attention_mask(~self.attention_mask, (N, L))
+        self.decoder_attention_mask = randint(0, 2, (N, L, L), dtype=bool)
+        self.t5_decoder_attention_mask = t5_model.get_extended_attention_mask(~self.decoder_attention_mask, (N, L, L))
 
     def test_weight_matching_basic(self) -> None:
         # Sanity check weight matching using encoder selfattn q weight
@@ -133,7 +133,7 @@ class TestReimplMatchT5Units(TestCase):
         set_torch_seed(self.SEED)
         t5_encoder_outputs = t5_model.encoder(
             inputs_embeds=input_embeds,
-            attention_mask=1.0 - attention_mask,  # We don't use self.t5_attention_mask because encoder will do it for us
+            attention_mask=~attention_mask,  # We don't use self.t5_attention_mask because encoder will do it for us
         )[0]
 
         self.assertTrue(equal(reimpl_encoder_outputs, t5_encoder_outputs))
@@ -156,9 +156,9 @@ class TestReimplMatchT5Units(TestCase):
         set_torch_seed(self.SEED)
         t5_decoder_outputs = t5_model.decoder(
             inputs_embeds=input_embeds,
-            attention_mask=1.0 - decoder_attention_mask,  # Again, we don't use self.t5_decoder_attention_mask because decoder will do it for us
+            attention_mask=~decoder_attention_mask,  # Again, we don't use self.t5_decoder_attention_mask because decoder will do it for us
             encoder_hidden_states=encoder_hidden_state,
-            encoder_attention_mask=1.0 - attention_mask,
+            encoder_attention_mask=~attention_mask,
         )[0]
 
         self.assertTrue(equal(reimpl_decoder_outputs, t5_decoder_outputs))

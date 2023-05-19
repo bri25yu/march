@@ -201,6 +201,7 @@ class TransformerBase(TransformerComponentBase):
         input_ids: SequenceInputIds,
         attention_mask: SequenceInputIds,
         decoder_input_ids: SequenceInputIds,
+        decoder_attention_mask: SequenceInputIds,
         labels: SequenceInputIds,
     ) -> Seq2SeqLMOutput:
         config = self.config
@@ -210,7 +211,6 @@ class TransformerBase(TransformerComponentBase):
         encoder_hidden_state = encoder_outputs.input_embeds
 
         decoder_input_embeds: SequenceInputEmbeds = embedding(decoder_input_ids, self.embedding.weight)
-        decoder_attention_mask = self.create_decoder_attention_mask(decoder_input_ids)
         decoder_outputs: AttentionOutput = self.decoder(
             decoder_input_embeds, decoder_attention_mask, encoder_hidden_state, attention_mask,
         )
@@ -224,19 +224,6 @@ class TransformerBase(TransformerComponentBase):
         loss = loss_fct(lm_logits.view(-1, lm_logits.size(-1)), labels.view(-1))
 
         return Seq2SeqLMOutput(loss=loss, logits=lm_logits)
-
-    def create_decoder_attention_mask(self, decoder_input_ids: SequenceInputIds) -> TensorType["N", "L_out", "L_out"]:
-        """
-        1 for should mask, 0 otherwise.
-        """
-        batch_size, sequence_length = decoder_input_ids.size()
-
-        no_loss_mask: TensorType["N", 1, "L_out"] = decoder_input_ids[:, None, :] == -100
-        causal_mask: TensorType["L_out", "L_out"] = triu(ones(sequence_length, sequence_length, dtype=long), diagonal=1)[None, :, :].to(device=decoder_input_ids.device)
-        decoder_attention_mask: TensorType["N", "L_out", "L_out"] = no_loss_mask | causal_mask
-        assert decoder_attention_mask.size() == (batch_size, sequence_length, sequence_length), f"Expected decoder attention mask of shape {(batch_size, sequence_length, sequence_length)}, but got {decoder_attention_mask.size()}."
-
-        return decoder_attention_mask
 
     def count_parameters(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)

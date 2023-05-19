@@ -44,22 +44,16 @@ class BaselineT5Experiment(BaselineExperiment):
         return model
 
     def get_data_collator(self, tokenizer: PreTrainedTokenizerFast):
+        data_collator = super().get_data_collator(tokenizer)
         # Invert the mask for T5, change the pad token id
-
-        base_data_collator = DataCollatorForSeq2Seq(tokenizer)
-        bos_token_id = pad_token_id = tokenizer.pad_token_id
-        def data_collator(examples):
-            for example in examples:
-                example["decoder_input_ids"] = [bos_token_id] + example["labels"][:-1]
-
-            examples = base_data_collator(examples)
-
-            # 0 for should mask, 1 otherwise
-            examples["attention_mask"] = examples["input_ids"] != pad_token_id
+        def inverted_attention_mask_data_collator(examples):
+            examples = data_collator(examples)
+            examples["attention_mask"] = ~examples["attention_mask"]
+            examples["decoder_attention_mask"] = ~examples["decoder_attention_mask"]
 
             return examples
 
-        return data_collator
+        return inverted_attention_mask_data_collator
 
     def _call_init_weights(self, model: TransformerBase, seed: int) -> None:
         # Special HF T5 model weight re-init

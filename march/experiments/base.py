@@ -10,7 +10,7 @@ from datasets import DatasetDict
 
 from numpy.random import seed as set_numpy_seed
 
-from torch import manual_seed as set_torch_seed
+from torch import long, manual_seed as set_torch_seed, triu, ones
 from torch.cuda import device_count
 from torch.nn import Module
 
@@ -164,8 +164,17 @@ class ExperimentBase(ABC):
 
             examples = base_data_collator(examples)
 
-            # 1 for should mask, 0 otherwise
+            # Attention masks have values of 1 for should mask, 0 otherwise
             examples["attention_mask"] = examples["input_ids"] == pad_token_id
+
+            batch_size, decoder_input_length = examples["decoder_input_ids"].size()
+            causal_mask = triu(ones(decoder_input_length, decoder_input_length, dtype=long), diagonal=1)[None, :, :]
+
+            decoder_attention_mask = examples["decoder_input_ids"] == pad_token_id
+            decoder_attention_mask = decoder_attention_mask | causal_mask
+            assert decoder_attention_mask.size() == (batch_size, decoder_input_length, decoder_input_length), f"Expected decoder attention mask of shape {(batch_size, decoder_input_length, decoder_input_length)}, but got {decoder_attention_mask.size()}."
+
+            examples["decoder_attention_mask"] = decoder_attention_mask
 
             return examples
 
