@@ -183,7 +183,7 @@ class TestReimplMatchT5(TestCase):
         # We use .to_list to convert into a format readable by data collators
         tiny_dataset = load_dataset("hlillemark/c4_t5_100")["train"].select(range(2)).to_list()
 
-        inputs_to_cuda = lambda d: {k: move_formats(v) for k, v in d.items()}
+        inputs_to_cuda = lambda d: {k: v.cuda() for k, v in d.items()}
         reimpl_data_collator = reimpl_exp.get_data_collator(reimpl_exp.load_default_tokenizer())
         reimpl_inputs = inputs_to_cuda(reimpl_data_collator(tiny_dataset))
         t5_data_collator = t5_exp.get_data_collator(t5_exp.load_default_tokenizer())
