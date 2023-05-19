@@ -6,11 +6,11 @@ from os.path import exists
 
 from unittest import TestCase, main as unittest_main, skipIf
 
-from numpy import array, ndarray
+from numpy import allclose, array, ndarray
 
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-from torch import allclose, bfloat16, equal, long, manual_seed as set_torch_seed, rand, randint
+from torch import bfloat16, equal, long, manual_seed as set_torch_seed, rand, randint
 from torch.cuda import device_count
 
 from datasets import load_dataset
