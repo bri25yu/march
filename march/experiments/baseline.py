@@ -4,7 +4,7 @@ from datasets import DatasetDict
 
 from torch import manual_seed as set_torch_seed
 
-from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, Seq2SeqTrainingArguments, AutoTokenizer, AutoModelForSeq2SeqLM, AutoConfig
+from transformers import PreTrainedTokenizerFast, Seq2SeqTrainingArguments, AutoModelForSeq2SeqLM, AutoConfig
 
 from march.datasets.c4 import load_c4
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
@@ -22,15 +22,6 @@ class BaselineExperiment(ExperimentBase):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
         return BaselineTransformer(config)
-
-
-class BaselineFP32Experiment(BaselineExperiment):
-    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
-        default_training_arguments = self.load_default_training_arguments()
-
-        default_training_arguments["bf16"] = False
-
-        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
 
 
 class BaselineT5Experiment(BaselineExperiment):

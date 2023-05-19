@@ -54,19 +54,6 @@ We compare our reimplementation with the implementation in [Raffel et al, Oct 20
 <hr>
 <br>
 
-## FP32 vs BF16 makes no difference
-
-<details>
-<summary></summary>
-
-![](readme_resources/model_training_precision.png)
-
-</details>
-
-<br>
-<hr>
-<br>
-
 ## Gated Linear Units are better
 
 <details>
