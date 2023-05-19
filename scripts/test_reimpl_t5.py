@@ -167,7 +167,7 @@ class TestReimplMatchT5Units(TestCase):
         reimpl_model = self.reimpl_model
         t5_model = self.t5_model
 
-        tiny_dataset = load_dataset("bri25yu/c4_t5_100")["train"]
+        tiny_dataset = load_dataset("hlillemark/c4_t5_100")["train"]
 
         reimpl_data_collator = reimpl_exp.get_data_collator(reimpl_exp.load_default_tokenizer())
         reimpl_inputs = reimpl_data_collator(tiny_dataset)
