@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 from abc import ABC, abstractmethod
 
@@ -10,9 +10,12 @@ from datasets import DatasetDict
 
 from numpy.random import seed as set_numpy_seed
 
-from torch.cuda import device_count
 from torch import manual_seed as set_torch_seed
+from torch.cuda import device_count
 from torch.nn import Module
+
+from torch.utils.data import Sampler
+from torch.utils.data.distributed import DistributedSampler
 
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, PrinterCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
 
@@ -21,7 +24,7 @@ from march.datasets.c4 import EOS_TOKEN, load_c4_tokenizer
 from march.models.baseline import TransformerBase, LayerNorm, AttentionBase
 
 
-class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
+class CustomSeq2SeqTrainer(Seq2SeqTrainer):
     def log(self, logs: Dict[str, float]) -> None:
         modules_by_cls = lambda cls: [module for module in self.model.modules() if isinstance(module, cls)]
 
@@ -51,6 +54,17 @@ class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
             logs["embedding_mean"] = self.model.embedding.weight.data.mean().item()
 
         return super().log(logs)
+
+    def _get_train_sampler(self) -> Optional[Sampler]:
+        sampler = super()._get_train_sampler()
+        assert type(sampler) is DistributedSampler
+
+        return DistributedSampler(
+            self.train_dataset,
+            num_replicas=self.args.world_size,
+            rank=self.args.process_index,
+            shuffle=False,
+        )
 
 
 class ExperimentBase(ABC):
@@ -171,7 +185,7 @@ class ExperimentBase(ABC):
             self._call_init_weights(model, training_arguments.seed)
 
         data_collator = self.get_data_collator(tokenizer)
-        trainer = CustomLoggingSeq2SeqTrainer(
+        trainer = CustomSeq2SeqTrainer(
             model=model,
             args=training_arguments,
             train_dataset=dataset_dict["train"],
