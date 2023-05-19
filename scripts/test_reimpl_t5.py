@@ -257,6 +257,30 @@ class TestReimplMatchT5(TestCase):
         t5_data_collator = t5_exp.get_data_collator(t5_exp.load_default_tokenizer())
         t5_inputs = inputs_to_cuda(t5_data_collator(tiny_dataset))
 
+        # START temp testing inputs
+        N, L = 2, 128
+        input_ids = randint(0, reimpl_model.config.vocab_size, (N, L), dtype=long)
+        attention_mask = randint(0, 2, (N, L), dtype=bool)
+        decoder_attention_mask = randint(0, 2, (N, L, L), dtype=bool)
+        reimpl_inputs = {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "decoder_input_ids": input_ids,
+            "decoder_attention_mask": decoder_attention_mask,
+            "labels": input_ids,
+        }
+        t5_inputs = {
+            "input_ids": input_ids,
+            "attention_mask": ~attention_mask,
+            "decoder_input_ids": input_ids,
+            "decoder_attention_mask": ~decoder_attention_mask,
+            "labels": input_ids,
+        }
+        reimpl_inputs = inputs_to_cuda(reimpl_inputs)
+        t5_inputs = inputs_to_cuda(t5_inputs)
+
+        # END temp testing inputs
+
         set_torch_seed(self.SEED)
         reimpl_outputs = reimpl_model(**reimpl_inputs)
         set_torch_seed(self.SEED)
