@@ -1,6 +1,6 @@
 from sys import argv
 
-from unittest import TestCase, main as unittest_main
+from unittest import TestCase, main as unittest_main, skipIf
 
 from numpy import array, ndarray
 
@@ -33,7 +33,8 @@ def read_train_loss(path: str) -> ndarray:
     return array([s.value for s in scalars])
 
 
-class TestReimplMatchT5(TestCase):
+@skipIf(device_count() != 0, "Skipping unit tests with GPUs")
+class TestReimplMatchT5Units(TestCase):
     SEED = 42
 
     def setUp(self) -> None:
@@ -195,15 +196,14 @@ class TestReimplMatchT5(TestCase):
         t5_grad = t5_weight.weight.grad
         self.assertTrue(equal(reimpl_grad, t5_grad))
 
+
+@skipIf(device_count() == 0, "Need GPUs to run end to end experiment")
+class TestReimplMatchT5EndToEnd(TestCase):
     def test_end_to_end_train(self) -> None:
-        num_gpus = device_count()
-        if num_gpus == 0:
-            self.skipTest(f"Need GPUs to run end to end experiment")
-
-        reimpl_exp = self.reimpl_exp
-        t5_exp = self.t5_exp
-
+        reimpl_exp = TestBaselineExperiment()
         reimpl_exp.train()
+
+        t5_exp = TestBaselineT5Experiment()
         t5_exp.train()
 
         reimpl_train_loss = read_train_loss(reimpl_exp.output_dir)
@@ -212,6 +212,6 @@ class TestReimplMatchT5(TestCase):
         self.assertTrue((reimpl_train_loss == t5_train_loss).all())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest_args = argv[:1]
     unittest_main(argv=unittest_args)
