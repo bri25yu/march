@@ -11,6 +11,8 @@ from tensorboard.backend.event_processing.event_accumulator import EventAccumula
 from torch import equal, long, manual_seed as set_torch_seed, rand, randint, ones
 from torch.cuda import device_count
 
+from datasets import load_dataset
+
 from march.experiments.baseline import BaselineExperiment, BaselineT5Experiment
 
 
@@ -160,25 +162,22 @@ class TestReimplMatchT5Units(TestCase):
         self.assertTrue(equal(reimpl_decoder_outputs, t5_decoder_outputs))
 
     def test_single_step(self) -> None:
+        reimpl_exp = self.reimpl_exp
+        t5_exp = self.t5_exp
         reimpl_model = self.reimpl_model
         t5_model = self.t5_model
-        input_ids = self.input_ids
-        attention_mask = self.attention_mask
+
+        tiny_dataset = load_dataset("bri25yu/c4_t5_100")["train"]
+
+        reimpl_data_collator = reimpl_exp.get_data_collator(reimpl_exp.load_default_tokenizer())
+        reimpl_inputs = reimpl_data_collator(tiny_dataset)
+        t5_data_collator = t5_exp.get_data_collator(t5_exp.load_default_tokenizer())
+        t5_inputs = t5_data_collator(tiny_dataset)
 
         set_torch_seed(self.SEED)
-        reimpl_outputs = reimpl_model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            decoder_input_ids=input_ids,
-            labels=input_ids,
-        )
+        reimpl_outputs = reimpl_model(**reimpl_inputs)
         set_torch_seed(self.SEED)
-        t5_outputs = t5_model(
-            input_ids=input_ids,
-            attention_mask=1.0 - attention_mask,
-            decoder_input_ids=input_ids,
-            labels=input_ids,
-        )
+        t5_outputs = t5_model(**t5_inputs)
 
         reimpl_logits = reimpl_outputs.logits
         t5_logits = t5_outputs.logits
