@@ -141,6 +141,7 @@ class ExperimentBase(ABC):
 
         if self.use_fp32 is True:
             args_dict["bf16"] = False
+            args_dict["bf16_full_eval"] = False
 
         if self.NUM_STEPS is not None:
             assert isinstance(self.NUM_STEPS, int)
