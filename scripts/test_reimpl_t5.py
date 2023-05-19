@@ -214,6 +214,17 @@ class TestReimplMatchT5EndToEnd(TestCase):
         self.assertTrue((reimpl_train_loss == t5_train_loss).all())
 
 
+def print_e2e_train_losses():
+    reimpl_exp = TestBaselineExperiment()
+    t5_exp = TestBaselineT5Experiment()
+
+    reimpl_train_loss = read_train_loss(reimpl_exp.output_dir)
+    t5_train_loss = read_train_loss(t5_exp.output_dir)
+    diff = reimpl_train_loss - t5_train_loss
+
+    print(reimpl_train_loss, t5_train_loss, diff, sep="\n")
+
+
 if __name__ == "__main__":
     unittest_args = argv[:1]
     unittest_main(argv=unittest_args)
