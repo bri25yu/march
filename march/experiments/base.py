@@ -10,7 +10,7 @@ from datasets import DatasetDict
 
 from numpy.random import seed as set_numpy_seed
 
-from torch import long, manual_seed as set_torch_seed, triu, ones
+from torch import manual_seed as set_torch_seed, triu, ones
 from torch.cuda import device_count
 from torch.nn import Module
 
