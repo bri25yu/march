@@ -101,7 +101,7 @@ def plot_comparative_experiment(
     table_ax = axs_dict["table_ax"]
     axs = [train_loss_ax, val_loss_ax, scaling_law_steps_ax, scaling_law_all_ax]
 
-    stats_df = DataFrame(columns=["Experiment", "Scaling law", "Mean L1 residual", "PPL at 1k", "PPL at 10k", "PPL at 100k", "PPL at 300k", "PPL at 1M"])
+    stats_df = DataFrame(columns=["Experiment", "Scaling law", "Mean L1 residual", "PPL at 100k", "PPL at 300k", "PPL at 1M"])
 
     for experiment_name, legend_label in tqdm(zip(experiment_names, legend_labels), desc="Plotting", total=len(experiment_names)):
         experiment_path = EXP_NAMES_TO_PATH[experiment_name]
