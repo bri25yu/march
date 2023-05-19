@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 from abc import ABC, abstractmethod
 
@@ -54,6 +54,8 @@ class CustomLoggingSeq2SeqTrainer(Seq2SeqTrainer):
 
 
 class ExperimentBase(ABC):
+    NUM_STEPS: Union[None, int] = None
+
     def __init__(self, batch_size_pow_scale: int=0, use_fp32: bool=False) -> None:
         super().__init__()
 
@@ -125,6 +127,14 @@ class ExperimentBase(ABC):
 
         if self.use_fp32 is True:
             args_dict["bf16"] = False
+
+        if self.NUM_STEPS is not None:
+            assert isinstance(self.NUM_STEPS, int)
+            args_dict["max_steps"] = self.NUM_STEPS
+
+        # Output and logging directories
+        args_dict["output_dir"] = self.output_dir
+        args_dict["logging_dir"] = self.output_dir
 
         return args_dict
 

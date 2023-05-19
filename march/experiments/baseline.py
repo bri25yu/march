@@ -1,5 +1,3 @@
-from typing import Union
-
 from types import MethodType
 
 from datasets import DatasetDict
@@ -14,18 +12,12 @@ from march.experiments.base import ExperimentBase
 
 
 class BaselineExperiment(ExperimentBase):
-    NUM_STEPS: Union[None, int] = None
-
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
         return load_c4()
 
     def get_training_arguments(self) -> Seq2SeqTrainingArguments:
         default_training_arguments = self.load_default_training_arguments()
-        if self.NUM_STEPS is not None:
-            assert isinstance(self.NUM_STEPS, int)
-            default_training_arguments["max_steps"] = self.NUM_STEPS
-
-        return Seq2SeqTrainingArguments(self.output_dir, **default_training_arguments)
+        return Seq2SeqTrainingArguments(**default_training_arguments)
 
     def get_model(self) -> TransformerBase:
         config = TransformerConfig()
@@ -43,12 +35,6 @@ class BaselineFP32Experiment(BaselineExperiment):
 
 class BaselineT5Experiment(BaselineExperiment):
     MODEL_NAME = "t5-base"
-
-    def load_default_tokenizer(self) -> PreTrainedTokenizerFast:
-        return AutoTokenizer.from_pretrained(self.MODEL_NAME, model_max_length=1024)
-
-    def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
-        return load_c4()
 
     def get_model(self) -> TransformerBase:
         config = AutoConfig.from_pretrained(self.MODEL_NAME)
