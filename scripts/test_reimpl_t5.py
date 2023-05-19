@@ -237,7 +237,8 @@ class TestReimplMatchT5(TestCase):
 
     def test_integration(self) -> None:
         device = 7  # TODO Temporary, not sure how best to pass in a param with unittest lol
-        move_formats = lambda t: t.to(f"cuda:{device}", bfloat16)
+        # move_formats = lambda t: t.to(f"cuda:{device}", bfloat16)
+        move_formats = lambda t: t.to("cpu", bfloat16)
 
         reimpl_exp = TestBaselineExperiment()
         reimpl_model = reimpl_exp.get_model()
@@ -251,35 +252,12 @@ class TestReimplMatchT5(TestCase):
         # We use .to_list to convert into a format readable by data collators
         tiny_dataset = load_dataset("hlillemark/c4_t5_100")["train"].select(range(2)).to_list()
 
-        inputs_to_cuda = lambda d: {k: v.cuda(device) for k, v in d.items()}
+        # inputs_to_cuda = lambda d: {k: v.cuda(device) for k, v in d.items()}
+        inputs_to_cuda = lambda d: {k: v for k, v in d.items()}
         reimpl_data_collator = reimpl_exp.get_data_collator(reimpl_exp.load_default_tokenizer())
         reimpl_inputs = inputs_to_cuda(reimpl_data_collator(tiny_dataset))
         t5_data_collator = t5_exp.get_data_collator(t5_exp.load_default_tokenizer())
         t5_inputs = inputs_to_cuda(t5_data_collator(tiny_dataset))
-
-        # START temp testing inputs
-        N, L = 2, 128
-        input_ids = randint(0, reimpl_model.config.vocab_size, (N, L), dtype=long)
-        attention_mask = randint(0, 2, (N, L), dtype=bool)
-        decoder_attention_mask = randint(0, 2, (N, L, L), dtype=bool)
-        reimpl_inputs = {
-            "input_ids": input_ids,
-            "attention_mask": attention_mask,
-            "decoder_input_ids": input_ids,
-            "decoder_attention_mask": decoder_attention_mask,
-            "labels": input_ids,
-        }
-        t5_inputs = {
-            "input_ids": input_ids,
-            "attention_mask": ~attention_mask,
-            "decoder_input_ids": input_ids,
-            "decoder_attention_mask": ~decoder_attention_mask,
-            "labels": input_ids,
-        }
-        reimpl_inputs = inputs_to_cuda(reimpl_inputs)
-        t5_inputs = inputs_to_cuda(t5_inputs)
-
-        # END temp testing inputs
 
         set_torch_seed(self.SEED)
         reimpl_outputs = reimpl_model(**reimpl_inputs)
