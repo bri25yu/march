@@ -10,10 +10,12 @@ from numpy import array, ndarray
 
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-from torch import bfloat16, equal, long, manual_seed as set_torch_seed, rand, randint, ones
+from torch import bfloat16, equal, long, manual_seed as set_torch_seed, rand, randint
 from torch.cuda import device_count
 
 from datasets import load_dataset
+
+from transformers import enable_full_determinism
 
 from march.experiments.baseline import BaselineExperiment, BaselineT5Experiment
 
@@ -99,6 +101,12 @@ class TestReimplMatchT5Units(TestCase):
 
             self.assertTrue(equal(reimpl_outputs, t5_outputs))
 
+            reimpl_outputs.mean().backward(retain_graph=True)
+            t5_outputs.mean().backward(retain_graph=True)
+            reimpl_weight = reimpl_selfattn.w_q
+            t5_weight = t5_selfattn.q
+            self.assertTrue(equal(reimpl_weight.weight.grad, t5_weight.weight.grad))
+
     def test_crossattn(self) -> None:
         reimpl_model = self.reimpl_model
         t5_model = self.t5_model
@@ -117,6 +125,12 @@ class TestReimplMatchT5Units(TestCase):
             t5_outputs = t5_crossattn(input_embeds, t5_decoder_attention_mask, key_value_states=encoder_hidden_state)[0]
 
             self.assertTrue(equal(reimpl_outputs, t5_outputs))
+
+            reimpl_outputs.mean().backward(retain_graph=True)
+            t5_outputs.mean().backward(retain_graph=True)
+            reimpl_weight = reimpl_crossattn.w_q
+            t5_weight = t5_crossattn.q
+            self.assertTrue(equal(reimpl_weight.weight.grad, t5_weight.weight.grad))
 
     def test_encoder(self) -> None:
         reimpl_model = self.reimpl_model
@@ -137,6 +151,12 @@ class TestReimplMatchT5Units(TestCase):
         )[0]
 
         self.assertTrue(equal(reimpl_encoder_outputs, t5_encoder_outputs))
+
+        reimpl_encoder_outputs.mean().backward(retain_graph=True)
+        t5_encoder_outputs.mean().backward(retain_graph=True)
+        reimpl_selfattn = reimpl_model.encoder.self_attention_layers[0]
+        t5_selfattn = t5_model.encoder.block[0].layer[0].SelfAttention
+        self.assertTrue(equal(reimpl_selfattn.w_q.weight.grad, t5_selfattn.q.weight.grad))
 
     def test_decoder(self) -> None:
         reimpl_model = self.reimpl_model
@@ -163,13 +183,24 @@ class TestReimplMatchT5Units(TestCase):
 
         self.assertTrue(equal(reimpl_decoder_outputs, t5_decoder_outputs))
 
+        reimpl_decoder_outputs.mean().backward(retain_graph=True)
+        t5_decoder_outputs.mean().backward(retain_graph=True)
+        reimpl_crossattn = reimpl_model.decoder.cross_attention_layers[0]
+        t5_crossattn = t5_model.decoder.block[0].layer[1].EncDecAttention
+        assert reimpl_crossattn.w_q.weight.grad is not None
+        self.assertTrue(equal(reimpl_crossattn.w_q.weight.grad, t5_crossattn.q.weight.grad))
+
 
 @skipIf(device_count() == 0, "Need GPUs to run end to end experiment")
 class TestReimplMatchT5(TestCase):
     SEED = 42  # Only used for this test case
 
+    def setUp(self) -> None:
+        enable_full_determinism(self.SEED)
+
     def test_integration(self) -> None:
-        move_formats = lambda t: t.to("cuda", bfloat16)
+        device = 7  # TODO Temporary, not sure how best to pass in a param with unittest lol
+        move_formats = lambda t: t.to(f"cuda:{device}", bfloat16)
 
         reimpl_exp = TestBaselineExperiment()
         reimpl_model = reimpl_exp.get_model()
@@ -183,7 +214,7 @@ class TestReimplMatchT5(TestCase):
         # We use .to_list to convert into a format readable by data collators
         tiny_dataset = load_dataset("hlillemark/c4_t5_100")["train"].select(range(2)).to_list()
 
-        inputs_to_cuda = lambda d: {k: v.cuda() for k, v in d.items()}
+        inputs_to_cuda = lambda d: {k: v.cuda(device) for k, v in d.items()}
         reimpl_data_collator = reimpl_exp.get_data_collator(reimpl_exp.load_default_tokenizer())
         reimpl_inputs = inputs_to_cuda(reimpl_data_collator(tiny_dataset))
         t5_data_collator = t5_exp.get_data_collator(t5_exp.load_default_tokenizer())
