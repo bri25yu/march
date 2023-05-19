@@ -6,7 +6,7 @@ from os.path import exists
 
 from unittest import TestCase, main as unittest_main, skipIf
 
-from numpy import allclose, array, ndarray
+from numpy import allclose, array, isclose, ndarray
 
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
@@ -329,8 +329,9 @@ def print_e2e_train_losses():
     reimpl_train_loss = read_train_loss(reimpl_exp.output_dir)
     t5_train_loss = read_train_loss(t5_exp.output_dir)
     diff = reimpl_train_loss - t5_train_loss
+    values_isclose = isclose(reimpl_train_loss, t5_train_loss)
 
-    print(reimpl_train_loss, t5_train_loss, diff, sep="\n")
+    print(reimpl_train_loss, t5_train_loss, diff, values_isclose, sep="\n")
 
 
 if __name__ == "__main__":
