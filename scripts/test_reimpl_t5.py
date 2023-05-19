@@ -39,7 +39,6 @@ def read_train_loss(path: str) -> ndarray:
     return array([s.value for s in scalars])
 
 
-@skipIf(device_count() != 0, "Skipping unit tests that run on CPU")
 class TestReimplMatchT5Units(TestCase):
     SEED = 42
 
@@ -49,6 +48,8 @@ class TestReimplMatchT5Units(TestCase):
         t5_exp = TestBaselineT5Experiment()
         reimpl_model = reimpl_exp.get_model()
         t5_model = t5_exp.get_model()
+        reimpl_model = reimpl_model.to(bfloat16)
+        t5_model = t5_model.to(bfloat16)
 
         # Reset parameters
         reimpl_exp._call_init_weights(reimpl_model, self.SEED)
@@ -63,8 +64,8 @@ class TestReimplMatchT5Units(TestCase):
         N, L = 2, 128
         D = reimpl_model.config.dim_model
         self.input_ids = randint(0, reimpl_model.config.vocab_size, (N, L), dtype=long)
-        self.input_embeds = t5_model.shared(self.input_ids)
-        self.encoder_hidden_state = rand((N, L, D))
+        self.input_embeds = t5_model.shared(self.input_ids).to(bfloat16)
+        self.encoder_hidden_state = rand((N, L, D), dtype=bfloat16)
 
         self.attention_mask = randint(0, 2, (N, L), dtype=bool)
         self.t5_attention_mask = t5_model.get_extended_attention_mask(~self.attention_mask, (N, L))
