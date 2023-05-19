@@ -172,17 +172,20 @@ class TestReimplMatchT5(TestCase):
         reimpl_exp = TestBaselineExperiment()
         reimpl_model = reimpl_exp.get_model()
         reimpl_exp._call_init_weights(reimpl_model, self.SEED)
+        reimpl_exp.cuda()
         t5_exp = TestBaselineT5Experiment()
         t5_model = t5_exp.get_model()
         t5_exp._call_init_weights(t5_model, self.SEED)
+        t5_model.cuda()
 
         # We use .to_list to convert into a format readable by data collators
         tiny_dataset = load_dataset("hlillemark/c4_t5_100")["train"].to_list()
 
+        inputs_to_cuda = lambda d: {k: v.cuda() for k, v in d.items()}
         reimpl_data_collator = reimpl_exp.get_data_collator(reimpl_exp.load_default_tokenizer())
-        reimpl_inputs = reimpl_data_collator(tiny_dataset)
+        reimpl_inputs = inputs_to_cuda(reimpl_data_collator(tiny_dataset))
         t5_data_collator = t5_exp.get_data_collator(t5_exp.load_default_tokenizer())
-        t5_inputs = t5_data_collator(tiny_dataset)
+        t5_inputs = inputs_to_cuda(t5_data_collator(tiny_dataset))
 
         set_torch_seed(self.SEED)
         reimpl_outputs = reimpl_model(**reimpl_inputs)
