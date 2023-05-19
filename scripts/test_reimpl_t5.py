@@ -1,3 +1,5 @@
+from sys import argv
+
 from unittest import TestCase, main as unittest_main
 
 from numpy import array, ndarray
@@ -211,4 +213,5 @@ class TestReimplMatchT5(TestCase):
 
 
 if __name__ == '__main__':
-    unittest_main()
+    unittest_args = argv[:1]
+    unittest_main(argv=unittest_args)
