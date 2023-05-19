@@ -15,8 +15,6 @@ from torch.cuda import device_count
 
 from datasets import load_dataset
 
-from transformers import enable_full_determinism
-
 from march.experiments.baseline import BaselineExperiment, BaselineT5Experiment
 
 
@@ -194,9 +192,6 @@ class TestReimplMatchT5Units(TestCase):
 @skipIf(device_count() == 0, "Need GPUs to run end to end experiment")
 class TestReimplMatchT5(TestCase):
     SEED = 42  # Only used for this test case
-
-    def setUp(self) -> None:
-        enable_full_determinism(self.SEED)
 
     def test_integration(self) -> None:
         device = 7  # TODO Temporary, not sure how best to pass in a param with unittest lol
