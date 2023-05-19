@@ -31,6 +31,7 @@ class ValuesReluExperiment(BaselineExperiment):
 
 class ValuesReluNoUpProjExperiment(BaselineExperiment):
     NUM_STEPS = 1_000
+    use_fp32 = True
 
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(dim_model=960, feedforward_scale=1)
@@ -39,6 +40,7 @@ class ValuesReluNoUpProjExperiment(BaselineExperiment):
 
 class ValuesReluFirstFFExperiment(BaselineExperiment):
     NUM_STEPS = 1_000
+    use_fp32 = True
 
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(dim_model=1024)
