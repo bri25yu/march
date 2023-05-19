@@ -188,6 +188,48 @@ class TestReimplMatchT5Units(TestCase):
         assert reimpl_crossattn.w_q.weight.grad is not None
         self.assertTrue(equal(reimpl_crossattn.w_q.weight.grad, t5_crossattn.q.weight.grad))
 
+    def test_transformer(self) -> None:
+        reimpl_model = self.reimpl_model
+        t5_model = self.t5_model
+        input_ids = self.input_ids
+        attention_mask = self.attention_mask
+        decoder_attention_mask = self.decoder_attention_mask
+
+        set_torch_seed(self.SEED)
+        reimpl_outputs = reimpl_model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            decoder_input_ids=input_ids,
+            decoder_attention_mask=decoder_attention_mask,
+            labels=input_ids,
+        )
+        set_torch_seed(self.SEED)
+        t5_outputs = t5_model(
+            input_ids=input_ids,
+            attention_mask=~attention_mask,
+            decoder_input_ids=input_ids,
+            decoder_attention_mask=~decoder_attention_mask,
+            labels=input_ids,
+        )
+
+        reimpl_logits = reimpl_outputs.logits
+        t5_logits = t5_outputs.logits
+        self.assertTrue(equal(reimpl_logits, t5_logits))
+
+        reimpl_loss = reimpl_outputs.loss
+        t5_loss = t5_outputs.loss
+        self.assertTrue(equal(reimpl_loss, t5_loss))
+
+        # Check gradients
+        reimpl_loss.backward()
+        t5_loss.backward()
+
+        reimpl_weight = reimpl_model.encoder.self_attention_layers[0].w_q
+        t5_weight = t5_model.encoder.block[0].layer[0].SelfAttention.q
+        reimpl_grad = reimpl_weight.weight.grad
+        t5_grad = t5_weight.weight.grad
+        self.assertTrue(equal(reimpl_grad, t5_grad))
+
 
 @skipIf(device_count() == 0, "Need GPUs to run end to end experiment")
 class TestReimplMatchT5(TestCase):
