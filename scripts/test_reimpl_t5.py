@@ -10,7 +10,7 @@ from numpy import array, ndarray
 
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-from torch import equal, long, manual_seed as set_torch_seed, rand, randint, ones
+from torch import bfloat16, equal, long, manual_seed as set_torch_seed, rand, randint, ones
 from torch.cuda import device_count
 
 from datasets import load_dataset
@@ -169,19 +169,21 @@ class TestReimplMatchT5(TestCase):
     SEED = 42  # Only used for this test case
 
     def test_integration(self) -> None:
+        move_formats = lambda t: t.to("cuda", bfloat16)
+
         reimpl_exp = TestBaselineExperiment()
         reimpl_model = reimpl_exp.get_model()
         reimpl_exp._call_init_weights(reimpl_model, self.SEED)
-        reimpl_model.cuda()
+        move_formats(reimpl_model)
         t5_exp = TestBaselineT5Experiment()
         t5_model = t5_exp.get_model()
         t5_exp._call_init_weights(t5_model, self.SEED)
-        t5_model.cuda()
+        move_formats(t5_model)
 
         # We use .to_list to convert into a format readable by data collators
         tiny_dataset = load_dataset("hlillemark/c4_t5_100")["train"].select(range(2)).to_list()
 
-        inputs_to_cuda = lambda d: {k: v.cuda() for k, v in d.items()}
+        inputs_to_cuda = lambda d: {k: move_formats(v) for k, v in d.items()}
         reimpl_data_collator = reimpl_exp.get_data_collator(reimpl_exp.load_default_tokenizer())
         reimpl_inputs = inputs_to_cuda(reimpl_data_collator(tiny_dataset))
         t5_data_collator = t5_exp.get_data_collator(t5_exp.load_default_tokenizer())
