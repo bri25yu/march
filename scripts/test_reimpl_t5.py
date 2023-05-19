@@ -172,7 +172,7 @@ class TestReimplMatchT5(TestCase):
         reimpl_exp = TestBaselineExperiment()
         reimpl_model = reimpl_exp.get_model()
         reimpl_exp._call_init_weights(reimpl_model, self.SEED)
-        reimpl_exp.cuda()
+        reimpl_model.cuda()
         t5_exp = TestBaselineT5Experiment()
         t5_model = t5_exp.get_model()
         t5_exp._call_init_weights(t5_model, self.SEED)
