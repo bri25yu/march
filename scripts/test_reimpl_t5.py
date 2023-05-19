@@ -1,3 +1,5 @@
+import march  # redirect cache
+
 from sys import argv
 
 from os.path import exists
@@ -161,13 +163,17 @@ class TestReimplMatchT5Units(TestCase):
 
         self.assertTrue(equal(reimpl_decoder_outputs, t5_decoder_outputs))
 
-    def test_single_step(self) -> None:
-        reimpl_exp = self.reimpl_exp
-        t5_exp = self.t5_exp
-        reimpl_model = self.reimpl_model
-        t5_model = self.t5_model
 
-        tiny_dataset = load_dataset("hlillemark/c4_t5_100")["train"]
+@skipIf(device_count() == 0, "Need GPUs to run end to end experiment")
+class TestReimplMatchT5(TestCase):
+    def test_integration(self) -> None:
+        reimpl_exp = TestBaselineExperiment()
+        t5_exp = TestBaselineT5Experiment()
+        reimpl_model = reimpl_exp.get_model()
+        t5_model = t5_exp.get_model()
+
+        # We use .to_list to convert into a format readable by data collators
+        tiny_dataset = load_dataset("hlillemark/c4_t5_100")["train"].to_list()
 
         reimpl_data_collator = reimpl_exp.get_data_collator(reimpl_exp.load_default_tokenizer())
         reimpl_inputs = reimpl_data_collator(tiny_dataset)
@@ -197,9 +203,6 @@ class TestReimplMatchT5Units(TestCase):
         t5_grad = t5_weight.weight.grad
         self.assertTrue(equal(reimpl_grad, t5_grad))
 
-
-@skipIf(device_count() == 0, "Need GPUs to run end to end experiment")
-class TestReimplMatchT5EndToEnd(TestCase):
     def test_end_to_end_train(self) -> None:
         reimpl_exp = TestBaselineExperiment()
         if not exists(reimpl_exp.output_dir): reimpl_exp.train()
