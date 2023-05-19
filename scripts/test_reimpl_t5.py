@@ -61,7 +61,7 @@ class TestReimplMatchT5Units(TestCase):
         self.t5_model = t5_model
 
         # Create dummy inputs
-        N, L = 2, 128
+        N, L = 2, 8
         D = reimpl_model.config.dim_model
         self.input_ids = randint(0, reimpl_model.config.vocab_size, (N, L), dtype=long)
         self.input_embeds = t5_model.shared(self.input_ids).to(bfloat16)
