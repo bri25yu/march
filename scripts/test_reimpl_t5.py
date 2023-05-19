@@ -82,6 +82,34 @@ class TestReimplMatchT5Units(TestCase):
 
             self.assertTrue(equal(reimpl_weight, t5_weight))
 
+    def test_ff(self) -> None:
+        reimpl_model = self.reimpl_model
+        t5_model = self.t5_model
+        input_embeds = self.input_embeds
+
+        bases = [
+            (reimpl_model.encoder, t5_model.encoder),
+            (reimpl_model.decoder, t5_model.decoder),
+        ]
+
+        for reimpl_base, t5_base in bases:
+            for i in range(12):
+                reimpl_ff = reimpl_base.feedforward_layers[i]
+                t5_ff = t5_base.block[i].layer[-1].DenseReluDense
+
+                set_torch_seed(self.SEED)
+                reimpl_outputs = reimpl_ff(input_embeds)
+                set_torch_seed(self.SEED)
+                t5_outputs = t5_ff(input_embeds)
+
+                self.assertTrue(equal(reimpl_outputs, t5_outputs))
+
+                reimpl_outputs.mean().backward(retain_graph=True)
+                t5_outputs.mean().backward(retain_graph=True)
+                reimpl_weight = reimpl_ff.up_projection
+                t5_weight = t5_ff.wi
+                self.assertTrue(equal(reimpl_weight.weight.grad, t5_weight.weight.grad))
+
     def test_selfattn(self) -> None:
         reimpl_model = self.reimpl_model
         t5_model = self.t5_model
