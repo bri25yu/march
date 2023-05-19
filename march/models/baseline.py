@@ -5,9 +5,9 @@ from abc import abstractmethod
 
 from math import log as math_log
 
-from torch import abs, arange, finfo, full_like, log as torch_log, long, matmul, min, ones, triu, where, zeros_like
+from torch import abs, arange, finfo, full_like, log as torch_log, long, matmul, min, where, zeros_like
 from torch.nn import CrossEntropyLoss, Embedding, Linear, ModuleList
-from torch.nn.functional import dropout, embedding, relu
+from torch.nn.functional import dropout, embedding, relu, softmax
 
 from transformers.modeling_outputs import Seq2SeqLMOutput
 
@@ -288,7 +288,7 @@ class BaselineAttention(AttentionBase):
             position_bias = self.compute_bias(query_length, key_length, is_decoder)
             attention_logits: MultiHeadedAttention = attention_logits + position_bias
 
-        attention_probs: MultiHeadedAttention = attention_logits.softmax(dim=3)
+        attention_probs: MultiHeadedAttention = softmax(attention_logits.to(float32), dim=3).to(attention_logits.dtype)
         attention_probs: MultiHeadedAttention = dropout(attention_probs, p=config.dropout_prob, training=self.training)
 
         attention_values: MultiHeadedEmbeds = matmul(attention_probs, value)

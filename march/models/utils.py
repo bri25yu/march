@@ -22,6 +22,7 @@ __all__ = [
     "TensorType",
     "Parameter",
     "FloatTensor",
+    "float32",
     "SequenceInputIds",
     "SequenceInputEmbeds",
     "KeyValueStates",
