@@ -168,7 +168,7 @@ class ExperimentBase(ABC):
             examples["attention_mask"] = examples["input_ids"] == pad_token_id
 
             batch_size, decoder_input_length = examples["decoder_input_ids"].size()
-            causal_mask = triu(ones(decoder_input_length, decoder_input_length, dtype=long), diagonal=1)
+            causal_mask = triu(ones(decoder_input_length, decoder_input_length, dtype=bool), diagonal=1)
 
             decoder_attention_mask = examples["decoder_input_ids"] == pad_token_id
             decoder_attention_mask = decoder_attention_mask[:, None, :] | causal_mask[None, :, :]
