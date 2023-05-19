@@ -1,11 +1,14 @@
 from typing import Dict, List
 
+from os.path import join
+
 import march  # Redirect cache
 
 from datasets import DatasetDict, load_dataset
 
 from transformers import AutoTokenizer, PreTrainedTokenizerFast
 
+from march import CACHE_DIR
 from march.datasets.span_corrupt_utils import create_span_corrupt_inputs
 
 
@@ -104,6 +107,7 @@ def tokenize_c4() -> None:
         "validation": load_dataset("c4", "en", split=f"validation[:{3 * NUM_VAL_EXAMPLES}]"),
     })
     tokenized_dataset_dict = dataset_dict.map(tokenize_fn, batched=True, remove_columns=dataset_dict["train"].column_names, desc="Tokenizing", num_proc=16)
+    tokenized_dataset_dict.save_to_disk(join(CACHE_DIR, "c4_t5"))
     tokenized_dataset_dict.push_to_hub("c4_t5")
 
 
@@ -124,6 +128,7 @@ def pack_tokenized_c4() -> None:
         "train": packed_dataset_dict["train"],
         "validation": packed_dataset_dict["validation"].select(range(NUM_VAL_EXAMPLES)),
     })
+    packed_dataset_dict.save_to_disk(join(CACHE_DIR, "c4_t5_packed"))
     packed_dataset_dict.push_to_hub("c4_t5_packed")
 
 
@@ -143,6 +148,7 @@ def span_corrupt_packed_c4() -> None:
 
     packed_dataset_dict = load_dataset("hlillemark/c4_t5_packed")
     span_corrupted_dataset_dict = packed_dataset_dict.map(apply_span_corruption, batched=True, num_proc=16, desc="Applying span corruption")
+    span_corrupted_dataset_dict.save_to_disk(join(CACHE_DIR, "c4_t5_pretrain"))
     span_corrupted_dataset_dict.push_to_hub("c4_t5_pretrain")
 
     # Load span corrupted dataset
