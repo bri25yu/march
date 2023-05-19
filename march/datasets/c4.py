@@ -153,3 +153,7 @@ def span_corrupt_packed_c4() -> None:
 
     # Load span corrupted dataset
     span_corrupted_dataset_dict = load_dataset("hlillemark/c4_t5_pretrain")
+
+
+def load_c4_full() -> DatasetDict:
+    return load_dataset("hlillemark/c4_t5_pretrain")

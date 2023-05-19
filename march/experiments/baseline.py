@@ -6,7 +6,7 @@ from torch import manual_seed as set_torch_seed
 
 from transformers import PreTrainedTokenizerFast, Seq2SeqTrainingArguments, AutoModelForSeq2SeqLM, AutoConfig
 
-from march.datasets.c4 import load_c4
+from march.datasets.c4 import load_c4, load_c4_full
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
 from march.experiments.base import ExperimentBase
 
@@ -64,3 +64,25 @@ class BaselineLargeExperiment(BaselineExperiment):
             num_layers=48,
         )
         return BaselineTransformer(config)
+
+
+class BaselineSmall(BaselineExperiment):
+    # We don't technically need to use c4 full here, but we do so to match with t5 small full train
+    def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
+        return load_c4_full()
+
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig(
+            dim_model=512,
+            num_layers=12,
+        )
+        return BaselineTransformer(config)
+
+
+class BaselineT5SmallFullTrain(BaselineT5Experiment):
+    # This trains the model for 100k steps at 1m tokens per step = 100B tokens seen total
+    MODEL_NAME = "t5-small"
+    NUM_STEPS = 100_000
+
+    def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
+        return load_c4_full()
