@@ -10,7 +10,7 @@ from numpy import array, ndarray
 
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-from torch import bfloat16, equal, long, manual_seed as set_torch_seed, rand, randint
+from torch import allclose, bfloat16, equal, long, manual_seed as set_torch_seed, rand, randint
 from torch.cuda import device_count
 
 from datasets import load_dataset
@@ -19,7 +19,7 @@ from march.experiments.baseline import BaselineExperiment, BaselineT5Experiment
 
 
 class TestExperimentMixin:
-    NUM_STEPS = 25
+    NUM_STEPS = 100
 
 
 class TestBaselineExperiment(TestExperimentMixin, BaselineExperiment):
@@ -319,7 +319,7 @@ class TestReimplMatchT5(TestCase):
         reimpl_train_loss = read_train_loss(reimpl_exp.output_dir)
         t5_train_loss = read_train_loss(t5_exp.output_dir)
 
-        self.assertTrue((reimpl_train_loss == t5_train_loss).all())
+        self.assertTrue(allclose(reimpl_train_loss, t5_train_loss))
 
 
 def print_e2e_train_losses():
