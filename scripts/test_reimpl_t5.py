@@ -19,7 +19,7 @@ from march.experiments.baseline import BaselineExperiment, BaselineT5Experiment
 
 
 class TestExperimentMixin:
-    NUM_STEPS = 5
+    NUM_STEPS = 25
 
 
 class TestBaselineExperiment(TestExperimentMixin, BaselineExperiment):
