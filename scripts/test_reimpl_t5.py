@@ -166,11 +166,15 @@ class TestReimplMatchT5Units(TestCase):
 
 @skipIf(device_count() == 0, "Need GPUs to run end to end experiment")
 class TestReimplMatchT5(TestCase):
+    SEED = 42  # Only used for this test case
+
     def test_integration(self) -> None:
         reimpl_exp = TestBaselineExperiment()
-        t5_exp = TestBaselineT5Experiment()
         reimpl_model = reimpl_exp.get_model()
+        reimpl_exp._call_init_weights(reimpl_model, self.SEED)
+        t5_exp = TestBaselineT5Experiment()
         t5_model = t5_exp.get_model()
+        t5_exp._call_init_weights(t5_model, self.SEED)
 
         # We use .to_list to convert into a format readable by data collators
         tiny_dataset = load_dataset("hlillemark/c4_t5_100")["train"].to_list()
