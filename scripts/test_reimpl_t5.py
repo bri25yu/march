@@ -1,5 +1,7 @@
 from sys import argv
 
+from os.path import exists
+
 from unittest import TestCase, main as unittest_main, skipIf
 
 from numpy import array, ndarray
@@ -33,7 +35,7 @@ def read_train_loss(path: str) -> ndarray:
     return array([s.value for s in scalars])
 
 
-@skipIf(device_count() != 0, "Skipping unit tests with GPUs")
+@skipIf(device_count() != 0, "Skipping unit tests that run on CPU")
 class TestReimplMatchT5Units(TestCase):
     SEED = 42
 
@@ -201,10 +203,10 @@ class TestReimplMatchT5Units(TestCase):
 class TestReimplMatchT5EndToEnd(TestCase):
     def test_end_to_end_train(self) -> None:
         reimpl_exp = TestBaselineExperiment()
-        reimpl_exp.train()
+        if not exists(reimpl_exp.output_dir): reimpl_exp.train()
 
         t5_exp = TestBaselineT5Experiment()
-        t5_exp.train()
+        if not exists(t5_exp.output_dir): t5_exp.train()
 
         reimpl_train_loss = read_train_loss(reimpl_exp.output_dir)
         t5_train_loss = read_train_loss(t5_exp.output_dir)
