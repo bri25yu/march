@@ -46,7 +46,7 @@ We follow the scaling law fitting approach of Kaplan et al, 2020 (https://arxiv.
 <details>
 <summary></summary>
 
-<iframe style="width: 100%; height: 500px; resize: vertical; overflow: auto;" src="/readme_resources/baseline_t5.pdf"></iframe>
+<iframe style="width: 100%; height: 500px; resize: vertical; overflow: auto;" src="readme_resources/baseline_t5.pdf"></iframe>
 
 We compare our reimplementation with the implementation in [Raffel et al, Oct 2019](https://arxiv.org/abs/1910.10683).
 
@@ -63,7 +63,7 @@ We compare our reimplementation with the implementation in [Raffel et al, Oct 20
 
 This is a successful replication of [Shazeer et al, Feb 2020](https://arxiv.org/abs/2002.05202).
 
-<iframe style="width: 100%; height: 500px; resize: vertical; overflow: auto;" src="/readme_resources/gated_linear_units.pdf"></iframe>
+<iframe style="width: 100%; height: 500px; resize: vertical; overflow: auto;" src="readme_resources/gated_linear_units.pdf"></iframe>
 
 </details>
 
