@@ -31,7 +31,9 @@ The baseline model has 220M parameters to match with [t5-base](https://huggingfa
 
 The models are optimized using AdamW using 90% old gradient in the gradient exponential moving average (EMA) and 95% old hessian approximiation in the hessian approximation EMA (equivalently 10% new gradient and 5% new hessian approx). We use a constant learning rate schedule and a learning rate value of 1e-4. 
 
-The models are trained in BF16, with exceptions noted otherwise. 
+The models are trained in BF16. 
+
+We follow the scaling law fitting approach of Kaplan et al, 2020 (https://arxiv.org/pdf/2001.08361.pdf). 
 
 </details>
 
@@ -61,7 +63,7 @@ We compare our reimplementation with the implementation in [Raffel et al, Oct 20
 
 This is a successful replication of [Shazeer et al, Feb 2020](https://arxiv.org/abs/2002.05202).
 
-![](readme_resources/gated_linear_units.png)
+![](readme_resources/gated_linear_units.pdf)
 
 </details>
 

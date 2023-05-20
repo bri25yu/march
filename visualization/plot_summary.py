@@ -101,7 +101,7 @@ def plot_comparative_experiment(
     table_ax = axs_dict["table_ax"]
     axs = [train_loss_ax, val_loss_ax, scaling_law_steps_ax, scaling_law_all_ax]
 
-    stats_df = DataFrame(columns=["Experiment", "Scaling law", "Mean L1 residual", "PPL at 100k", "PPL at 300k", "PPL at 1M"])
+    stats_df = DataFrame(columns=["Experiment", "Train - eval loss", "Scaling law", "PPL at 100k", "PPL at 300k", "PPL at 1M"])
 
     for experiment_name, legend_label in tqdm(zip(experiment_names, legend_labels), desc="Plotting", total=len(experiment_names)):
         experiment_path = EXP_NAMES_TO_PATH[experiment_name]
@@ -121,6 +121,10 @@ def plot_comparative_experiment(
         scaling_law_plotter.plot_over_steps(scaling_law_steps_ax, scaling_law_baseline.get_color())
         scaling_law_plotter.plot_over_all(scaling_law_all_ax)
 
+        train_loss_matched = train_losses[val_steps - 1]  # Steps is 1 indexed, train_losses is 0 indexed
+        diff_mean = (train_loss_matched - val_losses).mean()
+        stats_df.at[len(stats_df.index)-1, "Train - eval loss"] = f"{diff_mean:.3f}"
+
 
     for y_label, ax_title, ax in zip(y_labels, ax_titles, axs):
         ax.set_ylim(ax.get_ylim()[0], 7.0)
@@ -134,11 +138,12 @@ def plot_comparative_experiment(
     scaling_law_all_ax.set_xlabel("Steps with a log scale")
     scaling_law_all_ax.xaxis.set_major_formatter(steps_log_scale_formatter)
 
+    x_margin = 0.1
     table = table_ax.table(
         cellText=stats_df.values,
         cellLoc="center",
         colLabels=stats_df.columns,
-        bbox=[0, 0, 1, 1],
+        bbox=[x_margin, 0, 1 - 2 * x_margin, 1],
     )
     table_ax.axis("off")
     table_ax.set_title("Scaling law fit details and perplexity (PPL) predictions")
