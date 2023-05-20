@@ -46,7 +46,7 @@ We follow the scaling law fitting approach of Kaplan et al, 2020 (https://arxiv.
 <details>
 <summary></summary>
 
-![](readme_resources/baseline_t5.png)
+![](readme_resources/baseline_t5.pdf)
 
 We compare our reimplementation with the implementation in [Raffel et al, Oct 2019](https://arxiv.org/abs/1910.10683).
 
