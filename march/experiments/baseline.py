@@ -66,8 +66,10 @@ class BaselineLargeExperiment(BaselineExperiment):
         return BaselineTransformer(config)
 
 
-class BaselineSmall(BaselineExperiment):
-    # We don't technically need to use c4 full here, but we do so to match with t5 small full train
+class BaselineSmallFullTrain(BaselineExperiment):
+    # This trains the model for 100k steps at 1m tokens per step = 100B tokens seen total
+    NUM_STEPS = 100_000
+
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
         return load_c4_full()
 
@@ -79,10 +81,8 @@ class BaselineSmall(BaselineExperiment):
         return BaselineTransformer(config)
 
 
-class BaselineT5SmallFullTrain(BaselineT5Experiment):
-    # This trains the model for 100k steps at 1m tokens per step = 100B tokens seen total
+class BaselineT5Small(BaselineT5Experiment):
     MODEL_NAME = "t5-small"
-    NUM_STEPS = 100_000
-
+    # We don't technically need to use c4 full here, but we do so to match with t5 small full train
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
         return load_c4_full()
