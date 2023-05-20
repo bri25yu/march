@@ -3,13 +3,13 @@ from visualization import plot_comparative_experiment
 
 plot_comparative_experiment(
     experiment_names=[
-        "BaselineExperiment",
+        "BaselineT5Experiment",
         "ReLUGatedLinearUnitExperiment",
         "GELUGatedLinearUnitExperiment",
         "SiLUGatedLinearUnitExperiment",
     ],
     legend_labels=[
-        "Baseline ReLU",
+        "Baseline T5 ReLU",
         "ReLU GLU",
         "GELU GLU",
         "Swish GLU",
