@@ -41,6 +41,11 @@ def reduce_input_embeds_L_dim(input_embeds: FloatTensor, mask_drop: BoolTensor) 
 
 
 def reduce_position_bias_L_dim(position_bias: FloatTensor, mask_drop: BoolTensor) -> FloatTensor:
+    """
+    position_bias: FloatTensor of shape (N, H, L, L)
+    mask_drop: BoolTensor of shape (N, L) where mask.sum(dim=1) = effective_L_drop
+        Ones indicate masking and zeros indicate keep
+    """
     N, H, L, L = position_bias.size()
 
     L_drop = mask_drop.sum(dim=1)[0]
@@ -49,6 +54,7 @@ def reduce_position_bias_L_dim(position_bias: FloatTensor, mask_drop: BoolTensor
     expanded_mask_drop = mask_drop[:, None, :].repeat(1, H, 1)
     assert expanded_mask_drop.size() == (N, H, L)
 
+    # Repeat the mask to duplicate the L_out dimension 
     expanded_mask_drop = expanded_mask_drop[:, :, None, :] | expanded_mask_drop[:, :, :, None]
     assert expanded_mask_drop.size() == (N, H, L, L)
 
@@ -132,6 +138,7 @@ class FCABSAttention(BaselineAttention):
         if position_bias is not None:
             attention_logits: MultiHeadedAttention = attention_logits + position_bias
         elif self.has_relative_attention_bias:
+            # Repeat batch size here since they will be unique per example after the first sequence length summarization
             position_bias = self.compute_bias(query_length, key_length, is_decoder).repeat(batch_size, 1, 1, 1)
             attention_logits: MultiHeadedAttention = attention_logits + position_bias
 
