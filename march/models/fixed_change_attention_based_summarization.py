@@ -41,9 +41,8 @@ def reduce_input_embeds_L_dim(input_embeds: FloatTensor, mask_drop: BoolTensor) 
 
 
 def reduce_position_bias_L_dim(position_bias: FloatTensor, mask_drop: BoolTensor) -> FloatTensor:
-    _, H, L, L = position_bias.size()
-    N, _ = mask_drop.size()
-    position_bias = position_bias.repeat(N, 1, 1, 1)
+    N, H, L, L = position_bias.size()
+
     L_drop = mask_drop.sum(dim=1)[0]
     L_out = L - L_drop
 
@@ -53,7 +52,7 @@ def reduce_position_bias_L_dim(position_bias: FloatTensor, mask_drop: BoolTensor
     expanded_mask_drop = expanded_mask_drop[:, :, None, :] | expanded_mask_drop[:, :, :, None]
     assert expanded_mask_drop.size() == (N, H, L, L)
 
-    reduced_L_position_bias = masked_select(position_bias, ~expanded_mask_drop).reshape(N, H, L_out, L_out)[0, :, :, :].view(1, H, L_out, L_out)
+    reduced_L_position_bias = masked_select(position_bias, ~expanded_mask_drop).reshape(N, H, L_out, L_out)
     return reduced_L_position_bias
 
 
@@ -133,7 +132,7 @@ class FCABSAttention(BaselineAttention):
         if position_bias is not None:
             attention_logits: MultiHeadedAttention = attention_logits + position_bias
         elif self.has_relative_attention_bias:
-            position_bias = self.compute_bias(query_length, key_length, is_decoder)
+            position_bias = self.compute_bias(query_length, key_length, is_decoder).repeat(batch_size, 1, 1, 1)
             attention_logits: MultiHeadedAttention = attention_logits + position_bias
 
         attention_probs: MultiHeadedAttention = softmax(attention_logits.to(float32), dim=3).to(attention_logits.dtype)
