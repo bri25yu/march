@@ -1,6 +1,7 @@
 from march.models.baseline import TransformerBase, TransformerConfig
 from march.models.no_ff import NoFFTransformer
 from march.models.values_relu import ValuesReluTransformer, ValuesReluFirstFFTransformer
+from march.models.fixed_change_attention_based_summarization import FCABSTransformer, FCABSTransformerConfig
 
 from march.experiments.baseline import BaselineExperiment
 
@@ -41,3 +42,10 @@ class ValuesReluFirstFFExperiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(dim_model=1024)
         return ValuesReluFirstFFTransformer(config)
+
+class FCABSExperiment(BaselineExperiment):
+    NUM_STEPS = 1_000
+
+    def get_model(self) -> TransformerBase:
+        config = FCABSTransformerConfig()
+        return FCABSTransformer(config)
