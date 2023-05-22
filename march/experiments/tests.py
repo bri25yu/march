@@ -14,8 +14,6 @@ class NoFFExperiment(BaselineExperiment):
 
 
 class NoFFParamMatchExperiment(BaselineExperiment):
-    NUM_STEPS = 1_000
-
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(dim_model=1088)
         return NoFFTransformer(config)
