@@ -15,18 +15,18 @@ from torch.cuda import device_count
 
 from datasets import load_dataset
 
-from march.experiments.baseline import BaselineExperiment, BaselineT5Experiment
+from march.experiments.baseline import BaselineSmallFullTrainExperiment, BaselineT5SmallExperiment
 
 
 class TestExperimentMixin:
     NUM_STEPS = 100
 
 
-class TestBaselineExperiment(TestExperimentMixin, BaselineExperiment):
+class TestBaselineExperiment(TestExperimentMixin, BaselineSmallFullTrainExperiment):
     pass
 
 
-class TestBaselineT5Experiment(TestExperimentMixin, BaselineT5Experiment):
+class TestBaselineT5Experiment(TestExperimentMixin, BaselineT5SmallExperiment):
     pass
 
 
