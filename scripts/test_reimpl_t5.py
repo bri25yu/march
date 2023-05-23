@@ -6,12 +6,15 @@ from os.path import exists
 
 from unittest import TestCase, main as unittest_main, skipIf
 
+from tqdm.auto import trange
+
 from numpy import allclose, array, isclose, ndarray
 
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 from torch import bfloat16, equal, finfo, long, manual_seed as set_torch_seed, rand, randint
 from torch.cuda import device_count
+from torch.optim import AdamW
 
 from datasets import load_dataset
 
@@ -73,8 +76,9 @@ class TestReimplMatchT5Units(TestCase):
         self.t5_decoder_attention_mask = t5_model.get_extended_attention_mask(~self.decoder_attention_mask, (N, L, L))
 
     def test_weight_matching_basic(self) -> None:
+        num_encoder_layers = self.reimpl_model.config.num_layers // 2
         # Sanity check weight matching using encoder selfattn q weight
-        for i in range(12):
+        for i in range(num_encoder_layers):
             reimpl_weight = self.reimpl_model.encoder.self_attention_layers[i].w_q
             t5_weight = self.t5_model.encoder.block[i].layer[0].SelfAttention.q
             reimpl_weight = reimpl_weight.weight.data
@@ -86,6 +90,7 @@ class TestReimplMatchT5Units(TestCase):
         reimpl_model = self.reimpl_model
         t5_model = self.t5_model
         input_embeds = self.input_embeds
+        num_encoder_layers = self.reimpl_model.config.num_layers // 2
 
         bases = [
             (reimpl_model.encoder, t5_model.encoder),
@@ -93,7 +98,7 @@ class TestReimplMatchT5Units(TestCase):
         ]
 
         for reimpl_base, t5_base in bases:
-            for i in range(12):
+            for i in range(num_encoder_layers):
                 reimpl_ff = reimpl_base.feedforward_layers[i]
                 t5_ff = t5_base.block[i].layer[-1].DenseReluDense
 
@@ -116,8 +121,9 @@ class TestReimplMatchT5Units(TestCase):
         input_embeds = self.input_embeds
         attention_mask = self.attention_mask
         t5_attention_mask = self.t5_attention_mask
+        num_encoder_layers = self.reimpl_model.config.num_layers // 2
 
-        for i in range(12):
+        for i in range(num_encoder_layers):
             reimpl_selfattn = reimpl_model.encoder.self_attention_layers[i]
             t5_selfattn = t5_model.encoder.block[i].layer[0].SelfAttention
 
@@ -141,8 +147,9 @@ class TestReimplMatchT5Units(TestCase):
         decoder_attention_mask = self.decoder_attention_mask
         t5_decoder_attention_mask = self.t5_decoder_attention_mask
         encoder_hidden_state = self.encoder_hidden_state
+        num_encoder_layers = self.reimpl_model.config.num_layers // 2
 
-        for i in range(12):
+        for i in range(num_encoder_layers):
             reimpl_crossattn = reimpl_model.decoder.cross_attention_layers[i]
             t5_crossattn = t5_model.decoder.block[i].layer[1].EncDecAttention
 
@@ -277,37 +284,52 @@ class TestReimplMatchT5(TestCase):
         t5_exp._call_init_weights(t5_model, self.SEED)
         move_formats(t5_model)
 
+        create_optimizer = lambda model: AdamW(params=model.parameters(), lr=1e-4, weight_decay=1e-1)
+        reimpl_optimizer = create_optimizer(reimpl_model)
+        t5_optimizer = create_optimizer(t5_model)
+
         # We use .to_list to convert into a format readable by data collators
-        tiny_dataset = load_dataset("hlillemark/c4_t5_100")["train"].select(range(2)).to_list()
+        tiny_dataset = load_dataset("hlillemark/c4_t5_100")["train"]
+        batch_size = 2
+        num_iters = 10
 
         inputs_to_cuda = lambda d: {k: v.cuda(device) for k, v in d.items()}
         reimpl_data_collator = reimpl_exp.get_data_collator(reimpl_exp.load_default_tokenizer())
-        reimpl_inputs = inputs_to_cuda(reimpl_data_collator(tiny_dataset))
         t5_data_collator = t5_exp.get_data_collator(t5_exp.load_default_tokenizer())
-        t5_inputs = inputs_to_cuda(t5_data_collator(tiny_dataset))
 
-        set_torch_seed(self.SEED)
-        reimpl_outputs = reimpl_model(**reimpl_inputs)
-        set_torch_seed(self.SEED)
-        t5_outputs = t5_model(**t5_inputs)
+        for step in trange(num_iters, desc="Running through inputs"):
+            data_start_idx, data_stop_idx = step * batch_size, (step + 1) * batch_size
+            batch = tiny_dataset.select(range(data_start_idx, data_stop_idx)).to_list()
 
-        reimpl_logits = reimpl_outputs.logits
-        t5_logits = t5_outputs.logits
-        self.assertTrue(equal(reimpl_logits, t5_logits))
+            reimpl_inputs = inputs_to_cuda(reimpl_data_collator(batch))
+            t5_inputs = inputs_to_cuda(t5_data_collator(batch))
 
-        reimpl_loss = reimpl_outputs.loss
-        t5_loss = t5_outputs.loss
-        self.assertTrue(equal(reimpl_loss, t5_loss))
+            set_torch_seed(self.SEED)
+            reimpl_outputs = reimpl_model(**reimpl_inputs)
+            set_torch_seed(self.SEED)
+            t5_outputs = t5_model(**t5_inputs)
 
-        # Check gradients
-        reimpl_loss.backward()
-        t5_loss.backward()
+            self.assertTrue(equal(reimpl_outputs.logits, t5_outputs.logits))
 
-        reimpl_weight = reimpl_model.encoder.self_attention_layers[0].w_q
-        t5_weight = t5_model.encoder.block[0].layer[0].SelfAttention.q
-        reimpl_grad = reimpl_weight.weight.grad
-        t5_grad = t5_weight.weight.grad
-        self.assertTrue(equal(reimpl_grad, t5_grad))
+            reimpl_loss = reimpl_outputs.loss
+            t5_loss = t5_outputs.loss
+            self.assertTrue(equal(reimpl_loss, t5_loss))
+
+            reimpl_optimizer.zero_grad()
+            t5_optimizer.zero_grad()
+
+            # Check gradients
+            reimpl_loss.backward()
+            t5_loss.backward()
+
+            reimpl_weight = reimpl_model.encoder.self_attention_layers[0].w_q
+            t5_weight = t5_model.encoder.block[0].layer[0].SelfAttention.q
+            reimpl_grad = reimpl_weight.weight.grad
+            t5_grad = t5_weight.weight.grad
+            self.assertTrue(equal(reimpl_grad, t5_grad))
+
+            reimpl_optimizer.step()
+            t5_optimizer.step()
 
     def test_end_to_end_train(self) -> None:
         reimpl_exp = TestBaselineExperiment()
