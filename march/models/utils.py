@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from torch import FloatTensor, float32, rsqrt, ones
 from torch.nn import Module, Parameter
+from torch.nn.functional import dropout
 
 from transformers.configuration_utils import PretrainedConfig
 from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
@@ -80,6 +81,13 @@ class TransformerComponentBase(Module):
     @abstractmethod
     def forward(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:
         pass
+
+    def apply_residual(self, residual: SequenceInputEmbeds, current: SequenceInputEmbeds) -> SequenceInputEmbeds:
+        return residual + self.apply_dropout(current)
+
+    def apply_dropout(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:
+        dropout_prob = self.config.dropout_prob
+        return dropout(input_embeds, p=dropout_prob, training=self.training)
 
 
 class LayerNorm(TransformerComponentBase):

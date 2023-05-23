@@ -14,7 +14,7 @@ class ModelComponents:
     class SelfAttention:
         @staticmethod
         def reimpl(model, num_layer):
-            self_attn = model.self_attention_layers[num_layer]
+            self_attn = model.layers[num_layer][1]
             weights = (self_attn.w_q, self_attn.w_k, self_attn.w_v, self_attn.w_o)
 
             if num_layer == 0:
@@ -35,7 +35,7 @@ class ModelComponents:
     class CrossAttention:
         @staticmethod
         def reimpl(model, num_layer):
-            cross_attn = model.cross_attention_layers[num_layer]
+            cross_attn = model.layers[num_layer][3]
             return (cross_attn.w_q, cross_attn.w_k, cross_attn.w_v, cross_attn.w_o)
 
         @staticmethod
@@ -44,11 +44,19 @@ class ModelComponents:
             return (cross_attn.q, cross_attn.k, cross_attn.v, cross_attn.o)
 
     class FeedForward:
-        reimpl = lambda m, i: (m.feedforward_layers[i].up_projection, m.feedforward_layers[i].down_projection)
+        reimpl = lambda m, i: (m.layers[i][-1].up_projection, m.layers[i][-1].down_projection)
         t5 = lambda m, i: (m.block[i].layer[-1].DenseReluDense.wi, m.block[i].layer[-1].DenseReluDense.wo)
 
     class LayerNorm:
-        reimpl = lambda m: tuple(m.layernorms)
+        @staticmethod
+        def reimpl(model):
+            res = []
+            for layer in model.layers:
+                res.extend(layer[i] for i in range(0, len(layer), 2))
+
+            res.append(model.final_layernorm)
+
+            return tuple(res)
 
         @staticmethod
         def t5(model):

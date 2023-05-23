@@ -49,45 +49,37 @@ class EncoderBase(TransformerComponentBase):
     def __init__(self, config: TransformerConfig) -> None:
         super().__init__(config)
 
-        self.layernorms = ModuleList([LayerNorm(config) for _ in range(config.num_layers + 1)])
-        self.self_attention_layers: List[AttentionBase] = ModuleList(
-            [self.ATTENTION_CLS(config, is_cross_attention=False, is_decoder=False, has_relative_attention_bias=i==0) for i in range(config.num_layers // 2)]
-        )
-        self.feedforward_layers: List[TransformerComponentBase] = ModuleList(
-            [self.FEEDFORWARD_CLS(config) for _ in range(config.num_layers // 2)]
-        )
+        attn_cls = self.ATTENTION_CLS
+        ff_cls = self.FEEDFORWARD_CLS
+        selfattn_kwargs = dict(is_cross_attention=False, is_decoder=False)
 
-    def init_weights(self) -> None:
-        # Match t5 weight init ordering
-        # attn -> ff
-        for i in range(self.config.num_layers // 2):
-            self.self_attention_layers[i]._init_weights()
-            self.feedforward_layers[i]._init_weights()
+        self.layers = ModuleList()
+        for i in range(config.num_layers // 2):
+            self.layers.append(ModuleList([
+                LayerNorm(config),
+                attn_cls(config, **selfattn_kwargs, has_relative_attention_bias=i==0),
+                LayerNorm(config),
+                ff_cls(config),
+            ]))
+
+        self.final_layernorm = LayerNorm(config)
 
     def forward(self, input_embeds: SequenceInputEmbeds, attention_mask: SequenceInputIds) -> AttentionOutput:
-        config: TransformerConfig = self.config
+        selfattn_ln: LayerNorm
+        selfattn: AttentionBase
+        ff_ln: LayerNorm
+        ff: TransformerComponentBase
 
-        input_embeds = dropout(input_embeds, p=config.dropout_prob, training=self.training)
-
+        input_embeds = self.apply_dropout(input_embeds)
         position_bias = None
-        for i in range(config.num_layers // 2):
-            self_attention_layernorm: LayerNorm = self.layernorms[2 * i]
-            self_attention_layer: AttentionBase = self.self_attention_layers[i]
-            feedforward_layernorm: LayerNorm = self.layernorms[2 * i + 1]
-            feedforward_layer: TransformerComponentBase = self.feedforward_layers[i]
-
-            normed_input_embeds: SequenceInputEmbeds = self_attention_layernorm(input_embeds)
-            self_attention_output: AttentionOutput = self_attention_layer(normed_input_embeds, attention_mask, position_bias)
-            input_embeds: SequenceInputEmbeds = input_embeds + dropout(self_attention_output.input_embeds, p=config.dropout_prob, training=self.training)
+        for selfattn_ln, selfattn, ff_ln, ff in self.layers:
+            self_attention_output: AttentionOutput = selfattn(selfattn_ln(input_embeds), attention_mask, position_bias)
+            input_embeds = self.apply_residual(input_embeds, self_attention_output.input_embeds)
             position_bias = self_attention_output.position_bias
 
-            normed_input_embeds: SequenceInputEmbeds = feedforward_layernorm(input_embeds)
-            feedforward_output: SequenceInputEmbeds = feedforward_layer(normed_input_embeds)
-            input_embeds: SequenceInputEmbeds = input_embeds + dropout(feedforward_output, p=config.dropout_prob, training=self.training)
+            input_embeds = self.apply_residual(input_embeds, ff(ff_ln(input_embeds)))
 
-        input_embeds: SequenceInputEmbeds = self.layernorms[-1](input_embeds)
-        input_embeds = dropout(input_embeds, p=config.dropout_prob, training=self.training)
-
+        input_embeds = self.apply_dropout(self.final_layernorm(input_embeds))
         return AttentionOutput(input_embeds=input_embeds, position_bias=None)
 
 
@@ -105,24 +97,23 @@ class DecoderBase(TransformerComponentBase):
     def __init__(self, config: TransformerConfig) -> None:
         super().__init__(config)
 
-        self.layernorms = ModuleList([LayerNorm(config) for _ in range(((config.num_layers // 2) * 3) + 1)])
-        self.self_attention_layers: List[AttentionBase] = ModuleList(
-            [self.ATTENTION_CLS(config, is_cross_attention=False, is_decoder=True, has_relative_attention_bias=i==0) for i in range(config.num_layers // 2)]
-        )
-        self.cross_attention_layers: List[AttentionBase] = ModuleList(
-            [self.ATTENTION_CLS(config, is_cross_attention=True, is_decoder=True) for _ in range(config.num_layers // 2)]
-        )
-        self.feedforward_layers: List[TransformerComponentBase] = ModuleList(
-            [self.FEEDFORWARD_CLS(config) for _ in range(config.num_layers // 2)]
-        )
+        attn_cls = self.ATTENTION_CLS
+        ff_cls = self.FEEDFORWARD_CLS
+        selfattn_kwargs = dict(is_cross_attention=False, is_decoder=True)
+        crossattn_kwargs = dict(is_cross_attention=True, is_decoder=True, has_relative_attention_bias=False)
 
-    def init_weights(self) -> None:
-        # Match t5 weight init ordering
-        # attn -> attn -> ff
-        for i in range(self.config.num_layers // 2):
-            self.self_attention_layers[i]._init_weights()
-            self.cross_attention_layers[i]._init_weights()
-            self.feedforward_layers[i]._init_weights()
+        self.layers = ModuleList()
+        for i in range(config.num_layers // 2):
+            self.layers.append(ModuleList([
+                LayerNorm(config),
+                attn_cls(config, **selfattn_kwargs, has_relative_attention_bias=i==0),
+                LayerNorm(config),
+                attn_cls(config, **crossattn_kwargs),
+                LayerNorm(config),
+                ff_cls(config),
+            ]))
+
+        self.final_layernorm = LayerNorm(config)
 
     def forward(
         self,
@@ -131,35 +122,26 @@ class DecoderBase(TransformerComponentBase):
         encoder_hidden_state: SequenceInputEmbeds,
         encoder_attention_mask: SequenceInputIds,
     ) -> AttentionOutput:
-        config: TransformerConfig = self.config
+        selfattn_ln: LayerNorm
+        selfattn: AttentionBase
+        crossattn_ln: LayerNorm
+        crossattn: AttentionBase
+        ff_ln: LayerNorm
+        ff: TransformerComponentBase
 
-        input_embeds = dropout(input_embeds, p=config.dropout_prob, training=self.training)
-
+        input_embeds = self.apply_dropout(input_embeds)
         position_bias = None
-        for i in range(config.num_layers // 2):
-            self_attention_layernorm: LayerNorm = self.layernorms[3 * i]
-            self_attention_layer: AttentionBase = self.self_attention_layers[i]
-            cross_attention_layernorm: LayerNorm = self.layernorms[3 * i + 1]
-            cross_attention_layer: AttentionBase = self.cross_attention_layers[i]
-            feedforward_layernorm: LayerNorm = self.layernorms[3 * i + 2]
-            feedforward_layer: TransformerComponentBase = self.feedforward_layers[i]
-
-            normed_input_embeds: SequenceInputEmbeds = self_attention_layernorm(input_embeds)
-            self_attention_output: AttentionOutput = self_attention_layer(normed_input_embeds, attention_mask, position_bias)
-            input_embeds: SequenceInputEmbeds = input_embeds + dropout(self_attention_output.input_embeds, p=config.dropout_prob, training=self.training)
+        for selfattn_ln, selfattn, crossattn_ln, crossattn, ff_ln, ff in self.layers:
+            self_attention_output: AttentionOutput = selfattn(selfattn_ln(input_embeds), attention_mask, position_bias)
+            input_embeds = self.apply_residual(input_embeds, self_attention_output.input_embeds)
             position_bias = self_attention_output.position_bias
 
-            normed_input_embeds: SequenceInputEmbeds = cross_attention_layernorm(input_embeds)
-            cross_attention_output: AttentionOutput = cross_attention_layer(normed_input_embeds, encoder_attention_mask, encoder_hidden_state=encoder_hidden_state)
-            input_embeds: SequenceInputEmbeds = input_embeds + dropout(cross_attention_output.input_embeds, p=config.dropout_prob, training=self.training)
+            cross_attention_output: AttentionOutput = crossattn(crossattn_ln(input_embeds), encoder_attention_mask, encoder_hidden_state=encoder_hidden_state)
+            input_embeds = self.apply_residual(input_embeds, cross_attention_output.input_embeds)
 
-            normed_input_embeds: SequenceInputEmbeds = feedforward_layernorm(input_embeds)
-            feedforward_output: SequenceInputEmbeds = feedforward_layer(normed_input_embeds)
-            input_embeds: SequenceInputEmbeds = input_embeds + dropout(feedforward_output, p=config.dropout_prob, training=self.training)
+            input_embeds = self.apply_residual(input_embeds, ff(ff_ln(input_embeds)))
 
-        input_embeds: SequenceInputEmbeds = self.layernorms[-1](input_embeds)
-        input_embeds = dropout(input_embeds, p=config.dropout_prob, training=self.training)
-
+        input_embeds = self.apply_dropout(self.final_layernorm(input_embeds))
         return AttentionOutput(input_embeds=input_embeds, position_bias=None)
 
 
@@ -234,8 +216,7 @@ class BaselineAttention(AttentionBase):
         if self.has_relative_attention_bias:
             self.relative_attention_bias = Embedding(config.relative_attention_num_buckets, config.num_heads)
 
-    def _init_weights(self) -> None:
-        # We use _init_weights rather than init_weights to have the encoder/decoder handle all the weight inits
+    def init_weights(self) -> None:
         config = self.config
 
         self.w_q.weight.data.normal_(mean=0.0, std=(config.dim_model * config.dim_qkv) ** -0.5)
@@ -366,8 +347,7 @@ class BaselineFeedforward(TransformerComponentBase):
         self.up_projection = Linear(config.dim_model, config.dim_feedforward, bias=False)
         self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False)
 
-    def _init_weights(self) -> None:
-        # We use _init_weights rather than init_weights to have the encoder/decoder handle all the weight inits
+    def init_weights(self) -> None:
         config = self.config
 
         self.up_projection.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)

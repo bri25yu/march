@@ -21,7 +21,7 @@ class TestReimplMatchT5SmallComponents(ComponentTestMixin, TestCase):
 
         for reimpl_base, t5_base in bases:
             for i in range(num_encoder_layers):
-                reimpl_ff = reimpl_base.feedforward_layers[i]
+                reimpl_ff = reimpl_base.layers[i][-1]
                 t5_ff = t5_base.block[i].layer[-1].DenseReluDense
 
                 set_torch_seed(self.SEED)
@@ -52,7 +52,7 @@ class TestReimplMatchT5SmallComponents(ComponentTestMixin, TestCase):
         current_reimpl_position_bias = None
         current_t5_position_bias = None
         for i in range(num_encoder_layers):
-            reimpl_selfattn = reimpl_model.encoder.self_attention_layers[i]
+            reimpl_selfattn = reimpl_model.encoder.layers[i][1]
             t5_selfattn = t5_model.encoder.block[i].layer[0].SelfAttention
 
             set_torch_seed(self.SEED)
@@ -88,7 +88,7 @@ class TestReimplMatchT5SmallComponents(ComponentTestMixin, TestCase):
         current_reimpl_input_embeds = initial_reimpl_input_embeds
         current_t5_input_embeds = initial_t5_input_embeds
         for i in range(num_encoder_layers):
-            reimpl_crossattn = reimpl_model.decoder.cross_attention_layers[i]
+            reimpl_crossattn = reimpl_model.decoder.layers[i][3]
             t5_crossattn = t5_model.decoder.block[i].layer[1].EncDecAttention
 
             set_torch_seed(self.SEED)
