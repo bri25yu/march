@@ -75,6 +75,7 @@ class ValuesReluAttention(BaselineAttention):
         if not self.is_cross_attention:
             self.values_ff._init_weights()
     
+    # TODO: update with new baseline class
     def forward(
         self,
         input_embeds: SequenceInputEmbeds,

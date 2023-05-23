@@ -22,12 +22,6 @@ class NoFFEncoder(TransformerComponentBase):
         #     [self.FEEDFORWARD_CLS(config) for _ in range(config.num_layers // 2)]
         # )
 
-    def init_weights(self) -> None:
-        # Match t5 weight init ordering
-        # attn -> ln -> ff -> ln
-        for i in range(self.config.num_layers // 2):
-            self.self_attention_layers[i]._init_weights()
-
     def forward(self, input_embeds: SequenceInputEmbeds, attention_mask: SequenceInputIds) -> AttentionOutput:
         config: TransformerConfig = self.config
 
@@ -72,13 +66,6 @@ class NoFFDecoder(TransformerComponentBase):
         # self.feedforward_layers: List[TransformerComponentBase] = ModuleList(
         #     [self.FEEDFORWARD_CLS(config) for _ in range(config.num_layers // 2)]
         # )
-
-    def init_weights(self) -> None:
-        # Match t5 weight init ordering
-        # attn -> ln -> attn -> ln -> ff -> ln
-        for i in range(self.config.num_layers // 2):
-            self.self_attention_layers[i]._init_weights()
-            self.cross_attention_layers[i]._init_weights()
 
     def forward(
         self,
