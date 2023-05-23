@@ -284,6 +284,8 @@ class TestReimplMatchT5(TestCase):
         t5_exp._call_init_weights(t5_model, self.SEED)
         move_formats(t5_model)
 
+        num_encoder_layers = reimpl_model.config.num_layers // 2
+
         create_optimizer = lambda model: AdamW(params=model.parameters(), lr=1e-4, weight_decay=1e-1)
         reimpl_optimizer = create_optimizer(reimpl_model)
         t5_optimizer = create_optimizer(t5_model)
@@ -322,14 +324,30 @@ class TestReimplMatchT5(TestCase):
             reimpl_loss.backward()
             t5_loss.backward()
 
-            reimpl_weight = reimpl_model.encoder.self_attention_layers[0].w_q
-            t5_weight = t5_model.encoder.block[0].layer[0].SelfAttention.q
-            reimpl_grad = reimpl_weight.weight.grad
-            t5_grad = t5_weight.weight.grad
-            self.assertTrue(equal(reimpl_grad, t5_grad), f"Failed on iteration {step+1}")
+            # Sanity check gradients using encoder selfattn q grad and embedding grad
+            for i in range(num_encoder_layers):
+                reimpl_weight = reimpl_model.encoder.self_attention_layers[i].w_q
+                t5_weight = t5_model.encoder.block[i].layer[0].SelfAttention.q
+                reimpl_grad = reimpl_weight.weight.grad
+                t5_grad = t5_weight.weight.grad
+                self.assertTrue(equal(reimpl_grad, t5_grad), f"Failed on iteration {step+1}")
+
+                reimpl_embedding_grad = reimpl_model.embedding.weight.grad
+                t5_embedding_grad = t5_model.lm_head.weight.grad
+                self.assertTrue(equal(reimpl_embedding_grad, t5_embedding_grad), f"Failed on iteration {step+1}")
 
             reimpl_optimizer.step()
             t5_optimizer.step()
+
+            # Sanity check weight matching using encoder selfattn q weight and embedding weight
+            for i in range(num_encoder_layers):
+                reimpl_weight = reimpl_model.encoder.self_attention_layers[i].w_q.weight.data
+                t5_weight = t5_model.encoder.block[i].layer[0].SelfAttention.q.weight.data
+                self.assertTrue(equal(reimpl_weight, t5_weight), f"Failed on iteration {step+1}")
+
+                reimpl_embedding_weight = reimpl_model.embedding.weight.data
+                t5_embedding_weight = t5_model.lm_head.weight.data
+                self.assertTrue(equal(reimpl_embedding_weight, t5_embedding_weight), f"Failed on iteration {step+1}")
 
     def test_end_to_end_train(self) -> None:
         reimpl_exp = TestBaselineExperiment()
