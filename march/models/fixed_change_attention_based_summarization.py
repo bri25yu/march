@@ -5,9 +5,15 @@ from march.models.utils import *
 
 from torch.nn.functional import dropout, embedding, relu, softmax
 
-from torch import BoolTensor, masked_select
+from torch import masked_select, empty, BoolTensor
 
 __all__ = ["FCABSTransformer", "FCABSTransformerConfig"]
+
+
+# Fixed change attention based summarization (FCABS)
+# Fixed change meaning there is a fixed number of tokens to drop per layer
+# Attention based means we use attention activations to determine which tokens to drop
+# Summarization means we drop tokens from the sequence length
 
 
 @dataclass
@@ -91,7 +97,7 @@ def calculate_mask_drop(attention_probs: FloatTensor, L_drop: int) -> BoolTensor
 
     bottomk_indices = attention_probs_for_mask.topk(k=effective_L_drop, dim=1, largest=False).indices
 
-    mask_drop = BoolTensor(N, L, device=attention_probs.device)
+    mask_drop = empty((N, L), dtype=bool)
     mask_drop.scatter_(dim=1, index=bottomk_indices, value=True)
 
     return mask_drop
