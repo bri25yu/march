@@ -7,4 +7,4 @@ python -m unittest tests.reimpl_t5.test_large_components
 
 # Run on GPUs
 python -m unittest tests.reimpl_t5.test_integration
-deepspeed tests.reimpl_t5.test_e2e.py
+deepspeed tests/reimpl_t5/test_e2e.py

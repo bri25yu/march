@@ -104,7 +104,8 @@ class ExperimentBase(ABC):
         return join(RESULTS_DIR, self.name)
 
     def load_default_training_arguments(self) -> Dict[str, Any]:
-        args_dict = json.load(open(join(CONFIG_DIR, "default_training_arguments.json")))
+        with open(join(CONFIG_DIR, "default_training_arguments.json")) as default_training_args_file:
+            args_dict = json.load(default_training_args_file)
 
         num_gpus = device_count()
         if num_gpus == 8:
@@ -114,7 +115,8 @@ class ExperimentBase(ABC):
         else:
             raise ValueError(f"The number of GPUs must be 4 or 8, but got {num_gpus}")
 
-        deepspeed_config = json.load(open(join(CONFIG_DIR, "deepspeed.json")))
+        with open(join(CONFIG_DIR, "deepspeed.json")) as deepspeed_config_file:
+            deepspeed_config = json.load(deepspeed_config_file)
         args_dict["deepspeed"] = deepspeed_config
 
         # Validate scale factor
