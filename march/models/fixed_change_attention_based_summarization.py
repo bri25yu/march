@@ -119,50 +119,38 @@ class FCABSAttention(BaselineAttention):
     ) -> AttentionOutput:
         config = self.config
 
-        if not self.is_cross_attention:
-            attention_values: List[SequenceInputEmbeds] = self.w_q(input_embeds), self.w_k(input_embeds), self.w_v(input_embeds)
-        else:
-            query: SequenceInputEmbeds = self.w_q(input_embeds)
-            key: SequenceInputEmbeds = self.w_k(encoder_hidden_state)
-            value: SequenceInputEmbeds = self.w_v(encoder_hidden_state)
-
-            attention_values: List[SequenceInputEmbeds] = (query, key, value)
-
-        query, key, value = list(map(self.reshape_to_head_sensitive, attention_values))
+        key_value_state = encoder_hidden_state if self.is_cross_attention else input_embeds
+        query, key, value = list(map(
+            self.reshape_to_head_sensitive,
+            [self.w_q(input_embeds), self.w_k(key_value_state), self.w_v(key_value_state)]
+        ))
 
         attention_logits: MultiHeadedAttention = matmul(query, key.transpose(2, 3))
 
-        # Infer is_decoder from attention mask size
-        is_decoder = len(attention_mask.size()) == 3
+        if position_bias is None:
+            batch_size, _, query_length, key_length = attention_logits.size()
 
-        batch_size, _, query_length, key_length = attention_logits.size()
-        if attention_mask is not None:
+            position_bias = self.compute_bias(query_length, key_length, attention_logits.device, attention_logits.dtype).repeat(batch_size, 1, 1, 1)
+
+            # Convert attention mask to mask to add to attention logits
             attention_mask = attention_mask.reshape(batch_size, 1, -1, key_length)
             attention_mask = attention_mask.to(attention_logits.dtype) * finfo(attention_logits.dtype).min
-            attention_logits: MultiHeadedAttention = attention_logits + attention_mask
 
-        if position_bias is not None:
-            attention_logits: MultiHeadedAttention = attention_logits + position_bias
-        elif self.has_relative_attention_bias:
-            # Repeat batch size here since they will be unique per example after the first sequence length summarization
-            position_bias = self.compute_bias(query_length, key_length, is_decoder).repeat(batch_size, 1, 1, 1)
-            attention_logits: MultiHeadedAttention = attention_logits + position_bias
+            # Combine position bias and attention masks to save on computation in subsequent layers
+            # This saves (2L - 2) * (N * H * L * L) additions per model pass
+            position_bias = position_bias + attention_mask
 
+        attention_logits: MultiHeadedAttention = attention_logits + position_bias
         attention_probs: MultiHeadedAttention = softmax(attention_logits.to(float32), dim=3).to(attention_logits.dtype)
-
-        # Use attention probs output of softmax to calculate which tokens to drop, 
-        # based on which has the lowest attention activation.
-        # Attention_probs is of dimension (N, H, L_q, L_k). Sum over H and L_q dimensions
-        mask_drop = calculate_mask_drop(attention_probs, config.L_drop) # (N, L)
+	
+        # Use attention probs output of softmax to calculate which tokens to drop, 	
+        # based on which has the lowest attention activation.	
+        # Attention_probs is of dimension (N, H, L_q, L_k). Sum over H and L_q dimensions	
+        mask_drop = calculate_mask_drop(attention_probs, config.L_drop) # (N, L)	
         
         attention_probs: MultiHeadedAttention = dropout(attention_probs, p=config.dropout_prob, training=self.training)
-
-        attention_values: MultiHeadedEmbeds = matmul(attention_probs, value)
-
-        attention_values: SequenceInputEmbeds = self.reshape_to_head_insensitive(attention_values)
-
+        attention_values: SequenceInputEmbeds = self.reshape_to_head_insensitive(matmul(attention_probs, value))
         attention_output: SequenceInputEmbeds = self.w_o(attention_values)
-
         return FCABSAttentionOutput(attention_output, position_bias, mask_drop)
 
 
@@ -170,38 +158,27 @@ class FCABSEncoder(BaselineEncoder):
     ATTENTION_CLS = FCABSAttention
 
     def forward(self, input_embeds: SequenceInputEmbeds, attention_mask: SequenceInputIds) -> AttentionOutput:
-        config: TransformerConfig = self.config
+        selfattn_ln: LayerNorm
+        selfattn: AttentionBase
+        ff_ln: LayerNorm
+        ff: TransformerComponentBase
 
-        input_embeds = dropout(input_embeds, p=config.dropout_prob, training=self.training)
-
+        input_embeds = self.apply_dropout(input_embeds)
         position_bias = None
-        for i in range(config.num_layers // 2):
-            self_attention_layernorm: LayerNorm = self.layernorms[2 * i]
-            self_attention_layer: AttentionBase = self.self_attention_layers[i]
-            feedforward_layernorm: LayerNorm = self.layernorms[2 * i + 1]
-            feedforward_layer: TransformerComponentBase = self.feedforward_layers[i]
-
-            normed_input_embeds: SequenceInputEmbeds = self_attention_layernorm(input_embeds)
-
+        for selfattn_ln, selfattn, ff_ln, ff in self.layers:
             # Also take the mask_drop here
-            self_attention_output: FCABSAttentionOutput = self_attention_layer(normed_input_embeds, attention_mask, position_bias)
-            input_embeds: SequenceInputEmbeds = input_embeds + dropout(self_attention_output.input_embeds, p=config.dropout_prob, training=self.training)
+            self_attention_output: FCABSAttentionOutput = selfattn(selfattn_ln(input_embeds), attention_mask, position_bias)
+            input_embeds = self.apply_residual(input_embeds, self_attention_output.input_embeds)
             position_bias = self_attention_output.position_bias
 
             # Update L dimension by dropping the indices which had the lowest attention activation, calculated earlier in self attention
             input_embeds, attention_mask, position_bias = update_L_dimension(input_embeds, attention_mask, position_bias, self_attention_output.mask_drop)
-            
 
-            normed_input_embeds: SequenceInputEmbeds = feedforward_layernorm(input_embeds)
-            feedforward_output: SequenceInputEmbeds = feedforward_layer(normed_input_embeds)
-            input_embeds: SequenceInputEmbeds = input_embeds + dropout(feedforward_output, p=config.dropout_prob, training=self.training)
+            input_embeds = self.apply_residual(input_embeds, ff(ff_ln(input_embeds)))
 
-
-        input_embeds: SequenceInputEmbeds = self.layernorms[-1](input_embeds)
-        input_embeds = dropout(input_embeds, p=config.dropout_prob, training=self.training)
-
+        input_embeds = self.apply_dropout(self.final_layernorm(input_embeds))
+        # return AttentionOutput(input_embeds=input_embeds, position_bias=None)
         return FCABSEncoderOutput(input_embeds=input_embeds, position_bias=None, attention_mask=attention_mask)
-
 
 
 class FCABSTransformer(BaselineTransformer):
