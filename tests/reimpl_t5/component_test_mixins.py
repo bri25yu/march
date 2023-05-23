@@ -1,4 +1,5 @@
 from torch import bfloat16, long, rand, randint
+from torch.nn.functional import embedding
 
 from tests.reimpl_t5.experiment_mixins import *
 
@@ -30,7 +31,8 @@ class ComponentTestMixin:
         N, L = 2, 8
         D = reimpl_model.config.dim_model
         self.input_ids = randint(0, reimpl_model.config.vocab_size, (N, L), dtype=long)
-        self.input_embeds = t5_model.shared(self.input_ids).to(bfloat16)
+        self.reimpl_input_embeds = embedding(self.input_ids, reimpl_model.embedding.weight).to(bfloat16)
+        self.t5_input_embeds = t5_model.shared(self.input_ids).to(bfloat16)
         self.encoder_hidden_state = rand((N, L, D), dtype=bfloat16)
 
         self.attention_mask = randint(0, 2, (N, L), dtype=bool)

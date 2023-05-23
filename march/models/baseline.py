@@ -5,7 +5,7 @@ from abc import abstractmethod
 
 from math import log as math_log
 
-from torch import abs, arange, finfo, full_like, log as torch_log, long, matmul, min, where, zeros_like
+from torch import abs, arange, device as torch_device, dtype as torch_dtype, finfo, full_like, log as torch_log, long, matmul, min, where, zeros_like, zeros
 from torch.nn import CrossEntropyLoss, Embedding, Linear, ModuleList
 from torch.nn.functional import dropout, embedding, relu, softmax
 
@@ -51,7 +51,7 @@ class EncoderBase(TransformerComponentBase):
 
         self.layernorms = ModuleList([LayerNorm(config) for _ in range(config.num_layers + 1)])
         self.self_attention_layers: List[AttentionBase] = ModuleList(
-            [self.ATTENTION_CLS(config, is_cross_attention=False, has_relative_attention_bias=i==0) for i in range(config.num_layers // 2)]
+            [self.ATTENTION_CLS(config, is_cross_attention=False, is_decoder=False, has_relative_attention_bias=i==0) for i in range(config.num_layers // 2)]
         )
         self.feedforward_layers: List[TransformerComponentBase] = ModuleList(
             [self.FEEDFORWARD_CLS(config) for _ in range(config.num_layers // 2)]
@@ -107,10 +107,10 @@ class DecoderBase(TransformerComponentBase):
 
         self.layernorms = ModuleList([LayerNorm(config) for _ in range(((config.num_layers // 2) * 3) + 1)])
         self.self_attention_layers: List[AttentionBase] = ModuleList(
-            [self.ATTENTION_CLS(config, is_cross_attention=False, has_relative_attention_bias=i==0) for i in range(config.num_layers // 2)]
+            [self.ATTENTION_CLS(config, is_cross_attention=False, is_decoder=True, has_relative_attention_bias=i==0) for i in range(config.num_layers // 2)]
         )
         self.cross_attention_layers: List[AttentionBase] = ModuleList(
-            [self.ATTENTION_CLS(config, is_cross_attention=True) for _ in range(config.num_layers // 2)]
+            [self.ATTENTION_CLS(config, is_cross_attention=True, is_decoder=True) for _ in range(config.num_layers // 2)]
         )
         self.feedforward_layers: List[TransformerComponentBase] = ModuleList(
             [self.FEEDFORWARD_CLS(config) for _ in range(config.num_layers // 2)]
@@ -221,8 +221,8 @@ class TransformerBase(TransformerComponentBase):
 
 
 class BaselineAttention(AttentionBase):
-    def __init__(self, config: TransformerConfig, is_cross_attention: bool, has_relative_attention_bias: bool=False) -> None:
-        super().__init__(config, is_cross_attention)
+    def __init__(self, config: TransformerConfig, is_cross_attention: bool, is_decoder: bool, has_relative_attention_bias: bool=False) -> None:
+        super().__init__(config, is_cross_attention, is_decoder)
 
         self.has_relative_attention_bias = has_relative_attention_bias
 
@@ -255,43 +255,32 @@ class BaselineAttention(AttentionBase):
     ) -> AttentionOutput:
         config = self.config
 
-        if not self.is_cross_attention:
-            attention_values: List[SequenceInputEmbeds] = self.w_q(input_embeds), self.w_k(input_embeds), self.w_v(input_embeds)
-        else:
-            query: SequenceInputEmbeds = self.w_q(input_embeds)
-            key: SequenceInputEmbeds = self.w_k(encoder_hidden_state)
-            value: SequenceInputEmbeds = self.w_v(encoder_hidden_state)
-
-            attention_values: List[SequenceInputEmbeds] = (query, key, value)
-
-        query, key, value = list(map(self.reshape_to_head_sensitive, attention_values))
+        key_value_state = encoder_hidden_state if self.is_cross_attention else input_embeds
+        query, key, value = list(map(
+            self.reshape_to_head_sensitive,
+            [self.w_q(input_embeds), self.w_k(key_value_state), self.w_v(key_value_state)]
+        ))
 
         attention_logits: MultiHeadedAttention = matmul(query, key.transpose(2, 3))
 
-        # Infer is_decoder from attention mask size
-        is_decoder = len(attention_mask.size()) == 3
+        if position_bias is None:
+            batch_size, _, query_length, key_length = attention_logits.size()
 
-        batch_size, _, query_length, key_length = attention_logits.size()
-        if attention_mask is not None:
+            position_bias = self.compute_bias(query_length, key_length, attention_logits.device, attention_logits.dtype)
+
+            # Convert attention mask to mask to add to attention logits
             attention_mask = attention_mask.reshape(batch_size, 1, -1, key_length)
             attention_mask = attention_mask.to(attention_logits.dtype) * finfo(attention_logits.dtype).min
-            attention_logits: MultiHeadedAttention = attention_logits + attention_mask
 
-        if position_bias is not None:
-            attention_logits: MultiHeadedAttention = attention_logits + position_bias
-        elif self.has_relative_attention_bias:
-            position_bias = self.compute_bias(query_length, key_length, is_decoder)
-            attention_logits: MultiHeadedAttention = attention_logits + position_bias
+            # Combine position bias and attention masks to save on computation in subsequent layers
+            # This saves (2L - 2) * (N * H * L * L) additions per model pass
+            position_bias = position_bias + attention_mask
 
+        attention_logits: MultiHeadedAttention = attention_logits + position_bias
         attention_probs: MultiHeadedAttention = softmax(attention_logits.to(float32), dim=3).to(attention_logits.dtype)
         attention_probs: MultiHeadedAttention = dropout(attention_probs, p=config.dropout_prob, training=self.training)
-
-        attention_values: MultiHeadedEmbeds = matmul(attention_probs, value)
-
-        attention_values: SequenceInputEmbeds = self.reshape_to_head_insensitive(attention_values)
-
+        attention_values: SequenceInputEmbeds = self.reshape_to_head_insensitive(matmul(attention_probs, value))
         attention_output: SequenceInputEmbeds = self.w_o(attention_values)
-
         return AttentionOutput(attention_output, position_bias)
 
     # Copied and reformatted from https://github.com/huggingface/transformers/blob/main/src/transformers/models/t5/modeling_t5.py
@@ -344,12 +333,18 @@ class BaselineAttention(AttentionBase):
         return relative_buckets
 
     # Copied and reformatted from https://github.com/huggingface/transformers/blob/main/src/transformers/models/t5/modeling_t5.py
-    def compute_bias(self, query_length: int, key_length: int, is_decoder: bool):
+    def compute_bias(self, query_length: int, key_length: int, device: torch_device, dtype: torch_dtype) -> MultiHeadedAttention:
         """Compute binned relative position bias"""
         config = self.config
-        bidirectional = not is_decoder
+        has_relative_attention_bias = self.has_relative_attention_bias
+        bidirectional = not self.is_decoder
 
-        device = self.relative_attention_bias.weight.device
+        if not has_relative_attention_bias:
+            position_bias = zeros(
+                (1, config.num_heads, query_length, key_length), device=device, dtype=dtype
+            )
+            return position_bias
+
         context_position = arange(query_length, dtype=long, device=device)[:, None]
         memory_position = arange(key_length, dtype=long, device=device)[None, :]
         relative_position = memory_position - context_position  # shape (query_length, key_length)

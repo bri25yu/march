@@ -126,6 +126,10 @@ def assert_property_equal(reimpl_model, t5_model, property_name: str) -> int:
 
         if property_name == "grad" and reimpl_property is None and t5_property is None: continue
 
+        # At least one but not both are None
+        property_mismatch = (reimpl_property is None) ^ (t5_property is None)
+        assert not property_mismatch, f"Property mismatch for {kwargs}\nReimpl\n{reimpl_property}\nT5\n{t5_property}"
+
         weights_equal = equal(reimpl_property, t5_property)
         if not weights_equal:
             error_strs.add(str(kwargs))

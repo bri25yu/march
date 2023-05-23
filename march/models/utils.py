@@ -110,10 +110,11 @@ class AttentionOutput:
 
 
 class AttentionBase(TransformerComponentBase):
-    def __init__(self, config: TransformerConfig, is_cross_attention: bool) -> None:
+    def __init__(self, config: TransformerConfig, is_cross_attention: bool, is_decoder: bool) -> None:
         super().__init__(config)
 
         self.is_cross_attention = is_cross_attention
+        self.is_decoder = is_decoder
 
     @abstractmethod
     def forward(
