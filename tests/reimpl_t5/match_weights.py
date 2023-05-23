@@ -9,7 +9,7 @@ __all__ = ["assert_property_equal", "assert_weight_equal", "assert_grad_equal"]
 class ModelComponents:
     class Embedding:
         reimpl = lambda m: m.embedding
-        t5 = lambda m: m.shared
+        t5 = lambda m: m.lm_head
 
     class SelfAttention:
         @staticmethod
@@ -121,13 +121,16 @@ def assert_property_equal(reimpl_model, t5_model, property_name: str) -> int:
     for kwargs, reimpl_weight, t5_weight in matched_weights:
         reimpl_property = getattr(reimpl_weight, property_name)
         t5_property = getattr(t5_weight, property_name)
-        weights_equal = equal(reimpl_property, t5_property)
 
         num_parameters_matched += reimpl_weight.numel()
+
+        if property_name == "grad" and reimpl_property is None and t5_property is None: continue
+
+        weights_equal = equal(reimpl_property, t5_property)
         if not weights_equal:
             error_strs.add(str(kwargs))
 
-    assert not error_strs, f"Values not equal for property {property_name} for:" + "\n\t".join(error_strs)
+    assert not error_strs, f"Values not equal for property {property_name} for:\n\t" + "\n\t".join(error_strs)
 
     return num_parameters_matched
 

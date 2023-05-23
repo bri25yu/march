@@ -1,6 +1,7 @@
 from unittest import TestCase
 
-from torch import equal, manual_seed as set_torch_seed
+from torch import bfloat16, equal, manual_seed as set_torch_seed
+from torch.nn.functional import embedding
 from torch.optim import AdamW
 
 from tests.reimpl_t5.match_weights import *
@@ -11,18 +12,20 @@ class TestReimplMatchT5LargeComponents(ComponentTestMixin, TestCase):
     def test_encoder(self) -> None:
         reimpl_model = self.reimpl_model
         t5_model = self.t5_model
-        input_embeds = self.input_embeds
+        input_ids = self.input_ids
         attention_mask = self.attention_mask
 
         set_torch_seed(self.SEED)
+        reimpl_input_embeds = embedding(input_ids, reimpl_model.embedding.weight).to(bfloat16)
         reimpl_encoder_outputs = reimpl_model.encoder(
-            input_embeds=input_embeds,
+            input_embeds=reimpl_input_embeds,
             attention_mask=attention_mask,
         ).input_embeds
 
         set_torch_seed(self.SEED)
+        t5_input_embeds = t5_model.shared(input_ids).to(bfloat16)
         t5_encoder_outputs = t5_model.encoder(
-            inputs_embeds=input_embeds,
+            inputs_embeds=t5_input_embeds,
             attention_mask=~attention_mask,  # We don't use self.t5_attention_mask because encoder will do it for us
         )[0]
 
@@ -30,28 +33,31 @@ class TestReimplMatchT5LargeComponents(ComponentTestMixin, TestCase):
 
         reimpl_encoder_outputs.mean().backward(retain_graph=True)
         t5_encoder_outputs.mean().backward(retain_graph=True)
-        reimpl_selfattn = reimpl_model.encoder.self_attention_layers[0]
-        t5_selfattn = t5_model.encoder.block[0].layer[0].SelfAttention
-        self.assertTrue(equal(reimpl_selfattn.w_q.weight.grad, t5_selfattn.q.weight.grad))
+        assert_grad_equal(reimpl_model, t5_model)
+        reimpl_model.zero_grad()
+        t5_model.zero_grad()
 
     def test_decoder(self) -> None:
         reimpl_model = self.reimpl_model
         t5_model = self.t5_model
-        input_embeds = self.input_embeds
+        input_ids = self.input_ids
         attention_mask = self.attention_mask
         decoder_attention_mask = self.decoder_attention_mask
         encoder_hidden_state = self.encoder_hidden_state
 
         set_torch_seed(self.SEED)
+        reimpl_input_embeds = embedding(input_ids, reimpl_model.embedding.weight).to(bfloat16)
         reimpl_decoder_outputs = reimpl_model.decoder(
-            input_embeds=input_embeds,
+            input_embeds=reimpl_input_embeds,
             attention_mask=decoder_attention_mask,
             encoder_hidden_state=encoder_hidden_state,
             encoder_attention_mask=attention_mask,
         ).input_embeds
+
         set_torch_seed(self.SEED)
+        t5_input_embeds = t5_model.shared(input_ids).to(bfloat16)
         t5_decoder_outputs = t5_model.decoder(
-            inputs_embeds=input_embeds,
+            inputs_embeds=t5_input_embeds,
             attention_mask=~decoder_attention_mask,  # Again, we don't use self.t5_decoder_attention_mask because decoder will do it for us
             encoder_hidden_states=encoder_hidden_state,
             encoder_attention_mask=~attention_mask,
@@ -61,10 +67,9 @@ class TestReimplMatchT5LargeComponents(ComponentTestMixin, TestCase):
 
         reimpl_decoder_outputs.mean().backward(retain_graph=True)
         t5_decoder_outputs.mean().backward(retain_graph=True)
-        reimpl_crossattn = reimpl_model.decoder.cross_attention_layers[0]
-        t5_crossattn = t5_model.decoder.block[0].layer[1].EncDecAttention
-        assert reimpl_crossattn.w_q.weight.grad is not None
-        self.assertTrue(equal(reimpl_crossattn.w_q.weight.grad, t5_crossattn.q.weight.grad))
+        assert_grad_equal(reimpl_model, t5_model)
+        reimpl_model.zero_grad()
+        t5_model.zero_grad()
 
     def test_transformer(self) -> None:
         reimpl_model = self.reimpl_model

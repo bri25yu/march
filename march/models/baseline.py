@@ -137,11 +137,11 @@ class DecoderBase(TransformerComponentBase):
 
         position_bias = None
         for i in range(config.num_layers // 2):
-            self_attention_layernorm: LayerNorm = self.layernorms[2 * i]
+            self_attention_layernorm: LayerNorm = self.layernorms[3 * i]
             self_attention_layer: AttentionBase = self.self_attention_layers[i]
-            cross_attention_layernorm: LayerNorm = self.layernorms[2 * i + 1]
+            cross_attention_layernorm: LayerNorm = self.layernorms[3 * i + 1]
             cross_attention_layer: AttentionBase = self.cross_attention_layers[i]
-            feedforward_layernorm: LayerNorm = self.layernorms[2 * i + 2]
+            feedforward_layernorm: LayerNorm = self.layernorms[3 * i + 2]
             feedforward_layer: TransformerComponentBase = self.feedforward_layers[i]
 
             normed_input_embeds: SequenceInputEmbeds = self_attention_layernorm(input_embeds)
@@ -227,14 +227,9 @@ class BaselineAttention(AttentionBase):
         self.has_relative_attention_bias = has_relative_attention_bias
 
         self.w_q = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
+        self.w_k = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
+        self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
         self.w_o = Linear(config.num_heads * config.dim_qkv, config.dim_model, bias=False)
-
-        if self.is_cross_attention:
-            self.w_k = Linear(config.num_heads * config.dim_qkv, config.num_heads * config.dim_qkv, bias=False)
-            self.w_v = Linear(config.num_heads * config.dim_qkv, config.num_heads * config.dim_qkv, bias=False)
-        else:
-            self.w_k = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
-            self.w_v = Linear(config.dim_model, config.num_heads * config.dim_qkv, bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = Embedding(config.relative_attention_num_buckets, config.num_heads)
