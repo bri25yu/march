@@ -16,11 +16,13 @@ for experiment_cls in experiments_to_check:
     input_ids = randint(0, model.config.vocab_size, (N, L))
     attention_mask = randint(0, 2, (N, L))
 
-    model(
+    outputs = model(
         input_ids=input_ids,
         attention_mask=attention_mask,
         decoder_input_ids=input_ids,
         decoder_attention_mask=attention_mask[:, None, :],
         labels=input_ids,
     )
+    outputs.logits.mean().backward()
+
     print(f"{experiment.name} passed!")
