@@ -309,11 +309,11 @@ class TestReimplMatchT5(TestCase):
             set_torch_seed(self.SEED)
             t5_outputs = t5_model(**t5_inputs)
 
-            self.assertTrue(equal(reimpl_outputs.logits, t5_outputs.logits), f"Failed on the {step+1} iteration")
+            self.assertTrue(equal(reimpl_outputs.logits, t5_outputs.logits), f"Failed on iteration {step+1}")
 
             reimpl_loss = reimpl_outputs.loss
             t5_loss = t5_outputs.loss
-            self.assertTrue(equal(reimpl_loss, t5_loss), f"Failed on the {step+1} iteration")
+            self.assertTrue(equal(reimpl_loss, t5_loss), f"Failed on iteration {step+1}")
 
             reimpl_optimizer.zero_grad()
             t5_optimizer.zero_grad()
@@ -326,7 +326,7 @@ class TestReimplMatchT5(TestCase):
             t5_weight = t5_model.encoder.block[0].layer[0].SelfAttention.q
             reimpl_grad = reimpl_weight.weight.grad
             t5_grad = t5_weight.weight.grad
-            self.assertTrue(equal(reimpl_grad, t5_grad), f"Failed on the {step+1} iteration")
+            self.assertTrue(equal(reimpl_grad, t5_grad), f"Failed on iteration {step+1}")
 
             reimpl_optimizer.step()
             t5_optimizer.step()
