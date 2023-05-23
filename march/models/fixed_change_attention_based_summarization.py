@@ -5,7 +5,7 @@ from march.models.utils import *
 
 from torch.nn.functional import dropout, embedding, relu, softmax
 
-from torch import masked_select, empty, BoolTensor
+from torch import masked_select, full, BoolTensor
 
 __all__ = ["FCABSTransformer", "FCABSTransformerConfig"]
 
@@ -97,7 +97,7 @@ def calculate_mask_drop(attention_probs: FloatTensor, L_drop: int) -> BoolTensor
 
     bottomk_indices = attention_probs_for_mask.topk(k=effective_L_drop, dim=1, largest=False).indices
 
-    mask_drop = empty((N, L), dtype=bool)
+    mask_drop = full((N, L), False, dtype=bool, device=attention_probs.device)
     mask_drop.scatter_(dim=1, index=bottomk_indices, value=True)
 
     return mask_drop
