@@ -57,3 +57,14 @@ class ModelDim640Layers30Experiment(BaselineExperiment):
             num_layers=30,
         )
         return BaselineTransformer(config)
+
+
+class ModelDim2304Layers2Experiment(BaselineExperiment):
+    def get_model(self) -> TransformerBase:
+        default_dim_model = TransformerConfig.dim_model
+        dim_qkv = TransformerConfig.dim_qkv
+        config = TransformerConfig(
+            dim_model=default_dim_model + 24 * dim_qkv,
+            num_layers=2,
+        )
+        return BaselineTransformer(config)
