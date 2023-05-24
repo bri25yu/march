@@ -22,7 +22,8 @@ os.environ["HF_DATASETS_CACHE"] = CACHE_DIR
 def run(
     experiment_name: Union[None, str]=None,
     batch_size_pow_scale: int=0,
-    use_fp32: bool=False
+    use_fp32: bool=False,
+    resume_from_checkpoint: bool=False,
 ) -> None:
     """
     batch_size_pow_scale: int
@@ -62,7 +63,11 @@ def run(
     finished = False
     while not finished:
         try:
-            experiment = experiment_cls(batch_size_pow_scale=batch_size_pow_scale, use_fp32=use_fp32)
+            experiment = experiment_cls(
+                batch_size_pow_scale=batch_size_pow_scale,
+                use_fp32=use_fp32,
+                resume_from_checkpoint=resume_from_checkpoint,
+            )
             experiment.train()
             finished = True
         except RuntimeError as e:

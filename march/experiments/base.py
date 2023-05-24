@@ -70,12 +70,14 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
 class ExperimentBase(ABC):
     NUM_STEPS: Union[None, int] = None
 
-    def __init__(self, batch_size_pow_scale: int=0, use_fp32: bool=False) -> None:
+    def __init__(self, batch_size_pow_scale: int=0, use_fp32: bool=False, resume_from_checkpoint: bool=False) -> None:
         super().__init__()
 
         # For self.load_default_training_arguments
         self.batch_size_pow_scale = batch_size_pow_scale
         self.use_fp32 = use_fp32
+
+        self.resume_from_checkpoint = resume_from_checkpoint
 
     @abstractmethod
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
@@ -208,7 +210,7 @@ class ExperimentBase(ABC):
         trainer.remove_callback(PrinterCallback)
         trainer.log({"num_params": model.count_parameters()})
 
-        trainer.train()
+        trainer.train(resume_from_checkpoint=self.resume_from_checkpoint)
 
     def _validate_dataset_dict(self, dataset_dict: DatasetDict) -> None:
         expected_splits = ["train", "validation"]

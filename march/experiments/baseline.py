@@ -1,11 +1,16 @@
 from types import MethodType
 
+from os.path import join
+
+import json
+
 from datasets import DatasetDict
 
 from torch import manual_seed as set_torch_seed
 
 from transformers import PreTrainedTokenizerFast, Seq2SeqTrainingArguments, AutoModelForSeq2SeqLM, AutoConfig
 
+from march import CONFIG_DIR
 from march.datasets.c4 import load_c4, load_c4_full
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
 from march.experiments.base import ExperimentBase
@@ -67,8 +72,14 @@ class BaselineLargeExperiment(BaselineExperiment):
 
 
 class BaselineSmallFullTrainExperiment(BaselineExperiment):
-    # This trains the model for 100k steps at 1m tokens per step = 100B tokens seen total
-    NUM_STEPS = 100_000
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        args_dict = self.load_default_training_arguments()
+        with open(join(CONFIG_DIR, "full_train_training_arguments.json")) as full_train_training_args_file:
+            full_train_args_dict = json.load(full_train_training_args_file)
+
+        args_dict.update(full_train_args_dict)
+
+        return Seq2SeqTrainingArguments(**args_dict)
 
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
         return load_c4_full()

@@ -1,0 +1,8 @@
+{
+    "overwrite_output_dir": true,
+    "max_steps": 100000,
+    "eval_steps": 100,
+    "save_strategy": "steps",
+    "save_steps": 1000,
+    "save_total_limit": 10
+}
