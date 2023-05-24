@@ -43,9 +43,18 @@ class ValuesReluFirstFFExperiment(BaselineExperiment):
         config = TransformerConfig(dim_model=1024)
         return ValuesReluFirstFFTransformer(config)
 
+
 class FCABSExperiment(BaselineExperiment):
     NUM_STEPS = 1_000
 
     def get_model(self) -> TransformerBase:
         config = FCABSTransformerConfig()
+        return FCABSTransformer(config)
+
+
+class FCABSLdrop32Experiment(BaselineExperiment):
+    NUM_STEPS = 1_000
+
+    def get_model(self) -> TransformerBase:
+        config = FCABSTransformerConfig(L_drop=32)
         return FCABSTransformer(config)
