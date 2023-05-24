@@ -72,6 +72,11 @@ class BaselineLargeExperiment(BaselineExperiment):
 
 
 class BaselineSmallFullTrainExperiment(BaselineExperiment):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+
+        self.resume_from_checkpoint = True
+
     def get_training_arguments(self) -> Seq2SeqTrainingArguments:
         args_dict = self.load_default_training_arguments()
         with open(join(CONFIG_DIR, "full_train_training_arguments.json")) as full_train_training_args_file:
