@@ -53,8 +53,6 @@ class FCABSExperiment(BaselineExperiment):
 
 
 class FCABSLdrop32Experiment(BaselineExperiment):
-    NUM_STEPS = 1_000
-
     def get_model(self) -> TransformerBase:
         config = FCABSTransformerConfig(L_drop=32)
         return FCABSTransformer(config)
