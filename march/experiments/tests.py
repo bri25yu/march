@@ -3,7 +3,7 @@ from march.models.no_ff import NoFFTransformer
 from march.models.values_relu import ValuesReluTransformer, ValuesReluFirstFFTransformer
 from march.models.fixed_change_attention_based_summarization import FCABSTransformer, FCABSTransformerConfig
 
-from march.experiments.baseline import BaselineExperiment
+from march.experiments.baseline import BaselineExperiment, BaselineT5Experiment
 
 
 class NoFFExperiment(BaselineExperiment):
@@ -56,3 +56,7 @@ class FCABSLdrop32Experiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = FCABSTransformerConfig(L_drop=32)
         return FCABSTransformer(config)
+
+
+class BaselineT52Experiment(BaselineT5Experiment):
+    pass
