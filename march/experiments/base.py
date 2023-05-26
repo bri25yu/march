@@ -65,7 +65,7 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
         self.add_callback(TensorboardWithCustomLogsCallback)
 
     def log(self, logs: Dict[str, float]) -> None:
-        if hasattr(self.model, "get_extra_logs"):
+        if hasattr(self.model, "get_custom_logs"):
             custom_logs = self.model.get_custom_logs()
             logs = {**logs, **custom_logs}
 
