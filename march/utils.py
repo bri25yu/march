@@ -68,7 +68,7 @@ def log_run(experiment_name: str) -> None:
         pickle.dump(run_logs, run_log_file)
 
 
-def print_most_recent_runs(num_runs: int=5) -> None:
+def print_most_recent_runs(num_runs: int) -> None:
     most_recent_runs = get_logged_runs()
     if not most_recent_runs:
         print("No runs found!")
