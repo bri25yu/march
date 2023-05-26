@@ -13,10 +13,15 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 RESULTS_DIR = os.path.join(ROOT_DIR, "..", "results")
 CONFIG_DIR = os.path.join(ROOT_DIR, "config")
 CACHE_DIR = os.path.join(ROOT_DIR, "..", "cache")
+RUN_LOG_PATH = os.path.join(RESULTS_DIR, "run_logs.pkl")
 
 
 os.environ["TRANSFORMERS_CACHE"] = CACHE_DIR
 os.environ["HF_DATASETS_CACHE"] = CACHE_DIR
+
+
+# Import after path declarations
+from march.utils import log_run
 
 
 def run(
@@ -68,6 +73,9 @@ def run(
                 use_fp32=use_fp32,
                 resume_from_checkpoint=resume_from_checkpoint,
             )
+
+            log_run(experiment_name)
+
             experiment.train()
             finished = True
         except RuntimeError as e:
