@@ -1,5 +1,6 @@
 from typing import List
 
+from os import environ
 from os.path import exists
 
 from dataclasses import dataclass
@@ -9,6 +10,8 @@ from datetime import datetime
 import pickle
 
 from socket import gethostname
+
+from torch.distributed import get_rank
 
 from march import RUN_LOG_PATH
 
@@ -50,6 +53,8 @@ def get_logged_runs() -> List[RunLog]:
 
 
 def log_run(experiment_name: str) -> None:
+    if get_rank() != 0: return  # Only log on global process 0
+
     run_logs = get_logged_runs()
 
     current_run_log = RunLog(
@@ -63,12 +68,23 @@ def log_run(experiment_name: str) -> None:
         pickle.dump(run_logs, run_log_file)
 
 
-def print_most_recent_runs() -> None:
-    most_recent_runs = get_logged_runs()[-5:]  # Last 5 runs
-
+def print_most_recent_runs(num_runs: int=5) -> None:
+    most_recent_runs = get_logged_runs()
     if not most_recent_runs:
         print("No runs found!")
         return
+
+    most_recent_unique_runs = []
+    seen = set()
+    for run in reversed(most_recent_runs):  # Newest first as a stack
+        if len(most_recent_unique_runs) >= num_runs: break
+        if run.experiment_name in seen: continue
+
+        most_recent_unique_runs.append(run)
+        seen.add(run.experiment_name)
+
+    # Was newest first, now we reverse to oldest first
+    most_recent_unique_runs = list(reversed(most_recent_unique_runs))
 
     print(f"Last {len(most_recent_runs)} runs (oldest first)")
     for run in most_recent_runs:
