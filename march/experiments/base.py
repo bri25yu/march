@@ -17,6 +17,7 @@ from torch.nn import Module
 from torch.utils.data import Sampler
 from torch.utils.data.distributed import DistributedSampler
 
+from transformers.utils.import_utils import is_torch_bf16_gpu_available
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, PrinterCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
 
 from march import CONFIG_DIR, RESULTS_DIR
@@ -70,12 +71,11 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
 class ExperimentBase(ABC):
     NUM_STEPS: Union[None, int] = None
 
-    def __init__(self, batch_size_pow_scale: int=0, use_fp32: bool=False, resume_from_checkpoint: bool=False) -> None:
+    def __init__(self, batch_size_pow_scale: int=0, resume_from_checkpoint: bool=False) -> None:
         super().__init__()
 
         # For self.load_default_training_arguments
         self.batch_size_pow_scale = batch_size_pow_scale
-        self.use_fp32 = use_fp32
 
         self.resume_from_checkpoint = resume_from_checkpoint
 
@@ -143,9 +143,10 @@ class ExperimentBase(ABC):
         args_dict["per_device_eval_batch_size"] = 2 * new_batch_size
         args_dict["gradient_accumulation_steps"] = new_grad_accumulation
 
-        if self.use_fp32 is True:
-            args_dict["bf16"] = False
-            args_dict["bf16_full_eval"] = False
+        # Default to using bf16 if available
+        use_bf16 = is_torch_bf16_gpu_available()
+        args_dict["bf16"] = use_bf16
+        args_dict["bf16_full_eval"] = use_bf16
 
         if self.NUM_STEPS is not None:
             assert isinstance(self.NUM_STEPS, int)

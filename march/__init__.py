@@ -27,7 +27,6 @@ from march.utils import log_run
 def run(
     experiment_name: Union[None, str]=None,
     batch_size_pow_scale: int=0,
-    use_fp32: bool=False,
     resume_from_checkpoint: bool=False,
 ) -> None:
     """
@@ -37,9 +36,6 @@ def run(
             => new_batch_size = original_batch_size * (2 ** batch_size_pow_scale)
                 = 8 * (2 ** 2) = 32
         Default value is 0 or a scaling factor of 2 ** 0 = 1.
-    use_fp32: bool
-        The default experiment precision is bf16. Setting this flag to true will turn off
-        bf16 and use fp32 instead.
 
     """
     from march.experiments import available_experiments
@@ -70,7 +66,6 @@ def run(
         try:
             experiment = experiment_cls(
                 batch_size_pow_scale=batch_size_pow_scale,
-                use_fp32=use_fp32,
                 resume_from_checkpoint=resume_from_checkpoint,
             )
 
