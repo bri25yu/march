@@ -63,7 +63,7 @@ class TestFCABS(TestCase):
 
         custom_logs = self.model.get_custom_logs()
 
-        self.assertIn("global_dropped_ids_by_layer", custom_logs)
+        self.assertIn("eval_global_dropped_ids_by_layer", custom_logs)
 
-        value = custom_logs["global_dropped_ids_by_layer"]
+        value = custom_logs["eval_global_dropped_ids_by_layer"]
         self.assertIsInstance(value, list)

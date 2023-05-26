@@ -247,6 +247,6 @@ class FCABSTransformer(BaselineTransformer):
         if not hasattr(self, "global_dropped_ids_by_layer"): return custom_logs
         if self.global_dropped_ids_by_layer is None: return custom_logs
 
-        custom_logs = {**custom_logs, **{"global_dropped_ids_by_layer": self.global_dropped_ids_by_layer}}
+        custom_logs = {**custom_logs, **{"eval_global_dropped_ids_by_layer": self.global_dropped_ids_by_layer}}
 
         return custom_logs
