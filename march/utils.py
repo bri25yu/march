@@ -84,5 +84,5 @@ def print_most_recent_runs(num_runs: int) -> None:
     most_recent_unique_runs = list(reversed(most_recent_unique_runs))
 
     print(f"Last {len(most_recent_runs)} runs (oldest first)")
-    for run in most_recent_runs:
+    for run in most_recent_unique_runs:
         print(run)
