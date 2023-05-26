@@ -224,7 +224,7 @@ class FCABSTransformer(BaselineTransformer):
         # For logging
         if encoder_outputs.global_dropped_idxs_by_layer is not None:
             self.global_dropped_ids_by_layer: List[SequenceInputIds] = [
-                input_ids.gather(dim=1, index=idxs).detach().cpu().numpy()
+                input_ids.gather(dim=1, index=idxs).detach().cpu().tolist()
                 for idxs in encoder_outputs.global_dropped_idxs_by_layer
             ]
         else:

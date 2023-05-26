@@ -41,17 +41,8 @@ class TensorboardWithCustomLogsCallback(TensorBoardCallback):
             if isinstance(v, (int, float)):
                 self.tb_writer.add_scalar(k, v, state.global_step)
             else:
-                try:
-                    value_str = json.dumps(v)
-                    self.tb_writer.add_text(k, value_str, state.global_step)
-                except TypeError:
-                    integrations_logger.warning(
-                        "Trainer is attempting to log a value of "
-                        f'"{v}" of type {type(v)} for key "{k}" that cannot be serialized. '
-                        "This invocation is incorrect so we dropped this attribute."
-                    )
-                except Exception as e:
-                    raise e
+                value_str = json.dumps(v)
+                self.tb_writer.add_text(k, value_str, state.global_step)
 
         self.tb_writer.flush()
 
