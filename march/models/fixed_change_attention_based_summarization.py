@@ -155,7 +155,12 @@ class FCABSAttention(BaselineAttention):
         attention_probs: MultiHeadedAttention = dropout(attention_probs, p=config.dropout_prob, training=self.training)
         attention_values: SequenceInputEmbeds = self.reshape_to_head_insensitive(matmul(attention_probs, value))
         attention_output: SequenceInputEmbeds = self.w_o(attention_values)
-        return FCABSAttentionOutput(attention_output, position_bias, mask_drop, bottomk_indices)
+        return FCABSAttentionOutput(
+            input_embeds=attention_output,
+            position_bias=position_bias,
+            mask_drop=mask_drop,
+            bottomk_indices=bottomk_indices,
+        )
 
 
 class FCABSEncoder(BaselineEncoder):

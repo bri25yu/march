@@ -13,7 +13,7 @@ class TestFCABS(TestCase):
         config = self.model.config
 
         # Create dummy inputs
-        N, L = 1, 128
+        N, L = 2, 128
         self.input_ids = randint(0, config.vocab_size, (N, L), dtype=long)
         self.input_embeds = embedding(self.input_ids, self.model.embedding.weight).to(bfloat16)
         self.attention_mask = randint(0, 2, (N, L), dtype=bool)
