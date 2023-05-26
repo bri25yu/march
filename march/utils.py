@@ -49,11 +49,8 @@ def get_logged_runs() -> List[RunLog]:
     return run_logs
 
 
-def log_run(experiment_name: str) -> None:
-    # We import here because importing torch is super slow
-    from torch.distributed import get_rank
-
-    if get_rank() != 0: return  # Only log on global process 0
+def log_run(is_global_process_0: bool, experiment_name: str) -> None:
+    if not is_global_process_0: return
 
     run_logs = get_logged_runs()
 

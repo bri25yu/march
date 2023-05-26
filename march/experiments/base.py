@@ -22,6 +22,7 @@ from transformers.integrations import TensorBoardCallback, logger as integration
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, PrinterCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
 
 from march import CONFIG_DIR, RESULTS_DIR
+from march.utils import log_run
 from march.datasets.c4 import EOS_TOKEN, load_c4_tokenizer
 from march.models.baseline import TransformerBase
 
@@ -223,6 +224,8 @@ class ExperimentBase(ABC):
             data_collator=data_collator,
         )
         trainer.log({"num_params": model.count_parameters()})
+
+        log_run(trainer.is_world_process_zero(), self.name)        
 
         trainer.train(resume_from_checkpoint=self.resume_from_checkpoint)
 

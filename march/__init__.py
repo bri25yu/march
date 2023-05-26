@@ -20,10 +20,6 @@ os.environ["TRANSFORMERS_CACHE"] = CACHE_DIR
 os.environ["HF_DATASETS_CACHE"] = CACHE_DIR
 
 
-# Import after path declarations
-from march.utils import log_run
-
-
 def run(
     experiment_name: Union[None, str]=None,
     batch_size_pow_scale: int=0,
@@ -68,9 +64,6 @@ def run(
                 batch_size_pow_scale=batch_size_pow_scale,
                 resume_from_checkpoint=resume_from_checkpoint,
             )
-
-            log_run(experiment_name)
-
             experiment.train()
             finished = True
         except RuntimeError as e:
