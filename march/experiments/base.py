@@ -18,41 +18,55 @@ from torch.utils.data import Sampler
 from torch.utils.data.distributed import DistributedSampler
 
 from transformers.utils.import_utils import is_torch_bf16_gpu_available
+from transformers.integrations import TensorBoardCallback, logger as integrations_logger, rewrite_logs
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, PrinterCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
 
 from march import CONFIG_DIR, RESULTS_DIR
 from march.datasets.c4 import EOS_TOKEN, load_c4_tokenizer
-from march.models.baseline import TransformerBase, LayerNorm, AttentionBase
+from march.models.baseline import TransformerBase
+
+
+class TensorboardWithCustomLogsCallback(TensorBoardCallback):
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if not state.is_world_process_zero: return
+
+        if self.tb_writer is None: self._init_summary_writer(args)
+
+        if self.tb_writer is None: return  # Still None after _init_summary_writer
+
+        logs = rewrite_logs(logs)
+
+        for k, v in logs.items():
+            if isinstance(v, (int, float)):
+                self.tb_writer.add_scalar(k, v, state.global_step)
+            else:
+                try:
+                    value_str = json.dumps(v)
+                    self.tb_writer.add_text(k, value_str, state.global_step)
+                except TypeError:
+                    integrations_logger.warning(
+                        "Trainer is attempting to log a value of "
+                        f'"{v}" of type {type(v)} for key "{k}" that cannot be serialized. '
+                        "This invocation is incorrect so we dropped this attribute."
+                    )
+                except Exception as e:
+                    raise e
+
+        self.tb_writer.flush()
 
 
 class CustomSeq2SeqTrainer(Seq2SeqTrainer):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.remove_callback(PrinterCallback)
+        self.remove_callback(TensorBoardCallback)
+        self.add_callback(TensorboardWithCustomLogsCallback)
+
     def log(self, logs: Dict[str, float]) -> None:
-        modules_by_cls = lambda cls: [module for module in self.model.modules() if isinstance(module, cls)]
-
-        layernorm_modules = modules_by_cls(LayerNorm)
-        if len(layernorm_modules) > 0:
-            logs["layernorm_mean"] = sum([m.weight.data.mean() for m in layernorm_modules]).item() / len(layernorm_modules)
-            logs["layernorm_max"] = sum([m.weight.data.max() for m in layernorm_modules]).item() / len(layernorm_modules)
-            logs["layernorm_min"] = sum([m.weight.data.min() for m in layernorm_modules]).item() / len(layernorm_modules)
-
-        attention_modules = modules_by_cls(AttentionBase)
-        def get_attn_weight_mean(weight_name: str) -> float:
-            weights = [getattr(m, weight_name).weight.data.mean() for m in attention_modules if hasattr(m, weight_name)]
-            if len(weights) > 0:
-                return sum(weights).item() / len(attention_modules)
-            return 0.0
-
-        if len(attention_modules) > 0:
-            logs["attention_w_q_mean"] = get_attn_weight_mean("w_q")
-            logs["attention_w_k_mean"] = get_attn_weight_mean("w_k")
-            logs["attention_w_v_mean"] = get_attn_weight_mean("w_v")
-            logs["attention_w_o_mean"] = get_attn_weight_mean("w_o")
-
-        if hasattr(self.model, "position_encoding"):
-            logs["position_encoding_mean"] = self.model.position_encoding.timing_table.data.mean().item()
-
-        if hasattr(self.model, "embedding"):
-            logs["embedding_mean"] = self.model.embedding.weight.data.mean().item()
+        if hasattr(self.model, "get_extra_logs"):
+            custom_logs = self.model.get_custom_logs()
+            logs = {**logs, **custom_logs}
 
         return super().log(logs)
 
@@ -208,7 +222,6 @@ class ExperimentBase(ABC):
             tokenizer=tokenizer,
             data_collator=data_collator,
         )
-        trainer.remove_callback(PrinterCallback)
         trainer.log({"num_params": model.count_parameters()})
 
         trainer.train(resume_from_checkpoint=self.resume_from_checkpoint)
