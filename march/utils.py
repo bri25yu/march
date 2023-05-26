@@ -1,6 +1,5 @@
 from typing import List
 
-from os import environ
 from os.path import exists
 
 from dataclasses import dataclass
@@ -10,8 +9,6 @@ from datetime import datetime
 import pickle
 
 from socket import gethostname
-
-from torch.distributed import get_rank
 
 from march import RUN_LOG_PATH
 
@@ -53,6 +50,9 @@ def get_logged_runs() -> List[RunLog]:
 
 
 def log_run(experiment_name: str) -> None:
+    # We import here because importing torch is super slow
+    from torch.distributed import get_rank
+
     if get_rank() != 0: return  # Only log on global process 0
 
     run_logs = get_logged_runs()
