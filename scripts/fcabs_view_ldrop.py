@@ -30,5 +30,6 @@ tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=1024)
 tokens_ex = tokenizer.batch_decode(ids_ex)
 tokens_ex = array(tokens_ex).reshape(num_layers, L_drop)
 
+print(f"Step {steps[-1]}")
 for i, tokens in enumerate(tokens_ex):
     print(f"Layer {i} dropped ids", tokens, "", sep="\n")
