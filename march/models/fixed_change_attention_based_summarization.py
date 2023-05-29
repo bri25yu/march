@@ -1,8 +1,5 @@
-from typing import Any, Dict
-from torch import arange
+from torch import BoolTensor, LongTensor, cat, full, masked_select
 from torch.nn.functional import dropout, embedding, softmax
-
-from torch import BoolTensor, LongTensor, full, masked_select
 
 from march.models.baseline import *
 from march.models.utils import *
@@ -24,6 +21,7 @@ class FCABSAttentionOutput:
     position_bias: MultiHeadedAttention
     mask_drop: SequenceInputIds
     bottomk_indices: SequenceInputIds
+    effective_L_drop: int
 
 
 @dataclass
@@ -31,65 +29,53 @@ class FCABSEncoderOutput:
     input_embeds: SequenceInputEmbeds
     position_bias: MultiHeadedAttention
     attention_mask: SequenceInputIds
-    global_dropped_idxs_by_layer: List[SequenceInputIds] = None
+    mask_drop_by_layer: List[SequenceInputIds] = None
+    dropped_indices_by_layer: List[SequenceInputIds] = None
+    effective_L_drop_by_layer: List[int] = None
 
 
-def reduce_input_embeds_L_dim(input_embeds: FloatTensor, mask_drop: BoolTensor) -> FloatTensor:
-    """
-    input_embeds: FloatTensor of shape (N, L, D)
-    mask_drop: BoolTensor of shape (N, L) where mask.sum(dim=1) = effective_L_drop
-        Ones indicate masking and zeros indicate keep
-    """
-    N, L, D = input_embeds.size()
-
-    expanded_mask_drop = mask_drop[:, :, None].repeat(1, 1, D)
-    assert expanded_mask_drop.size() == (N, L, D)
-
-    reduced_L_embeds = masked_select(input_embeds, ~expanded_mask_drop).reshape(N, -1, D)
-
-    return reduced_L_embeds
-
-
-def reduce_position_bias_L_dim(position_bias: FloatTensor, mask_drop: BoolTensor) -> FloatTensor:
-    """
-    position_bias: FloatTensor of shape (N, H, L, L)
-    mask_drop: BoolTensor of shape (N, L) where mask.sum(dim=1) = effective_L_drop
-        Ones indicate masking and zeros indicate keep
-    """
-    N, H, L, L = position_bias.size()
-
-    L_drop = mask_drop.sum(dim=1)[0]
-    L_out = L - L_drop
-
-    expanded_mask_drop = mask_drop[:, None, :].repeat(1, H, 1)
-    assert expanded_mask_drop.size() == (N, H, L)
-
-    # Repeat the mask to duplicate the L_out dimension 
-    expanded_mask_drop = expanded_mask_drop[:, :, None, :] | expanded_mask_drop[:, :, :, None]
-    assert expanded_mask_drop.size() == (N, H, L, L)
-
-    reduced_L_position_bias = masked_select(position_bias, ~expanded_mask_drop).reshape(N, H, L_out, L_out)
-    return reduced_L_position_bias
+@dataclass
+class FCABSTransformerOutput(Seq2SeqLMOutput):
+    dropped_ids: SequenceInputIds=None
 
 
 def update_L_dimension(
-    input_embeds: FloatTensor, attention_mask: BoolTensor, position_bias: FloatTensor, mask_drop: BoolTensor
+    input_embeds: FloatTensor,
+    attention_mask: BoolTensor,
+    position_bias: FloatTensor,
+    mask_drop: BoolTensor,
+    effective_L_drop: int,
 ) -> Tuple[FloatTensor, BoolTensor, FloatTensor]:
     """
     input_embeds is (N, L, D)
     attention_mask is (N, L)
-    position_bias is (1, L, L)
+    position_bias is (N, H, L, L)
     mask_drop is (N, L)
     """
-    input_embeds = reduce_input_embeds_L_dim(input_embeds, mask_drop)
-    N = input_embeds.size()[0]
-    attention_mask = masked_select(attention_mask, ~mask_drop).reshape(N, -1)
-    position_bias = reduce_position_bias_L_dim(position_bias, mask_drop)
+    N, L, D = input_embeds.size()
+    _, H, _, _ = position_bias.size()
+    L_out = L - effective_L_drop
+
+    mask_keep = ~mask_drop
+
+    # Drop from input_embeds
+    expanded_mask_keep = mask_keep[:, :, None].repeat(1, 1, D)
+    assert expanded_mask_keep.size() == (N, L, D)
+    input_embeds = masked_select(input_embeds, expanded_mask_keep).reshape(N, L_out, D)
+
+    # Drop from attention_mask
+    attention_mask = masked_select(attention_mask, mask_keep).reshape(N, L_out)
+
+    # Drop from position_bias
+    expanded_mask_keep = mask_keep[:, None, :].repeat(1, H, 1)  # (N, H, L)
+    expanded_mask_keep = expanded_mask_keep[:, :, None, :] & expanded_mask_keep[:, :, :, None]
+    assert expanded_mask_keep.size() == (N, H, L, L)
+    position_bias = masked_select(position_bias, expanded_mask_keep).reshape(N, H, L_out, L_out)
 
     return input_embeds, attention_mask, position_bias
 
 
-def calculate_mask_drop(attention_probs: FloatTensor, L_drop: int) -> Tuple[BoolTensor, LongTensor]:
+def calculate_mask_drop(attention_probs: FloatTensor, L_drop: int) -> Tuple[BoolTensor, LongTensor, int]:
     """
     attention_probs is (N, H, L, L)
     """
@@ -104,7 +90,42 @@ def calculate_mask_drop(attention_probs: FloatTensor, L_drop: int) -> Tuple[Bool
     mask_drop = full((N, L), False, dtype=bool, device=attention_probs.device)
     mask_drop.scatter_(dim=1, index=bottomk_indices, value=True)
 
-    return mask_drop, bottomk_indices
+    return mask_drop, bottomk_indices, effective_L_drop
+
+
+def log_fcabs(
+    input_ids: SequenceInputIds,
+    dropped_indices_by_layer: List[SequenceInputIds],
+    mask_drop_by_layer: List[SequenceInputIds],
+    effective_L_drop_by_layer: List[int],
+):
+    """
+    N_L is the number of layers
+
+    input_ids is (N, L)
+    dropped_indices_by_layer is (N_L, N, L_drop)
+    mask_drop_by_layer is (N_L, N, L)
+    effective_L_drop_by_layer is length N_L
+
+    Returns dropped_ids of shape (N, N_L, L_drop)
+    """
+    N, L_out = input_ids.size()
+
+    if dropped_indices_by_layer is None: return None
+
+    dropped_ids_by_layer = []  # (N_L, N, L_drop)
+    for dropped_indices, mask_drop, effective_L_drop in zip(dropped_indices_by_layer, mask_drop_by_layer, effective_L_drop_by_layer):
+        L_out -= effective_L_drop
+
+        dropped_ids = input_ids.gather(dim=1, index=dropped_indices)
+        assert dropped_ids.size() == (N, effective_L_drop)
+        input_ids = masked_select(input_ids, ~mask_drop).reshape(N, L_out)
+
+        dropped_ids_by_layer.append(dropped_ids[None, :, :])  # Expand for cat later
+
+    dropped_ids = cat(dropped_ids_by_layer, dim=0).permute(1, 0, 2)
+
+    return dropped_ids
 
 
 @dataclass
@@ -146,12 +167,12 @@ class FCABSAttention(BaselineAttention):
 
         attention_logits: MultiHeadedAttention = attention_logits + position_bias
         attention_probs: MultiHeadedAttention = softmax(attention_logits.to(float32), dim=3).to(attention_logits.dtype)
-	
+
         # Use attention probs output of softmax to calculate which tokens to drop, 	
         # based on which has the lowest attention activation.	
         # Attention_probs is of dimension (N, H, L_q, L_k). Sum over H and L_q dimensions	
-        mask_drop, bottomk_indices = calculate_mask_drop(attention_probs, config.L_drop) # (N, L)	
-        
+        mask_drop, bottomk_indices, effective_L_drop = calculate_mask_drop(attention_probs, config.L_drop) # (N, L)	
+
         attention_probs: MultiHeadedAttention = dropout(attention_probs, p=config.dropout_prob, training=self.training)
         attention_values: SequenceInputEmbeds = self.reshape_to_head_insensitive(matmul(attention_probs, value))
         attention_output: SequenceInputEmbeds = self.w_o(attention_values)
@@ -160,28 +181,26 @@ class FCABSAttention(BaselineAttention):
             position_bias=position_bias,
             mask_drop=mask_drop,
             bottomk_indices=bottomk_indices,
+            effective_L_drop=effective_L_drop,
         )
 
 
 class FCABSEncoder(BaselineEncoder):
     ATTENTION_CLS = FCABSAttention
 
-    def forward(self, input_embeds: SequenceInputEmbeds, attention_mask: SequenceInputIds) -> AttentionOutput:
+    def forward(self, input_embeds: SequenceInputEmbeds, attention_mask: SequenceInputIds, return_fcabs: bool=False) -> AttentionOutput:
         selfattn_ln: LayerNorm
         selfattn: AttentionBase
         ff_ln: LayerNorm
         ff: TransformerComponentBase
 
-        should_log_dropped_ids = not self.training  # Only log when in eval
-        if should_log_dropped_ids:
-            global_dropped_idxs_by_layer: List[LongTensor] = []
-            N, L = input_embeds.size()[:2]
-            global_idxs = arange(L, device=input_embeds.device)[None, :].repeat(N, 1).to()
-        else:
-            global_dropped_idxs_by_layer = None
-
         input_embeds = self.apply_dropout(input_embeds)
         position_bias = None
+        if return_fcabs:
+            mask_drop_by_layer, dropped_indices_by_layer, effective_L_drop_by_layer = [], [], []
+        else:
+            mask_drop_by_layer, dropped_indices_by_layer, effective_L_drop_by_layer = None, None, None
+
         for selfattn_ln, selfattn, ff_ln, ff in self.layers:
             # Also take the mask_drop here
             self_attention_output: FCABSAttentionOutput = selfattn(selfattn_ln(input_embeds), attention_mask, position_bias)
@@ -189,19 +208,26 @@ class FCABSEncoder(BaselineEncoder):
             position_bias = self_attention_output.position_bias
 
             # Update L dimension by dropping the indices which had the lowest attention activation, calculated earlier in self attention
-            input_embeds, attention_mask, position_bias = update_L_dimension(input_embeds, attention_mask, position_bias, self_attention_output.mask_drop)
-
-            if should_log_dropped_ids:
-                dropped_idxs = self_attention_output.bottomk_indices
-                dropped_global_idxs = global_idxs.gather(dim=1, index=dropped_idxs)
-                global_idxs = masked_select(global_idxs, ~self_attention_output.mask_drop).reshape(N, -1)
-                global_dropped_idxs_by_layer.append(dropped_global_idxs)
+            input_embeds, attention_mask, position_bias = update_L_dimension(
+                input_embeds, attention_mask, position_bias, self_attention_output.mask_drop, self_attention_output.effective_L_drop
+            )
+            if return_fcabs:
+                mask_drop_by_layer.append(self_attention_output.mask_drop)
+                dropped_indices_by_layer.append(self_attention_output.bottomk_indices)
+                effective_L_drop_by_layer.append(self_attention_output.effective_L_drop)
 
             input_embeds = self.apply_residual(input_embeds, ff(ff_ln(input_embeds)))
 
         input_embeds = self.apply_dropout(self.final_layernorm(input_embeds))
-        # return AttentionOutput(input_embeds=input_embeds, position_bias=None)
-        return FCABSEncoderOutput(input_embeds=input_embeds, position_bias=None, attention_mask=attention_mask, global_dropped_idxs_by_layer=global_dropped_idxs_by_layer)
+
+        return FCABSEncoderOutput(
+            input_embeds=input_embeds,
+            position_bias=None,
+            attention_mask=attention_mask,
+            mask_drop_by_layer=mask_drop_by_layer,
+            dropped_indices_by_layer=dropped_indices_by_layer,
+            effective_L_drop_by_layer=effective_L_drop_by_layer,
+        )
 
 
 class FCABSTransformer(BaselineTransformer):
@@ -217,18 +243,12 @@ class FCABSTransformer(BaselineTransformer):
     ) -> Seq2SeqLMOutput:
         config = self.config
 
-        input_embeds: SequenceInputEmbeds = embedding(input_ids, self.embedding.weight)
-        encoder_outputs: FCABSEncoderOutput = self.encoder(input_embeds, attention_mask)
-        encoder_hidden_state = encoder_outputs.input_embeds
+        # Should log fcabs?
+        return_fcabs = not self.training
 
-        # For logging
-        if encoder_outputs.global_dropped_idxs_by_layer is not None:
-            self.global_dropped_ids_by_layer: List[SequenceInputIds] = [
-                input_ids.gather(dim=1, index=idxs).detach().cpu().tolist()
-                for idxs in encoder_outputs.global_dropped_idxs_by_layer
-            ]
-        else:
-            self.global_dropped_ids_by_layer = None
+        input_embeds: SequenceInputEmbeds = embedding(input_ids, self.embedding.weight)
+        encoder_outputs: FCABSEncoderOutput = self.encoder(input_embeds, attention_mask, return_fcabs=return_fcabs)
+        encoder_hidden_state = encoder_outputs.input_embeds
 
         decoder_input_embeds: SequenceInputEmbeds = embedding(decoder_input_ids, self.embedding.weight)
         # Use updated attention mask from FCABS encoder
@@ -244,14 +264,11 @@ class FCABSTransformer(BaselineTransformer):
         loss_fct = CrossEntropyLoss(ignore_index=-100)
         loss = loss_fct(lm_logits.view(-1, lm_logits.size(-1)), labels.view(-1))
 
-        return Seq2SeqLMOutput(loss=loss, logits=lm_logits)
+        dropped_ids = log_fcabs(
+            input_ids=input_ids,
+            dropped_indices_by_layer=encoder_outputs.dropped_indices_by_layer,
+            mask_drop_by_layer=encoder_outputs.mask_drop_by_layer,
+            effective_L_drop_by_layer=encoder_outputs.effective_L_drop_by_layer,
+        )
 
-    def get_custom_logs(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        custom_logs = super().get_custom_logs()
-
-        if not hasattr(self, "global_dropped_ids_by_layer"): return custom_logs
-        if self.global_dropped_ids_by_layer is None: return custom_logs
-
-        custom_logs = {**custom_logs, **{"eval_global_dropped_ids_by_layer": self.global_dropped_ids_by_layer}}
-
-        return custom_logs
+        return FCABSTransformerOutput(loss=loss, logits=lm_logits, dropped_ids=dropped_ids)

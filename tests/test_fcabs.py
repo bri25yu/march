@@ -35,10 +35,10 @@ class TestFCABS(TestCase):
         assert target_L > 0, target_L
         self.assertEqual(outputs.input_embeds.size(), (N, target_L, D))
 
-    def test_training_has_no_custom_logs(self) -> None:
+    def test_training_has_no_logs(self) -> None:
         self.model.train()
 
-        _ = self.model(
+        model_outputs = self.model(
             input_ids=self.input_ids,
             attention_mask=self.attention_mask,
             decoder_input_ids=self.input_ids,
@@ -46,14 +46,12 @@ class TestFCABS(TestCase):
             labels=self.input_ids,
         )
 
-        custom_logs = self.model.get_custom_logs()
+        self.assertIsNone(model_outputs.dropped_ids)
 
-        self.assertNotIn("global_dropped_ids_by_layer", custom_logs)
-
-    def test_logging(self) -> None:
+    def test_eval_has_logs(self) -> None:
         self.model.eval()
 
-        _ = self.model(
+        model_outputs = self.model(
             input_ids=self.input_ids,
             attention_mask=self.attention_mask,
             decoder_input_ids=self.input_ids,
@@ -61,9 +59,7 @@ class TestFCABS(TestCase):
             labels=self.input_ids,
         )
 
-        custom_logs = self.model.get_custom_logs()
-
-        self.assertIn("eval_global_dropped_ids_by_layer", custom_logs)
-
-        value = custom_logs["eval_global_dropped_ids_by_layer"]
-        self.assertIsInstance(value, list)
+        dropped_ids = model_outputs.dropped_ids
+        self.assertIsNotNone(dropped_ids)
+        expected_size = (self.input_ids.size()[0], self.model.config.num_layers // 2, self.model.config.L_drop)  # (N, N_L, L_drop)
+        self.assertEqual(dropped_ids.size(), expected_size)

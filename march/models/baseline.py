@@ -201,35 +201,6 @@ class TransformerBase(TransformerComponentBase):
     def count_parameters(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
-    def get_custom_logs(self) -> Dict[str, Any]:
-        logs = dict()
-
-        modules_by_cls = lambda cls: [module for module in self.modules() if isinstance(module, cls)]
-
-        layernorm_modules = modules_by_cls(LayerNorm)
-        if len(layernorm_modules) > 0:
-            logs["layernorm_mean"] = sum([m.weight.data.mean() for m in layernorm_modules]).item() / len(layernorm_modules)
-            logs["layernorm_max"] = sum([m.weight.data.max() for m in layernorm_modules]).item() / len(layernorm_modules)
-            logs["layernorm_min"] = sum([m.weight.data.min() for m in layernorm_modules]).item() / len(layernorm_modules)
-
-        attention_modules = modules_by_cls(AttentionBase)
-        def get_attn_weight_mean(weight_name: str) -> float:
-            weights = [getattr(m, weight_name).weight.data.mean() for m in attention_modules if hasattr(m, weight_name)]
-            if len(weights) > 0:
-                return sum(weights).item() / len(attention_modules)
-            return 0.0
-
-        if len(attention_modules) > 0:
-            logs["attention_w_q_mean"] = get_attn_weight_mean("w_q")
-            logs["attention_w_k_mean"] = get_attn_weight_mean("w_k")
-            logs["attention_w_v_mean"] = get_attn_weight_mean("w_v")
-            logs["attention_w_o_mean"] = get_attn_weight_mean("w_o")
-
-        if hasattr(self, "embedding"):
-            logs["embedding_mean"] = self.embedding.weight.data.mean().item()
-
-        return logs
-
 
 class BaselineAttention(AttentionBase):
     def __init__(self, config: TransformerConfig, is_cross_attention: bool, is_decoder: bool, has_relative_attention_bias: bool=False) -> None:

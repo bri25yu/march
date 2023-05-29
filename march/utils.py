@@ -34,7 +34,7 @@ class RunLog:
         hours, rem = divmod(diff.seconds, 3600)
         minutes, _ = divmod(rem, 60)
 
-        return (f"{diff.days} days " if diff.days else "") + f"{hours} hr {minutes} min"
+        return (f"{diff.days} d " if diff.days else "") + f"{hours} hr {minutes} min"
 
     def __str__(self) -> str:
         return f"Node {self.hostname} | started at {self.timestamp_str} ({self.started_ago} ago) | {self.experiment_name}"
@@ -83,6 +83,6 @@ def print_most_recent_runs(num_runs: int) -> None:
     # Was newest first, now we reverse to oldest first
     most_recent_unique_runs = list(reversed(most_recent_unique_runs))
 
-    print(f"Last {len(most_recent_runs)} runs (oldest first)")
+    print(f"Last {len(most_recent_unique_runs)} runs (oldest first)")
     for run in most_recent_unique_runs:
         print(run)

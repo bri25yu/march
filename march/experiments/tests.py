@@ -1,3 +1,5 @@
+from transformers.trainer_utils import EvalPrediction
+
 from march.models.baseline import TransformerBase, TransformerConfig
 from march.models.no_ff import NoFFTransformer
 from march.models.values_relu import ValuesReluTransformer, ValuesReluFirstFFTransformer
@@ -51,8 +53,20 @@ class FCABSExperiment(BaselineExperiment):
         config = FCABSTransformerConfig()
         return FCABSTransformer(config)
 
+    def get_compute_metrics(self, model: TransformerBase):
+        def compute_metrics(eval_preds: EvalPrediction):
+            logs = dict(model.named_parameters())
 
-class FCABSLdrop32Experiment(BaselineExperiment):
+            logits, dropped_ids = eval_preds.predictions
+
+            return {**logs, "dropped_ids_by_layer": dropped_ids}
+
+        return compute_metrics
+
+
+class FCABSLdrop32Experiment(FCABSExperiment):
+    NUM_STEPS = 10_000
+
     def get_model(self) -> TransformerBase:
         config = FCABSTransformerConfig(L_drop=32)
         return FCABSTransformer(config)

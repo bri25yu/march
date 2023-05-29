@@ -12,13 +12,14 @@ from numpy.random import seed as set_numpy_seed
 
 from torch import manual_seed as set_torch_seed, triu, ones
 from torch.cuda import device_count
-from torch.nn import Module
+from torch.nn import Module, Parameter
 
 from torch.utils.data import Sampler
 from torch.utils.data.distributed import DistributedSampler
 
 from transformers.utils.import_utils import is_torch_bf16_gpu_available
-from transformers.integrations import TensorBoardCallback, logger as integrations_logger, rewrite_logs
+from transformers.integrations import TensorBoardCallback, rewrite_logs
+from transformers.trainer_utils import EvalPrediction
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, PrinterCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
 
 from march import CONFIG_DIR, RESULTS_DIR
@@ -40,7 +41,9 @@ class TensorboardWithCustomLogsCallback(TensorBoardCallback):
         for k, v in logs.items():
             if isinstance(v, (int, float)):
                 self.tb_writer.add_scalar(k, v, state.global_step)
-            else:
+            elif isinstance(v, Parameter):
+                self.tb_writer.add_histogram(k, v.data, state.global_step)
+            else:  # For more complex values
                 value_str = json.dumps(v)
                 self.tb_writer.add_text(k, value_str, state.global_step)
 
@@ -54,13 +57,6 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
         self.remove_callback(PrinterCallback)
         self.remove_callback(TensorBoardCallback)
         self.add_callback(TensorboardWithCustomLogsCallback)
-
-    def log(self, logs: Dict[str, float]) -> None:
-        if hasattr(self.model, "get_custom_logs"):
-            custom_logs = self.model.get_custom_logs()
-            logs = {**logs, **custom_logs}
-
-        return super().log(logs)
 
     def _get_train_sampler(self) -> Optional[Sampler]:
         sampler = super()._get_train_sampler()
@@ -192,6 +188,12 @@ class ExperimentBase(ABC):
 
         return data_collator
 
+    def get_compute_metrics(self, model: TransformerBase):
+        def compute_metrics(eval_preds: EvalPrediction) -> Dict[str, Any]:
+            return dict(model.named_parameters())
+
+        return compute_metrics
+
     def train(self) -> None:
         training_arguments = self.get_training_arguments()
 
@@ -213,6 +215,7 @@ class ExperimentBase(ABC):
             eval_dataset=dataset_dict["validation"],
             tokenizer=tokenizer,
             data_collator=data_collator,
+            compute_metrics=self.get_compute_metrics(model),
         )
         trainer.log({"num_params": model.count_parameters()})
 
