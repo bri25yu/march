@@ -3,12 +3,12 @@ from unittest import TestCase
 from torch import bfloat16, long, randint
 from torch.nn.functional import embedding
 
-from march.experiments.tests import FCABSExperiment
+from tests.fcabs.experiment_mixins import TestFCABSExperiment
 
 
-class TestFCABS(TestCase):
+class TestFCABSUnits(TestCase):
     def setUp(self) -> None:
-        self.exp = FCABSExperiment()
+        self.exp = TestFCABSExperiment()
         self.model = self.exp.get_model().to(bfloat16)
         config = self.model.config
 
