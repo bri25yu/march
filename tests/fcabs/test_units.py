@@ -55,7 +55,7 @@ class TestFCABSUnits(TestCase):
 
         model.eval()
 
-        model_outputs = self.model(**inputs)
+        model_outputs = model(**inputs)
 
         dropped_ids = model_outputs.dropped_ids
         self.assertIsNotNone(dropped_ids)

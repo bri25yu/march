@@ -109,9 +109,9 @@ def log_fcabs(
 
     Returns dropped_ids of shape (N, N_L, L_drop)
     """
-    N, L_out = input_ids.size()
-
     if dropped_indices_by_layer is None: return None
+
+    N, L_out = input_ids.size()
 
     dropped_ids_by_layer = []  # (N_L, N, L_drop)
     for dropped_indices, mask_drop, effective_L_drop in zip(dropped_indices_by_layer, mask_drop_by_layer, effective_L_drop_by_layer):
