@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from torch import bfloat16, long, randint
+from torch import bfloat16
 from torch.nn.functional import embedding
 
 from datasets import load_dataset
@@ -24,7 +24,13 @@ class TestFCABSUnits(TestCase):
         config = model.config
         inputs = self.inputs
 
-        outputs = model.encoder(**inputs)
+        input_embeds = embedding(inputs["input_ids"], model.embedding.weight)
+        encoder_inputs = {
+            "input_embeds": input_embeds,
+            "attention_mask": inputs["attention_mask"],
+        }
+
+        outputs = model.encoder(**encoder_inputs)
 
         N, original_L = inputs["input_ids"].size()
         D = config.dim_model
