@@ -11,7 +11,7 @@ from tests.fcabs.experiment_mixins import TestFCABSExperiment
 
 class TestFCABSEndToEnd(TestCase):
     def test_end_to_end(self) -> None:
-        exp = TestFCABSExperiment()
+        exp = TestFCABSExperiment(batch_size_pow_scale=-1)
         if not exists(exp.output_dir): exp.train()
 
 
