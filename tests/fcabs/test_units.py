@@ -33,18 +33,25 @@ class TestFCABSUnits(TestCase):
         self.assertEqual(outputs.input_embeds.size(), (N, target_L, D))
 
     def test_training_has_no_logs(self) -> None:
-        self.model.train()
+        model = self.model
+        inputs = self.inputs
 
-        model_outputs = self.model(**self.inputs)
+        model.train()
+
+        model_outputs = model(**inputs)
 
         self.assertIsNone(model_outputs.dropped_ids)
 
     def test_eval_has_logs(self) -> None:
-        self.model.eval()
+        model = self.model
+        inputs = self.inputs
+        config = model.config
 
-        model_outputs = self.model(**self.inputs)
+        model.eval()
+
+        model_outputs = self.model(**inputs)
 
         dropped_ids = model_outputs.dropped_ids
         self.assertIsNotNone(dropped_ids)
-        expected_size = (self.input_ids.size()[0], self.model.config.num_layers // 2, self.model.config.L_drop)  # (N, N_L, L_drop)
+        expected_size = (inputs["input_ids"].size()[0], config.num_layers // 2, config.L_drop)  # (N, N_L, L_drop)
         self.assertEqual(dropped_ids.size(), expected_size)
