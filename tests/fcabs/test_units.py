@@ -16,7 +16,7 @@ class TestFCABSUnits(TestCase):
         N = 2
         data_collator = self.exp.get_data_collator(self.exp.load_default_tokenizer())
         tiny_dataset = load_dataset("hlillemark/c4_t5_100")["train"]
-        inputs = tiny_dataset.select(range(N)).tolist()
+        inputs = tiny_dataset.select(range(N)).to_list()
         self.inputs = data_collator(inputs)
 
     def test_encoder_basic(self) -> None:
