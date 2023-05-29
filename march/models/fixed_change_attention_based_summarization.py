@@ -1,5 +1,9 @@
+from typing import Optional
+
 from torch import BoolTensor, LongTensor, cat, full, masked_select
 from torch.nn.functional import dropout, embedding, softmax
+
+from transformers.modeling_outputs import ModelOutput
 
 from march.models.baseline import *
 from march.models.utils import *
@@ -35,7 +39,16 @@ class FCABSEncoderOutput:
 
 
 @dataclass
-class FCABSTransformerOutput(Seq2SeqLMOutput):
+class FCABSTransformerOutput(ModelOutput):
+    loss: Optional[FloatTensor] = None
+    logits: FloatTensor = None
+    past_key_values: Optional[Tuple[Tuple[FloatTensor]]] = None
+    decoder_hidden_states: Optional[Tuple[FloatTensor]] = None
+    decoder_attentions: Optional[Tuple[FloatTensor]] = None
+    cross_attentions: Optional[Tuple[FloatTensor]] = None
+    encoder_last_hidden_state: Optional[FloatTensor] = None
+    encoder_hidden_states: Optional[Tuple[FloatTensor]] = None
+    encoder_attentions: Optional[Tuple[FloatTensor]] = None
     dropped_ids: SequenceInputIds=None
 
 
