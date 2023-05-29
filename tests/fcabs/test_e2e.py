@@ -1,3 +1,6 @@
+from os import environ
+environ["CUDA_LAUNCH_BLOCKING"] = "1"
+
 import march  # Redirect cache. This is necessary because this file might be run as a standalone
 
 from sys import argv
