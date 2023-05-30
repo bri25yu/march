@@ -1,4 +1,4 @@
 #!/bin/bash
 # Start Tensorboard (tb)
 
-tensorboard --logdir results --port=62724
+tensorboard --logdir results --port=62724 --window_title "March Tensorboard"

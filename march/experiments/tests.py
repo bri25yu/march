@@ -1,4 +1,5 @@
 from transformers.trainer_utils import EvalPrediction
+from transformers import Seq2SeqTrainingArguments
 
 from march.models.baseline import TransformerBase, TransformerConfig
 from march.models.no_ff import NoFFTransformer
@@ -48,6 +49,15 @@ class ValuesReluFirstFFExperiment(BaselineExperiment):
 
 class FCABSExperiment(BaselineExperiment):
     NUM_STEPS = 1_000
+
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        args_dict = self.load_default_training_arguments()
+
+        # We use eval accumulation steps value of 1 because the logging intermediate
+        # values are very large
+        args_dict["eval_accumulation_steps"] = 1
+
+        return Seq2SeqTrainingArguments(**args_dict)
 
     def get_model(self) -> TransformerBase:
         config = FCABSTransformerConfig()
