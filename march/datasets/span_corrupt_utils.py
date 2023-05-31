@@ -5,6 +5,8 @@ with some minor changes to
 
 from typing import Dict, List
 
+from dataclasses import dataclass
+
 import numpy as np
 
 from transformers.tokenization_utils_base import BatchEncoding, PreTrainedTokenizerBase
@@ -57,7 +59,8 @@ def compute_input_and_target_lengths(inputs_length, noise_density, mean_noise_sp
     return tokens_length, targets_length
 
 
-class FlaxDataCollatorForT5MLM:
+@dataclass
+class DataCollatorForT5MLM:
     """
     Data collator used for T5 span-masked language modeling.
     It is made sure that after masking the inputs are of length `data_args.max_seq_length` and targets are also of fixed length.
@@ -119,11 +122,6 @@ class FlaxDataCollatorForT5MLM:
                 f"`labels` are incorrectly preprocessed. `labels` length is {batch['labels'].shape[-1]}, but should be"
                 f" {self.target_length}."
             )
-
-        # to check that tokens are correctly preprocessed, one can run `self.tokenizer.batch_decode(input_ids)` and `self.tokenizer.batch_decode(labels)` here...
-        batch["decoder_input_ids"] = shift_tokens_right(
-            batch["labels"], self.pad_token_id, self.decoder_start_token_id
-        )
 
         return batch
 

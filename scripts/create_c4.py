@@ -1,6 +1,11 @@
-from march.datasets.c4 import tokenize_c4, pack_tokenized_c4, span_corrupt_packed_c4
+from argparse import ArgumentParser
+
+from march.datasets.c4 import create_span_corrupted_c4
 
 
-tokenize_c4()
-pack_tokenized_c4()
-span_corrupt_packed_c4()
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("--use_tiny", action="store_true", type=bool, default=True)
+    args = parser.parse_args()
+
+    create_span_corrupted_c4(use_tiny=args.use_tiny)
