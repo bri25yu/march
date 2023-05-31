@@ -6,15 +6,15 @@ import json
 
 from datasets import DatasetDict
 
-from torch import manual_seed as set_torch_seed
+from torch import manual_seed as set_torch_seed, triu, ones, cat, zeros
 
-from transformers import PreTrainedTokenizerFast, Seq2SeqTrainingArguments, AutoModelForSeq2SeqLM, AutoConfig
+from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, Seq2SeqTrainingArguments, AutoModelForSeq2SeqLM, AutoConfig
 
 from march import CONFIG_DIR
-from march.datasets.c4 import load_c4, load_c4_full
+from march.datasets.c4 import load_c4
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
+from march.models.DObaseline import DOBaselineTransformer
 from march.experiments.base import ExperimentBase
-
 
 class BaselineExperiment(ExperimentBase):
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
@@ -87,7 +87,7 @@ class BaselineSmallFullTrainExperiment(BaselineExperiment):
         return Seq2SeqTrainingArguments(**args_dict)
 
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
-        return load_c4_full()
+        raise NotImplementedError
 
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(
@@ -101,4 +101,51 @@ class BaselineT5SmallExperiment(BaselineT5Experiment):
     MODEL_NAME = "t5-small"
     # We don't technically need to use c4 full here, but we do so to match with t5 small full train
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
-        return load_c4_full()
+        raise NotImplementedError
+
+
+class DOBaselineExperiment(BaselineExperiment):
+    # We need to input the input_ids properly here with the DO model
+
+    def get_data_collator(self, tokenizer: PreTrainedTokenizerFast):
+        base_data_collator = DataCollatorForSeq2Seq(tokenizer)
+        bos_token_id = tokenizer.bos_token_id
+        pad_token_id = tokenizer.pad_token_id
+        def data_collator(examples):
+            # Do normal processing first: 
+            for example in examples:
+                example["decoder_input_ids"] = [bos_token_id] + example["labels"][:-1]
+
+            examples = base_data_collator(examples)
+
+            # Attention masks have values of 1 for should mask, 0 otherwise
+            examples["attention_mask"] = examples["input_ids"] == pad_token_id
+
+            batch_size, decoder_input_length = examples["decoder_input_ids"].size()
+            causal_mask = triu(ones(decoder_input_length, decoder_input_length, dtype=bool), diagonal=1)
+
+            decoder_attention_mask = examples["decoder_input_ids"] == pad_token_id
+            decoder_attention_mask[:, 0] = 0  # in T5, bos_token_id == pad_token_id
+            decoder_attention_mask = decoder_attention_mask[:, None, :] | causal_mask[None, :, :]
+            assert decoder_attention_mask.size() == (batch_size, decoder_input_length, decoder_input_length), f"Expected decoder attention mask of shape {(batch_size, decoder_input_length, decoder_input_length)}, but got {decoder_attention_mask.size()}."
+
+            # Then combine the attention mask and decoder attention mask into one by concatenating them
+            # First we have to create the causal mask (0's) for the input attention mask
+            _, input_length = examples["input_ids"].size()
+            causal_mask_input = zeros(decoder_input_length, input_length, dtype=bool)
+            attention_mask = examples['attention_mask'][:, None, :] | causal_mask_input[None, :, :]
+            # We end up with a mask of shape (batch_size, decoder_input_length, input_length + decoder_input_length)
+            # This makes sense since we have decoder_input_length steps of decoding, but have to provide this 
+            # attention mask over all possible tokens, including the input tokens, which have length input_length
+            examples["attention_mask"] = cat([attention_mask, decoder_attention_mask], dim=-1)
+
+            # and the decoder input ids and input ids into one by concatenating them
+            examples["input_ids"] = cat([examples["input_ids"], examples["decoder_input_ids"]], dim=-1)
+
+            return examples
+
+        return data_collator
+
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig()
+        return DOBaselineTransformer(config)
