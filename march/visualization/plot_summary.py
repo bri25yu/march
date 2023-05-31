@@ -18,7 +18,7 @@ from matplotlib.ticker import FuncFormatter
 from matplotlib.pyplot import subplot_mosaic
 from matplotlib.font_manager import FontProperties
 
-from visualization.compute_scaling_law import ScalingLawForCompute
+from march.visualization.compute_scaling_law import ScalingLawForCompute
 
 
 __all__ = ["plot_comparative_experiment"]

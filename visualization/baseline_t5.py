@@ -1,4 +1,4 @@
-from visualization import plot_comparative_experiment
+from march.visualization.plot_summary import plot_comparative_experiment
 
 
 plot_comparative_experiment(
