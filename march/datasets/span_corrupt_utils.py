@@ -1,177 +1,223 @@
-from typing import List, Tuple
-from numpy.typing import NDArray
+"""
+This is directly copied from https://github.com/huggingface/transformers/blob/main/examples/flax/language-modeling/run_t5_mlm_flax.py
+with some minor changes to 
+"""
 
-from numpy import (
-    arange, array, argwhere, bool_, cumsum, empty, equal, hstack, insert, int_, round, ones, zeros
-)
-from numpy.random import shuffle
+from typing import Dict, List
 
+import numpy as np
 
-__all__ = ["create_span_corrupt_inputs"]
-
-
-def get_noise_statistics(mask_prob: float, average_span_length: int, length: int) -> Tuple[int, int, int]:
-    num_noise_tokens = max(1, int(round(length * mask_prob)))
-    num_spans = max(1, int(round(num_noise_tokens / average_span_length)))
-
-    num_noise_tokens = min(num_noise_tokens, length - num_spans)
-    num_noise_tokens = max(num_noise_tokens, num_spans)
-
-    num_nonnoise_tokens = length - num_noise_tokens
-
-    return num_spans, num_noise_tokens, num_nonnoise_tokens
+from transformers.tokenization_utils_base import BatchEncoding, PreTrainedTokenizerBase
 
 
-def get_span_lengths(length: int, num_spans: int) -> NDArray[int_]:
-    stars = zeros((length - num_spans,), dtype=bool)
-    bars = ones((num_spans - 1,), dtype=bool)
-    stars_and_bars = hstack((stars, bars))
+def compute_input_and_target_lengths(inputs_length, noise_density, mean_noise_span_length):
+    """This function is copy of `random_spans_helper <https://github.com/google-research/text-to-text-transfer-transformer/blob/84f8bcc14b5f2c03de51bd3587609ba8f6bbd1cd/t5/data/preprocessors.py#L2466>`__ .
 
-    shuffle(stars_and_bars)
+    Training parameters to avoid padding with random_spans_noise_mask.
+    When training a model with random_spans_noise_mask, we would like to set the other
+    training hyperparmeters in a way that avoids padding.
+    This function helps us compute these hyperparameters.
+    We assume that each noise span in the input is replaced by extra_tokens_per_span_inputs sentinel tokens,
+    and each non-noise span in the targets is replaced by extra_tokens_per_span_targets sentinel tokens.
+    This function tells us the required number of tokens in the raw example (for split_tokens())
+    as well as the length of the encoded targets. Note that this function assumes
+    the inputs and targets will have EOS appended and includes that in the reported length.
 
-    bars_idxs = argwhere(stars_and_bars).ravel() - arange(num_spans - 1)
-    indices = hstack(([0], bars_idxs, [length - num_spans]))
-    lengths = indices[1:] - indices[:-1] + 1
-
-    return lengths
-
-
-def create_noise_mask(length: int, noise_lengths: NDArray[int_], nonnoise_lengths: NDArray[int_]) -> NDArray[bool_]:
+    Args:
+        inputs_length: an integer - desired length of the tokenized inputs sequence
+        noise_density: a float
+        mean_noise_span_length: a float
+    Returns:
+        tokens_length: length of original text in tokens
+        targets_length: an integer - length in tokens of encoded targets sequence
     """
-    >>> from numpy import array
-    >>> length = 10
-    >>> nonnoise_lengths = array([3, 3])
-    >>> noise_lengths = array([2, 2])
-    >>> create_noise_mask(length, noise_lengths, nonnoise_lengths)
-    array([False, False, False,  True,  True, False, False, False,  True,
-            True])
 
+    def _tokens_length_to_inputs_length_targets_length(tokens_length):
+        num_noise_tokens = int(round(tokens_length * noise_density))
+        num_nonnoise_tokens = tokens_length - num_noise_tokens
+        num_noise_spans = int(round(num_noise_tokens / mean_noise_span_length))
+        # inputs contain all nonnoise tokens, sentinels for all noise spans
+        # and one EOS token.
+        _input_length = num_nonnoise_tokens + num_noise_spans + 1
+        _output_length = num_noise_tokens + num_noise_spans + 1
+        return _input_length, _output_length
+
+    tokens_length = inputs_length
+
+    while _tokens_length_to_inputs_length_targets_length(tokens_length + 1)[0] <= inputs_length:
+        tokens_length += 1
+
+    inputs_length, targets_length = _tokens_length_to_inputs_length_targets_length(tokens_length)
+
+    # minor hack to get the targets length to be equal to inputs length
+    # which is more likely to have been set to a nice round number.
+    if noise_density == 0.5 and targets_length > inputs_length:
+        tokens_length -= 1
+        targets_length -= 1
+    return tokens_length, targets_length
+
+
+class FlaxDataCollatorForT5MLM:
     """
-    lengths = empty((len(noise_lengths) + len(nonnoise_lengths),), dtype=noise_lengths.dtype)
-    lengths[::2] = nonnoise_lengths
-    lengths[1::2] = noise_lengths
+    Data collator used for T5 span-masked language modeling.
+    It is made sure that after masking the inputs are of length `data_args.max_seq_length` and targets are also of fixed length.
+    For more information on how T5 span-masked language modeling works, one can take a look
+    at the `official paper <https://arxiv.org/pdf/1910.10683.pdf>`__
+    or the `official code for preprocessing <https://github.com/google-research/text-to-text-transfer-transformer/blob/master/t5/data/preprocessors.py>`__ .
 
-    start_indices = cumsum(lengths)[:-1]
-    start_mask = zeros((length,), dtype=bool)
-    start_mask[start_indices] = True
-
-    spread_mask = cumsum(start_mask)
-    noise_mask = equal(spread_mask % 2, 1)
-
-    return noise_mask
-
-
-def get_ids(input_ids: NDArray[int_], mask: NDArray[bool_]) -> NDArray[int_]:
-    return input_ids[mask]
-
-
-def insert_sentinel_ids(input_ids: NDArray[int_], lengths: List[int], sentinel_id_start: int) -> NDArray[int_]:
+    Args:
+        tokenizer (:class:`~transformers.PreTrainedTokenizer` or :class:`~transformers.PreTrainedTokenizerFast`):
+            The tokenizer used for encoding the data.
+        noise_density (:obj:`float`):
+            The probability with which to (randomly) mask tokens in the input.
+        mean_noise_span_length (:obj:`float`):
+            The average span length of the masked tokens.
+        input_length (:obj:`int`):
+            The expected input length after masking.
+        target_length (:obj:`int`):
+            The expected target length after masking.
+        pad_token_id: (:obj:`int`):
+            The pad token id of the model
+        decoder_start_token_id: (:obj:`int):
+            The decoder start token id of the model
     """
-    For the first example,
-        insert_idxs is [3, 5, 9]
-        sentinel_ids is [250099, 250098, 250097]
-    For the second example,
-        insert_idxs = [0, 3, 5, 9]
-        sentinel_ids is [250099, 250098, 250097, 250096]
 
-    >>> input_ids = [0, 1, 2, 0, 1, 0, 1, 2, 3]
-    >>> sentinel_id_start = 250099
-    >>> lengths = [3, 2, 4]
-    >>> insert_sentinel_ids(input_ids, lengths, sentinel_id_start)
-    array([     0,      1,      2, 250099,      0,      1, 250098,      0,
-                1,      2,      3, 250097])
-    >>> lengths = [0] + lengths
-    >>> insert_sentinel_ids(input_ids, lengths, sentinel_id_start)
-    array([250099,      0,      1,      2, 250098,      0,      1, 250097,
-                0,      1,      2,      3, 250096])
+    tokenizer: PreTrainedTokenizerBase
+    noise_density: float
+    mean_noise_span_length: float
+    input_length: int
+    target_length: int
+    pad_token_id: int
+    decoder_start_token_id: int
 
-    """
-    insert_idxs = cumsum(lengths)
-    sentinel_ids = sentinel_id_start - arange(len(lengths))
+    def __call__(self, examples: List[Dict[str, np.ndarray]]) -> BatchEncoding:
+        # convert list to dict and tensorize input
+        batch = BatchEncoding(
+            {k: np.array([examples[i][k] for i in range(len(examples))]) for k, v in examples[0].items()}
+        )
 
-    expanded_inputs = insert(input_ids, insert_idxs, sentinel_ids)
+        input_ids = batch["input_ids"]
+        batch_size, expandend_input_length = input_ids.shape
 
-    return expanded_inputs
+        mask_indices = np.asarray([self.random_spans_noise_mask(expandend_input_length) for i in range(batch_size)])
+        labels_mask = ~mask_indices
 
+        input_ids_sentinel = self.create_sentinel_ids(mask_indices.astype(np.int8))
+        labels_sentinel = self.create_sentinel_ids(labels_mask.astype(np.int8))
 
-def create_span_corrupt_inputs(
-    input_ids: List[int], mask_prob: float, average_span_length: int, sentinel_id_start: int
-) -> Tuple[List[int], List[int]]:
-    """
-    Parameters
-    ----------
-    input_ids: List[int]
-    mask_prob: float
-    average_span_length: int
-    sentinel_id_start: int
-        This method will count down from the provided value e.g. t5 uses 
-        "<extra_id_0>" as id 250099 and "<extra_id_1>" as id 250098. 
+        batch["input_ids"] = self.filter_input_ids(input_ids, input_ids_sentinel)
+        batch["labels"] = self.filter_input_ids(input_ids, labels_sentinel)
 
-    Returns
-    -------
-    corrupted_input_ids: List[int]
-    label_ids: List[int]
+        if batch["input_ids"].shape[-1] != self.input_length:
+            raise ValueError(
+                f"`input_ids` are incorrectly preprocessed. `input_ids` length is {batch['input_ids'].shape[-1]}, but"
+                f" should be {self.input_length}."
+            )
 
-    >>> from numpy import arange
-    >>> from numpy.random import seed as set_seed
-    >>> set_seed(42)
-    >>> input_ids = arange(50)
-    >>> mask_prob, average_span_length, sentinel_id_start = 0.15, 3, 250099
-    >>> corrupted_input_ids, label_ids = create_span_corrupt_inputs(input_ids, mask_prob, average_span_length, sentinel_id_start)
-    >>> corrupted_input_ids
-    array([     0, 250099,      4,      5,      6,      7,      8,      9,
-               10,     11,     12,     13,     14,     15,     16,     17,
-               18,     19,     20,     21,     22,     23,     24,     25,
-               26,     27,     28,     29,     30,     31,     32,     33,
-           250098,     38,     39,     40,     41,     42,     43,     44,
-               45,     46,     47,     48, 250097])
-    >>> label_ids
-    array([250099,      1,      2,      3, 250098,     34,     35,     36,
-               37, 250097,     49, 250096])
-    >>> corrupted_input_ids, label_ids = create_span_corrupt_inputs(input_ids, mask_prob, average_span_length, sentinel_id_start)
-    >>> corrupted_input_ids
-    array([     0,      1,      2,      3,      4,      5,      6,      7,
-                8,      9,     10, 250099,     12,     13,     14,     15,
-               16,     17,     18,     19,     20,     21,     22,     23,
-           250098,     28,     29,     30,     31,     32,     33,     34,
-               35,     36,     37,     38,     39,     40,     41,     42,
-               43,     44,     45,     46, 250097])
-    >>> label_ids
-    array([250099,     11, 250098,     24,     25,     26,     27, 250097,
-               47,     48,     49, 250096])
+        if batch["labels"].shape[-1] != self.target_length:
+            raise ValueError(
+                f"`labels` are incorrectly preprocessed. `labels` length is {batch['labels'].shape[-1]}, but should be"
+                f" {self.target_length}."
+            )
 
-    >>> from itertools import product
-    >>> mask_probs = arange(0.1, 1, 0.1)
-    >>> average_span_lengths = arange(2, 6)
-    >>> input_ids = arange(50)
-    >>> _ = [\
-        create_span_corrupt_inputs(input_ids, mask_prob, average_span_length, sentinel_id_start)\
-        for mask_prob, average_span_length in product(mask_probs, average_span_lengths)\
-    ]
+        # to check that tokens are correctly preprocessed, one can run `self.tokenizer.batch_decode(input_ids)` and `self.tokenizer.batch_decode(labels)` here...
+        batch["decoder_input_ids"] = shift_tokens_right(
+            batch["labels"], self.pad_token_id, self.decoder_start_token_id
+        )
 
-    """
-    assert 0 < mask_prob < 1, f"Mask probability must be in (0, 1)"
+        return batch
 
-    input_ids = array(input_ids)
-    total_length = len(input_ids)
+    def create_sentinel_ids(self, mask_indices):
+        """
+        Sentinel ids creation given the indices that should be masked.
+        The start indices of each mask are replaced by the sentinel ids in increasing
+        order. Consecutive mask indices to be deleted are replaced with `-1`.
+        """
+        start_indices = mask_indices - np.roll(mask_indices, 1, axis=-1) * mask_indices
+        start_indices[:, 0] = mask_indices[:, 0]
 
-    num_spans, num_noise_tokens, num_nonnoise_tokens =\
-        get_noise_statistics(mask_prob, average_span_length, total_length)
+        sentinel_ids = np.where(start_indices != 0, np.cumsum(start_indices, axis=-1), start_indices)
+        sentinel_ids = np.where(sentinel_ids != 0, (len(self.tokenizer) - sentinel_ids), 0)
+        sentinel_ids -= mask_indices - start_indices
 
-    noise_lengths = get_span_lengths(num_noise_tokens, num_spans)
-    nonnoise_lengths = get_span_lengths(num_nonnoise_tokens, num_spans)
+        return sentinel_ids
 
-    noise_mask = create_noise_mask(total_length, noise_lengths, nonnoise_lengths)
+    def filter_input_ids(self, input_ids, sentinel_ids):
+        """
+        Puts sentinel mask on `input_ids` and fuse consecutive mask tokens into a single mask token by deleting.
+        This will reduce the sequence length from `expanded_inputs_length` to `input_length`.
+        """
+        batch_size = input_ids.shape[0]
 
-    noise_ids = get_ids(input_ids, noise_mask)
-    nonnoise_ids = get_ids(input_ids, ~noise_mask)
+        input_ids_full = np.where(sentinel_ids != 0, sentinel_ids, input_ids)
+        # input_ids tokens and sentinel tokens are >= 0, tokens < 0 are
+        # masked tokens coming after sentinel tokens and should be removed
+        input_ids = input_ids_full[input_ids_full >= 0].reshape((batch_size, -1))
+        input_ids = np.concatenate(
+            [input_ids, np.full((batch_size, 1), self.tokenizer.eos_token_id, dtype=np.int32)], axis=-1
+        )
+        return input_ids
 
-    corrupted_input_ids = insert_sentinel_ids(nonnoise_ids, nonnoise_lengths, sentinel_id_start)
-    label_ids = insert_sentinel_ids(noise_ids, hstack(([0], noise_lengths)), sentinel_id_start)
+    def random_spans_noise_mask(self, length):
+        """This function is copy of `random_spans_helper <https://github.com/google-research/text-to-text-transfer-transformer/blob/84f8bcc14b5f2c03de51bd3587609ba8f6bbd1cd/t5/data/preprocessors.py#L2682>`__ .
 
-    return corrupted_input_ids, label_ids
+        Noise mask consisting of random spans of noise tokens.
+        The number of noise tokens and the number of noise spans and non-noise spans
+        are determined deterministically as follows:
+        num_noise_tokens = round(length * noise_density)
+        num_nonnoise_spans = num_noise_spans = round(num_noise_tokens / mean_noise_span_length)
+        Spans alternate between non-noise and noise, beginning with non-noise.
+        Subject to the above restrictions, all masks are equally likely.
 
+        Args:
+            length: an int32 scalar (length of the incoming token sequence)
+            noise_density: a float - approximate density of output mask
+            mean_noise_span_length: a number
 
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
+        Returns:
+            a boolean tensor with shape [length]
+        """
+
+        orig_length = length
+
+        num_noise_tokens = int(np.round(length * self.noise_density))
+        num_nonnoise_tokens = length - num_noise_tokens
+        # avoid degeneracy by ensuring positive numbers of noise and nonnoise tokens.
+        num_noise_tokens = min(max(num_noise_tokens, 1), length - 1)
+        # num_noise_tokens should be less than num_noise_tokens and num_nonnoise_tokens
+        num_noise_spans = int(np.round(min(num_noise_tokens, num_nonnoise_tokens) / self.mean_noise_span_length))
+
+        # avoid degeneracy by ensuring positive number of noise spans
+        num_noise_spans = max(num_noise_spans, 1)
+
+        # pick the lengths of the noise spans and the non-noise spans
+        def _random_segmentation(num_items, num_segments):
+            """Partition a sequence of items randomly into non-empty segments.
+            Args:
+                num_items: an integer scalar > 0
+                num_segments: an integer scalar in [1, num_items]
+            Returns:
+                a Tensor with shape [num_segments] containing positive integers that add
+                up to num_items
+            """
+            mask_indices = np.arange(num_items - 1) < (num_segments - 1)
+            np.random.shuffle(mask_indices)
+            first_in_segment = np.pad(mask_indices, [[1, 0]])
+            segment_id = np.cumsum(first_in_segment)
+            # count length of sub segments assuming that list is sorted
+            _, segment_length = np.unique(segment_id, return_counts=True)
+            return segment_length
+
+        noise_span_lengths = _random_segmentation(num_noise_tokens, num_noise_spans)
+        nonnoise_span_lengths = _random_segmentation(num_nonnoise_tokens, num_noise_spans)
+
+        interleaved_span_lengths = np.reshape(
+            np.stack([nonnoise_span_lengths, noise_span_lengths], axis=1), [num_noise_spans * 2]
+        )
+        span_starts = np.cumsum(interleaved_span_lengths)[:-1]
+        span_start_indicator = np.zeros((length,), dtype=np.int8)
+        span_start_indicator[span_starts] = True
+        span_num = np.cumsum(span_start_indicator)
+        is_noise = np.equal(span_num % 2, 1)
+
+        return is_noise[:orig_length]
