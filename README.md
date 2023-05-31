@@ -90,4 +90,5 @@ First, modify the `name` parameter in the `environment.yml` file.
 ```bash
 git checkout /my/branch/path
 conda env create --file environment.yml --prefix /path/to/new/conda
+conda activate /path/to/new/conda
 ```
