@@ -83,3 +83,11 @@ This is a successful replication of [Shazeer et al, Feb 2020](https://arxiv.org/
 <br>
 <hr>
 <br>
+
+
+# Working in a branch
+First, modify the `name` parameter in the `environment.yml` file. 
+```bash
+git checkout /my/branch/path
+conda env create --file environment.yml --prefix /path/to/new/conda
+```
