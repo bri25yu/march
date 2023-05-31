@@ -4,7 +4,7 @@ from march.experiments.baseline import BaselineExperiment
 
 
 class TestBaselineRuntimeExperiment(BaselineExperiment):
-    NUM_STEPS = 100
+    NUM_STEPS = 20
 
     def get_training_arguments(self) -> Seq2SeqTrainingArguments:
         default_training_arguments = self.load_default_training_arguments()
