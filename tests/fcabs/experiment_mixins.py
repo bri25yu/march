@@ -1,5 +1,8 @@
 from transformers import Seq2SeqTrainingArguments
 
+from march.models.baseline import TransformerBase
+from march.models.fixed_change_attention_based_summarization import FCABSTransformerConfig, FCABSTransformer
+
 from march.experiments.tests import FCABSExperiment
 
 
@@ -16,3 +19,10 @@ class TestFCABSExperiment(FCABSExperiment):
         args_dict["eval_accumulation_steps"] = 1
 
         return Seq2SeqTrainingArguments(**args_dict)
+
+    def get_model(self) -> TransformerBase:
+        config = FCABSTransformerConfig(
+            dim_model=512,
+            num_layers=12,
+        )
+        return FCABSTransformer(config)
