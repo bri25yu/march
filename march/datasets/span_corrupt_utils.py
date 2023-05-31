@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from transformers.tokenization_utils_base import BatchEncoding, PreTrainedTokenizerBase
+from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 
 def compute_input_and_target_lengths(inputs_length, noise_density, mean_noise_span_length):
