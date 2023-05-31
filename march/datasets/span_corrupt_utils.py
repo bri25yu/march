@@ -60,7 +60,7 @@ def compute_input_and_target_lengths(inputs_length, noise_density, mean_noise_sp
 
 
 @dataclass
-class DataCollatorForT5MLM:
+class T5SpanCorruption:
     """
     Data collator used for T5 span-masked language modeling.
     It is made sure that after masking the inputs are of length `data_args.max_seq_length` and targets are also of fixed length.
@@ -93,37 +93,40 @@ class DataCollatorForT5MLM:
     pad_token_id: int
     decoder_start_token_id: int
 
-    def __call__(self, examples: List[Dict[str, np.ndarray]]) -> BatchEncoding:
-        # convert list to dict and tensorize input
-        batch = BatchEncoding(
-            {k: np.array([examples[i][k] for i in range(len(examples))]) for k, v in examples[0].items()}
-        )
+    def __call__(self, examples: Dict[str, List[List[int]]]) -> Dict[str, np.ndarray]:
+        assert set(examples.keys()) == set(["input_ids"])
 
-        input_ids = batch["input_ids"]
-        batch_size, expandend_input_length = input_ids.shape
+        max_len = max(map(len, examples["input_ids"]))
+        examples["input_ids"] = np.array([
+            input_ids + [self.pad_token_id] * (max_len - len(input_ids))
+            for input_ids in examples["input_ids"]
+        ])
 
-        mask_indices = np.asarray([self.random_spans_noise_mask(expandend_input_length) for i in range(batch_size)])
+        input_ids = examples["input_ids"]
+        batch_size, expanded_input_length = input_ids.shape
+
+        mask_indices = np.asarray([self.random_spans_noise_mask(expanded_input_length) for i in range(batch_size)])
         labels_mask = ~mask_indices
 
         input_ids_sentinel = self.create_sentinel_ids(mask_indices.astype(np.int8))
         labels_sentinel = self.create_sentinel_ids(labels_mask.astype(np.int8))
 
-        batch["input_ids"] = self.filter_input_ids(input_ids, input_ids_sentinel)
-        batch["labels"] = self.filter_input_ids(input_ids, labels_sentinel)
+        examples["input_ids"] = self.filter_input_ids(input_ids, input_ids_sentinel)
+        examples["labels"] = self.filter_input_ids(input_ids, labels_sentinel)
 
-        if batch["input_ids"].shape[-1] != self.input_length:
+        if examples["input_ids"].shape[-1] != self.input_length:
             raise ValueError(
                 f"`input_ids` are incorrectly preprocessed. `input_ids` length is {batch['input_ids'].shape[-1]}, but"
                 f" should be {self.input_length}."
             )
 
-        if batch["labels"].shape[-1] != self.target_length:
+        if examples["labels"].shape[-1] != self.target_length:
             raise ValueError(
                 f"`labels` are incorrectly preprocessed. `labels` length is {batch['labels'].shape[-1]}, but should be"
                 f" {self.target_length}."
             )
 
-        return batch
+        return examples
 
     def create_sentinel_ids(self, mask_indices):
         """

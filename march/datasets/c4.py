@@ -9,7 +9,7 @@ from datasets import DatasetDict, load_dataset, load_from_disk
 from transformers import AutoTokenizer, PreTrainedTokenizerFast
 
 from march import CACHE_DIR
-from march.datasets.span_corrupt_utils import DataCollatorForT5MLM, compute_input_and_target_lengths
+from march.datasets.span_corrupt_utils import T5SpanCorruption, compute_input_and_target_lengths
 
 
 # T5 span corruption parameters
@@ -134,7 +134,7 @@ def span_corrupt_packed_dataset(
         mean_noise_span_length=mean_noise_span_length,
     )
 
-    data_collator = DataCollatorForT5MLM(
+    data_collator = T5SpanCorruption(
         tokenizer=tokenizer,
         noise_density=noise_density,
         mean_noise_span_length=mean_noise_span_length,
