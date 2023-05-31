@@ -1,5 +1,4 @@
-from transformers.tokenization_utils import PreTrainedTokenizerFast
-from transformers import Seq2SeqTrainingArguments
+from transformers import PreTrainedTokenizerFast, Seq2SeqTrainingArguments
 
 from march.experiments.baseline import BaselineExperiment
 
