@@ -96,7 +96,7 @@ class T5SpanCorruption:
     def __call__(self, examples: Dict[str, List[List[int]]]) -> Dict[str, np.ndarray]:
         assert set(examples.keys()) == set(["input_ids"])
 
-        input_ids = np.ndarray(examples["input_ids"])
+        input_ids = np.array(examples["input_ids"])
         batch_size, expanded_input_length = input_ids.shape
 
         mask_indices = np.asarray([self.random_spans_noise_mask(expanded_input_length) for i in range(batch_size)])
