@@ -116,13 +116,13 @@ class T5SpanCorruption:
 
         if examples["input_ids"].shape[-1] != self.input_length:
             raise ValueError(
-                f"`input_ids` are incorrectly preprocessed. `input_ids` length is {batch['input_ids'].shape[-1]}, but"
+                f"`input_ids` are incorrectly preprocessed. `input_ids` length is {examples['input_ids'].shape[-1]}, but"
                 f" should be {self.input_length}."
             )
 
         if examples["labels"].shape[-1] != self.target_length:
             raise ValueError(
-                f"`labels` are incorrectly preprocessed. `labels` length is {batch['labels'].shape[-1]}, but should be"
+                f"`labels` are incorrectly preprocessed. `labels` length is {examples['labels'].shape[-1]}, but should be"
                 f" {self.target_length}."
             )
 
