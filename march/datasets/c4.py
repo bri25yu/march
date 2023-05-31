@@ -205,9 +205,9 @@ def create_span_corrupted_c4(use_tiny: bool=False) -> DatasetDict:
     assert set(packed_dataset_dict["train"].column_names) == set(["input_ids"])
 
     mean_length = sum(map(len, packed_dataset_dict["train"].select(range(n_head))["input_ids"])) / n_head
-    mean_length_around = int(max_seq_length * 1.3)
+    mean_length_around = int(max_seq_length * (1 + noise_density))
     print(f"After packing, average length of the first {n_head:,} train split examples is {mean_length}")
-    print(f"This number should be around {mean_length_around}")
+    print(f"This number should be in the ballpark (+-10) of {mean_length_around}")
 
     corrupted_dataset_dict = span_corrupt_packed_dataset(
         packed_dataset_dict=packed_dataset_dict,
@@ -225,11 +225,10 @@ def create_span_corrupted_c4(use_tiny: bool=False) -> DatasetDict:
     mean_labels_length = sum(map(len, corrupted_n_head["labels"])) / n_head
     mean_input_ids_length_around = max_seq_length
     mean_labels_length_around = int(max_seq_length * 0.3)
-    print("After span corruption, average length")
     print(
         f"After span corruption, average length of the first {n_head:,} train split example", 
-        f"input ids is {mean_input_ids_length}. This number should be around {mean_input_ids_length_around}",
-        f"labels is {mean_labels_length}. This number should be around {mean_labels_length_around}",
+        f"input ids is {mean_input_ids_length}. This number should be {mean_input_ids_length_around}",
+        f"labels is {mean_labels_length}. This number should be in the ballpark (+-10) of {mean_labels_length_around}",
         sep="\n\t",
     )
 
