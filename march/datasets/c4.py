@@ -31,7 +31,11 @@ def load_c4_tokenizer() -> PreTrainedTokenizerFast:
 
 
 def load_c4() -> DatasetDict:
-    return load_dataset(f"hlillemark/c4_t5_corrupted_seqlen{MAX_LENGTH}")
+    # TODO when this dataset finishes processing, change this over
+    # TODO enable this function to accept optional num samples for train and validation sets
+    # return load_dataset(f"hlillemark/c4_t5_corrupted_seqlen{MAX_LENGTH}")
+
+    return load_dataset("hlillemark/c4_t5_10m")
 
 
 def load_c4_text() -> DatasetDict:
