@@ -225,6 +225,8 @@ class ExperimentBase(ABC):
 
         trainer.train(resume_from_checkpoint=self.resume_from_checkpoint)
 
+        trainer.save_model()
+
     def _validate_dataset_dict(self, dataset_dict: DatasetDict) -> None:
         expected_splits = ["train", "validation"]
         actual_splits = list(dataset_dict)
