@@ -24,7 +24,7 @@ from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, Printe
 
 from march import CONFIG_DIR, RESULTS_DIR
 from march.utils import log_run
-from march.datasets.c4 import EOS_TOKEN, load_c4_tokenizer
+from march.datasets.c4 import load_c4_tokenizer
 from march.models.baseline import TransformerBase
 
 
@@ -165,7 +165,8 @@ class ExperimentBase(ABC):
 
     def get_data_collator(self, tokenizer: PreTrainedTokenizerFast):
         base_data_collator = DataCollatorForSeq2Seq(tokenizer)
-        bos_token_id = pad_token_id = tokenizer.convert_tokens_to_ids(EOS_TOKEN)
+        bos_token_id = tokenizer.bos_token_id
+        pad_token_id = tokenizer.pad_token_id
         def data_collator(examples):
             for example in examples:
                 example["decoder_input_ids"] = [bos_token_id] + example["labels"][:-1]
@@ -179,6 +180,7 @@ class ExperimentBase(ABC):
             causal_mask = triu(ones(decoder_input_length, decoder_input_length, dtype=bool), diagonal=1)
 
             decoder_attention_mask = examples["decoder_input_ids"] == pad_token_id
+            decoder_attention_mask[:, 0] = 0  # in T5, bos_token_id == pad_token_id
             decoder_attention_mask = decoder_attention_mask[:, None, :] | causal_mask[None, :, :]
             assert decoder_attention_mask.size() == (batch_size, decoder_input_length, decoder_input_length), f"Expected decoder attention mask of shape {(batch_size, decoder_input_length, decoder_input_length)}, but got {decoder_attention_mask.size()}."
 
