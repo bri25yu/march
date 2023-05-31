@@ -24,6 +24,8 @@ class TestFCABSUnits(TestCase):
         config = model.config
         inputs = self.inputs
 
+        model.train()
+
         input_embeds = embedding(inputs["input_ids"], model.embedding.weight)
         encoder_inputs = {
             "input_embeds": input_embeds,

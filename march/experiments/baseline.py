@@ -11,7 +11,7 @@ from torch import manual_seed as set_torch_seed
 from transformers import PreTrainedTokenizerFast, Seq2SeqTrainingArguments, AutoModelForSeq2SeqLM, AutoConfig
 
 from march import CONFIG_DIR
-from march.datasets.c4 import load_c4, load_c4_full
+from march.datasets.c4 import load_c4
 from march.models.baseline import TransformerBase, BaselineTransformer, TransformerConfig
 from march.experiments.base import ExperimentBase
 
@@ -87,7 +87,7 @@ class BaselineSmallFullTrainExperiment(BaselineExperiment):
         return Seq2SeqTrainingArguments(**args_dict)
 
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
-        return load_c4_full()
+        raise NotImplementedError
 
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(
@@ -101,4 +101,4 @@ class BaselineT5SmallExperiment(BaselineT5Experiment):
     MODEL_NAME = "t5-small"
     # We don't technically need to use c4 full here, but we do so to match with t5 small full train
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
-        return load_c4_full()
+        raise NotImplementedError
