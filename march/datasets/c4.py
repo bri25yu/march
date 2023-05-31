@@ -187,7 +187,7 @@ def create_span_corrupted_c4(use_tiny: bool=False) -> DatasetDict:
     )
 
     assert set(tokenized_dataset_dict.keys()) == set(["train", "validation"])
-    assert set(tokenized_dataset_dict["train"]) == set(["input_ids"])
+    assert set(tokenized_dataset_dict["train"].column_names) == set(["input_ids"])
 
     n_head = 10_000
     mean_length = sum(map(len, tokenized_dataset_dict["train"].select(range(n_head))["input_ids"])) / n_head
@@ -202,7 +202,7 @@ def create_span_corrupted_c4(use_tiny: bool=False) -> DatasetDict:
     )
 
     assert set(packed_dataset_dict.keys()) == set(["train", "validation"])
-    assert set(packed_dataset_dict["train"]) == set(["input_ids"])
+    assert set(packed_dataset_dict["train"].column_names) == set(["input_ids"])
 
     mean_length = sum(map(len, packed_dataset_dict["train"].select(range(n_head))["input_ids"])) / n_head
     mean_length_around = int(max_seq_length * 1.3)
@@ -218,7 +218,7 @@ def create_span_corrupted_c4(use_tiny: bool=False) -> DatasetDict:
     )
 
     assert set(corrupted_dataset_dict.keys()) == set(["train", "validation"])
-    assert set(corrupted_dataset_dict["train"]) == set(["input_ids", "labels"])
+    assert set(corrupted_dataset_dict["train"].column_names) == set(["input_ids", "labels"])
 
     corrupted_n_head = corrupted_dataset_dict["train"].select(range(n_head))
     mean_input_ids_length = sum(map(len, corrupted_n_head["input_ids"])) / n_head
