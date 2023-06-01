@@ -103,12 +103,11 @@ class SwiGLU(TransformerComponentBase):
         D, Dff = config.dim_model, config.dim_feedforward
         self.w12 = Linear(config, D, 2 * Dff)
         self.w3 = Linear(config, Dff, D)
-        self.op = None
 
     def forward(self, embeds: NLD) -> NLD:
         D, Dff = self.config.dim_model, self.config.dim_feedforward
         w1, w2 = unbind(self.w12.weight.view([2, Dff, D]), dim=0)
-        return swiglu(embeds, w1, None, w2, None, self.w3.weight, None, op=self.op)
+        return swiglu(embeds, w1, None, w2, None, self.w3.weight, None)
 
 
 class BaselineV2EncoderDecoder(TransformerComponentBase):
