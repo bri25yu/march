@@ -92,3 +92,13 @@ git checkout /my/branch/path
 conda env create --file environment.yml --prefix /path/to/new/conda
 conda activate /path/to/new/conda
 ```
+
+# Plan for initial implementation with all the bells and whistles
+- xformers rotary embedding https://github.com/facebookresearch/xformers/blob/main/xformers/components/positional_embedding/rotary.py
+- swiglu https://github.com/facebookresearch/xformers/blob/main/xformers/ops/swiglu_op.py#L390
+- torch implementations of flashattention or memory efficient attention https://pytorch.org/docs/master/generated/torch.nn.functional.scaled_dot_product_attention.html. xformers also has some implementations, but we use the vanilla torch 2.0 ones
+- no dropout
+- maybe torch compile (need to read more about using torch.compile in a distributed environment. starting by reading about compile first)
+- torch skip weight init https://pytorch.org/tutorials/prototype/skip_param_init.html
+- unified enc/dec like t5stack
+- condense implementations
