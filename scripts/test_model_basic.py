@@ -1,8 +1,8 @@
 from torch import randint
 
 from march.experiments.baseline import *
-
 from march.experiments.tests import *
+
 
 experiments_to_check = [
 ]
@@ -25,4 +25,5 @@ for experiment_cls in experiments_to_check:
     )
     outputs.logits.mean().backward()
 
+    print(outputs.logits[0, 0, :10])
     print(f"{experiment.name} passed!")

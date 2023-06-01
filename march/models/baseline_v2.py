@@ -9,7 +9,7 @@ from torch.nn.functional import cross_entropy, scaled_dot_product_attention as a
 from torch.backends.cuda import sdp_kernel
 
 from xformers.components.positional_embedding import RotaryEmbedding
-from xformers.ops import SwiGLU as xFormersSwiGLU, swiglu
+from xformers.ops import swiglu, unbind
 
 from transformers.utils.import_utils import is_torch_bf16_gpu_available
 from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
@@ -63,7 +63,6 @@ class BaselineV2Attention(TransformerComponentBase):
         super().__init__(config)
 
         D, HDkv = config.dim_model, config.num_heads * config.dim_qkv
-
         self.w_q = Linear(config, D, HDkv)
         self.w_k = Linear(config, D, HDkv)
         self.w_v = Linear(config, D, HDkv)
@@ -81,7 +80,7 @@ class BaselineV2Attention(TransformerComponentBase):
         def from_heads(embeds: NHLDkv) -> NLD:  # Use reshape to use different underlying data
             return embeds.transpose(1, 2).reshape(N, L, D)
 
-        key_value_embeds = encoder_embeds or embeds
+        key_value_embeds = encoder_embeds if encoder_embeds is not None else embeds
         query: NHLDkv = to_heads(self.w_q(embeds))
         key: NHLDkv = to_heads(self.w_k(key_value_embeds))
         value: NHLDkv = to_heads(self.w_v(key_value_embeds))
@@ -98,20 +97,18 @@ class BaselineV2Attention(TransformerComponentBase):
 
 
 class SwiGLU(TransformerComponentBase):
-    _ordered_params = xFormersSwiGLU._ordered_params
-
     def __init__(self, config: BaselineV2Config) -> None:
         super().__init__(config)
 
         D, Dff = config.dim_model, config.dim_feedforward
-
-        self.w12 = Linear(D, 2 * Dff)
-        self.w3 = Linear(Dff, D)
-
+        self.w12 = Linear(config, D, 2 * Dff)
+        self.w3 = Linear(config, Dff, D)
         self.op = None
 
     def forward(self, embeds: NLD) -> NLD:
-        return swiglu(embeds, *self._ordered_params(), op=self.op)
+        D, Dff = self.config.dim_model, self.config.dim_feedforward
+        w1, w2 = unbind(self.w12.weight.view([2, Dff, D]), dim=0)
+        return swiglu(embeds, w1, None, w2, None, self.w3.weight, None, op=self.op)
 
 
 class BaselineV2EncoderDecoder(TransformerComponentBase):
@@ -135,7 +132,7 @@ class BaselineV2EncoderDecoder(TransformerComponentBase):
 
         self.layers = ModuleList()
         for _ in range(config.num_decoder_layers):
-            self.layers += (layer := Module())
+            self.layers.append(layer := Module())
 
             layer.selfattn_ln, layer.selfattn = layernorm_fn(), attn_cls(config)
 
@@ -146,7 +143,7 @@ class BaselineV2EncoderDecoder(TransformerComponentBase):
 
         self.final_layernorm = layernorm_fn()
 
-    def forward(self, embeds: NLD, mask: N1LL, encoder_embeds: NLD, encoder_mask: N1LL) -> NLD:
+    def forward(self, embeds: NLD, mask: N1LL, encoder_embeds: Optional[NLD]=None, encoder_mask: Optional[N1LL]=None) -> NLD:
         for layer in self.layers:
             embeds = embeds + layer.selfattn(layer.selfattn_ln(embeds), mask)
 
@@ -159,15 +156,14 @@ class BaselineV2EncoderDecoder(TransformerComponentBase):
         return embeds
 
 
-class BaselineV2TransformerBase(TransformerComponentBase):
+class BaselineV2Transformer(TransformerComponentBase):
     ENCODERDECODER_CLS = BaselineV2EncoderDecoder
 
     def __init__(self, config: BaselineV2Config) -> None:
         super().__init__(config)
 
         self.embedding = Linear(config, config.dim_model, config.vocab_size, std=1.0)
-
-        self.encoder = self.ENCODERDECODER_CLS(config)
+        self.encoder = self.ENCODERDECODER_CLS(config, is_decoder=False)
         self.decoder = self.ENCODERDECODER_CLS(config, is_decoder=True)
 
     def forward(
@@ -180,15 +176,15 @@ class BaselineV2TransformerBase(TransformerComponentBase):
     ) -> Seq2SeqLMOutput:
         config = self.config
 
-        N, L = input_ids.size()[0]
+        N, L = input_ids.size()
         def convert_attention_mask(mask) -> N1LL:
             return mask.view(N, 1, -1, L).to(config.dtype) * finfo(config.dtype).min
 
         encoder_mask: N1LL = convert_attention_mask(attention_mask)
-        encoder_embeds: NLD = self.encoder(embedding(input_ids, self.embedding.weight), encoder_mask)
+        encoder_embeds: NLD = self.encoder(embedding(self.embedding.weight, input_ids), encoder_mask)
 
         decoder_mask: N1LL = convert_attention_mask(decoder_attention_mask)
-        decoder_embeds: NLD = embedding(decoder_input_ids, self.embedding.weight)
+        decoder_embeds: NLD = embedding(self.embedding.weight, decoder_input_ids)
         decoder_embeds: NLD = self.decoder(decoder_embeds, decoder_mask, encoder_embeds, encoder_mask)
 
         logits: NLD = self.embedding(decoder_embeds * (config.dim_model ** -0.5))
