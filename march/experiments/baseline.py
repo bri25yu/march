@@ -35,7 +35,6 @@ class BaselineT5Experiment(BaselineExperiment):
     def get_model(self) -> TransformerBase:
         config = AutoConfig.from_pretrained(self.MODEL_NAME)
         model = AutoModelForSeq2SeqLM.from_config(config)
-        setattr(model, "count_parameters", MethodType(BaselineTransformer.count_parameters, model))
 
         return model
 

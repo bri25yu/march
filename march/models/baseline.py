@@ -198,9 +198,6 @@ class TransformerBase(TransformerComponentBase):
 
         return Seq2SeqLMOutput(loss=loss, logits=lm_logits)
 
-    def count_parameters(self) -> int:
-        return sum(p.numel() for p in self.parameters() if p.requires_grad)
-
 
 class BaselineAttention(AttentionBase):
     def __init__(self, config: TransformerConfig, is_cross_attention: bool, is_decoder: bool, has_relative_attention_bias: bool=False) -> None:

@@ -5,6 +5,7 @@ dependencies:
   - python=3.10
   - cudatoolkit-dev=11.7.0
   - cudatoolkit=11.8.0
+  - nvidia-apex=22.03
   - pip
   - pip:
     - torch --extra-index-url https://download.pytorch.org/whl/cu117

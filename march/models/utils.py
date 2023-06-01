@@ -29,6 +29,7 @@ __all__ = [
     "KeyValueStates",
     "MultiHeadedEmbeds",
     "MultiHeadedAttention",
+    "count_parameters",
     "TransformerConfig",
     "TransformerComponentBase",
     "LayerNorm",
@@ -42,6 +43,10 @@ SequenceInputEmbeds = TensorType["N", "L_in", "D"]
 MultiHeadedEmbeds = TensorType["N", "H", "L_in", "D_kv"]
 KeyValueStates = Tuple[MultiHeadedEmbeds, MultiHeadedEmbeds]
 MultiHeadedAttention = TensorType["N", "H", "L_in", "L_out"]
+
+
+def count_parameters(model: Module) -> int:
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
 @dataclass

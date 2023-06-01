@@ -2,6 +2,7 @@ torchtyping==0.1.4
 transformers==4.28.1
 sentencepiece==0.1.98
 accelerate==0.18.0
+xformers==0.0.20
 datasets==2.11.0
 tensorboard==2.12.0
 matplotlib==3.7.1

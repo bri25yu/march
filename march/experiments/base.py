@@ -26,6 +26,7 @@ from march import CONFIG_DIR, RESULTS_DIR
 from march.utils import log_run
 from march.datasets.c4 import load_c4_tokenizer
 from march.models.baseline import TransformerBase
+from march.models.utils import count_parameters
 
 
 class TensorboardWithCustomLogsCallback(TensorBoardCallback):
@@ -219,7 +220,7 @@ class ExperimentBase(ABC):
             data_collator=data_collator,
             compute_metrics=self.get_compute_metrics(model),
         )
-        trainer.log({"num_params": model.count_parameters()})
+        trainer.log({"num_params": count_parameters(model)})
 
         log_run(trainer.is_world_process_zero(), self.name)        
 
