@@ -1,10 +1,6 @@
-from types import MethodType
-
 from os.path import join
 
 import json
-
-from datasets import DatasetDict
 
 from torch import manual_seed as set_torch_seed, triu, ones, cat, zeros
 
@@ -17,7 +13,6 @@ from transformers import (
 )
 
 from march import CONFIG_DIR
-from march.datasets.c4 import load_c4
 from march.models.baseline import (
     TransformerBase,
     BaselineTransformer,
@@ -28,9 +23,6 @@ from march.experiments.base import ExperimentBase
 
 
 class BaselineExperiment(ExperimentBase):
-    def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
-        return load_c4()
-
     def get_training_arguments(self) -> Seq2SeqTrainingArguments:
         default_training_arguments = self.load_default_training_arguments()
         return Seq2SeqTrainingArguments(**default_training_arguments)
@@ -99,9 +91,6 @@ class BaselineSmallFullTrainExperiment(BaselineExperiment):
 
         return Seq2SeqTrainingArguments(**args_dict)
 
-    def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
-        raise NotImplementedError
-
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(
             dim_model=512,
@@ -112,10 +101,6 @@ class BaselineSmallFullTrainExperiment(BaselineExperiment):
 
 class BaselineT5SmallExperiment(BaselineT5Experiment):
     MODEL_NAME = "t5-small"
-
-    # We don't technically need to use c4 full here, but we do so to match with t5 small full train
-    def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
-        raise NotImplementedError
 
 
 class DOBaselineExperiment(BaselineExperiment):

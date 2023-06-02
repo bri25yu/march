@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 from abc import ABC, abstractmethod
 
@@ -32,7 +32,7 @@ from transformers import (
 )
 
 from march import CONFIG_DIR, RESULTS_DIR
-from march.datasets.c4 import load_c4_tokenizer
+from march.datasets.c4 import load_c4, load_c4_tokenizer
 from march.models.baseline import TransformerBase
 from march.models.utils import count_parameters
 
@@ -118,7 +118,8 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
 
 
 class ExperimentBase(ABC):
-    NUM_STEPS: Union[None, int] = None
+    NUM_STEPS: Optional[int] = None
+    NUM_VALIDATION_EXAMPLES: int = 10_000
 
     def __init__(
         self,
@@ -136,10 +137,6 @@ class ExperimentBase(ABC):
 
         # For self.train
         self.can_train = True
-
-    @abstractmethod
-    def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
-        pass
 
     @abstractmethod
     def get_training_arguments(self) -> Seq2SeqTrainingArguments:
@@ -229,6 +226,10 @@ class ExperimentBase(ABC):
     def load_default_tokenizer(self) -> PreTrainedTokenizerFast:
         return load_c4_tokenizer()
 
+    def load_dataset_dict(self, args: Seq2SeqTrainingArguments) -> DatasetDict:
+        num_train_examples = args.max_steps * args.gradient_accumulation_steps * args.per_device_train_batch_size * args.world_size
+        return load_c4(num_train_examples, self.NUM_VALIDATION_EXAMPLES)
+
     def get_data_collator(self, tokenizer: PreTrainedTokenizerFast):
         base_data_collator = DataCollatorForSeq2Seq(tokenizer)
         bos_token_id = tokenizer.bos_token_id
@@ -295,7 +296,7 @@ class ExperimentBase(ABC):
 
         with training_arguments.main_process_first():
             tokenizer = self.load_default_tokenizer()
-            dataset_dict = self.load_dataset_dict(tokenizer)
+            dataset_dict = self.load_dataset_dict(training_arguments)
             self._validate_dataset_dict(dataset_dict)
             model = self.get_model()
             self._call_init_weights(model, training_arguments.seed)

@@ -33,12 +33,14 @@ def load_c4_tokenizer() -> PreTrainedTokenizerFast:
     return tokenizer
 
 
-def load_c4() -> DatasetDict:
-    # TODO when this dataset finishes processing, change this over
-    # TODO enable this function to accept optional num samples for train and validation sets
-    # return load_dataset(f"hlillemark/c4_t5_corrupted_seqlen{MAX_LENGTH}")
+def load_c4(num_train_examples: int=None, num_validation_examples: int=None) -> DatasetDict:
+    train_split = f"[:{num_train_examples}]" if num_train_examples is not None else ""
+    validation_split = f"[:{num_validation_examples}]" if num_validation_examples is not None else ""
 
-    return load_dataset("hlillemark/c4_t5_10m")
+    return DatasetDict({
+        "train": load_dataset(f"hlillemark/c4_t5_corrupted_seqlen{MAX_LENGTH}", split=f"train{train_split}"),
+        "validation": load_dataset(f"hlillemark/c4_t5_corrupted_seqlen{MAX_LENGTH}", split=f"validation{validation_split}"),
+    })
 
 
 def load_c4_text() -> DatasetDict:
