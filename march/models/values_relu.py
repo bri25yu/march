@@ -14,27 +14,36 @@ in the attention mechanism.
 
 __all__ = ["ValuesReluTransformer", "ValuesReluFirstFFTransformer"]
 
+
 # This is a copy of the BaselineFeedforward class
 class ValuesFF(TransformerComponentBase):
     def __init__(self, config: TransformerConfig) -> None:
         super().__init__(config)
 
-        self.up_projection = Linear(config.dim_model, config.dim_feedforward, bias=False)
-        self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False)
-    
+        self.up_projection = Linear(
+            config.dim_model, config.dim_feedforward, bias=False
+        )
+        self.down_projection = Linear(
+            config.dim_feedforward, config.dim_model, bias=False
+        )
+
     def _init_weights(self) -> None:
         # We use _init_weights rather than init_weights to have the encoder/decoder handle all the weight inits
         config = self.config
 
-        self.up_projection.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
-        self.down_projection.weight.data.normal_(mean=0.0, std=config.dim_feedforward ** -0.5)
-    
+        self.up_projection.weight.data.normal_(mean=0.0, std=config.dim_model**-0.5)
+        self.down_projection.weight.data.normal_(
+            mean=0.0, std=config.dim_feedforward**-0.5
+        )
+
     def forward(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:
         config = self.config
 
         input_embeds: SequenceInputEmbeds = self.up_projection(input_embeds)
         input_embeds: SequenceInputEmbeds = relu(input_embeds)
-        input_embeds: SequenceInputEmbeds = dropout(input_embeds, config.dropout_prob, training=self.training)
+        input_embeds: SequenceInputEmbeds = dropout(
+            input_embeds, config.dropout_prob, training=self.training
+        )
         input_embeds: SequenceInputEmbeds = self.down_projection(input_embeds)
 
         return input_embeds
@@ -46,17 +55,19 @@ class ValuesReluFirstFF(TransformerComponentBase):
         super().__init__(config)
 
         self.projection = Linear(config.dim_model, config.dim_model, bias=False)
-    
+
     def _init_weights(self) -> None:
         # We use _init_weights rather than init_weights to have the encoder/decoder handle all the weight inits
         config = self.config
 
-        self.projection.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
-    
+        self.projection.weight.data.normal_(mean=0.0, std=config.dim_model**-0.5)
+
     def forward(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:
         config = self.config
 
-        input_embeds: SequenceInputEmbeds = dropout(input_embeds, config.dropout_prob, training=self.training)
+        input_embeds: SequenceInputEmbeds = dropout(
+            input_embeds, config.dropout_prob, training=self.training
+        )
         input_embeds: SequenceInputEmbeds = relu(input_embeds)
         input_embeds: SequenceInputEmbeds = self.projection(input_embeds)
 
@@ -64,29 +75,38 @@ class ValuesReluFirstFF(TransformerComponentBase):
 
 
 class ValuesReluAttention(BaselineAttention):
-    def __init__(self, config: TransformerConfig, is_cross_attention: bool, has_relative_attention_bias: bool=False) -> None:
+    def __init__(
+        self,
+        config: TransformerConfig,
+        is_cross_attention: bool,
+        has_relative_attention_bias: bool = False,
+    ) -> None:
         super().__init__(config, is_cross_attention, has_relative_attention_bias)
         # If self attention, init extra values transform:
         if not is_cross_attention:
             self.values_ff = ValuesFF(config)
-    
+
     def _init_weights(self) -> None:
         super()._init_weights()
         if not self.is_cross_attention:
             self.values_ff._init_weights()
-    
+
     # TODO: update with new baseline class
     def forward(
         self,
         input_embeds: SequenceInputEmbeds,
-        attention_mask: SequenceInputIds=None,
-        position_bias: MultiHeadedAttention=None,
-        encoder_hidden_state: SequenceInputEmbeds=None,
+        attention_mask: SequenceInputIds = None,
+        position_bias: MultiHeadedAttention = None,
+        encoder_hidden_state: SequenceInputEmbeds = None,
     ) -> AttentionOutput:
         config = self.config
 
         if not self.is_cross_attention:
-            attention_values: List[SequenceInputEmbeds] = self.w_q(input_embeds), self.w_k(input_embeds), self.w_v(input_embeds)
+            attention_values: List[SequenceInputEmbeds] = (
+                self.w_q(input_embeds),
+                self.w_k(input_embeds),
+                self.w_v(input_embeds),
+            )
         else:
             query: SequenceInputEmbeds = self.w_q(input_embeds)
             key: SequenceInputEmbeds = self.w_k(encoder_hidden_state)
@@ -104,7 +124,10 @@ class ValuesReluAttention(BaselineAttention):
         batch_size, _, query_length, key_length = attention_logits.size()
         if attention_mask is not None:
             attention_mask = attention_mask.reshape(batch_size, 1, -1, key_length)
-            attention_mask = attention_mask.to(attention_logits.dtype) * finfo(attention_logits.dtype).min
+            attention_mask = (
+                attention_mask.to(attention_logits.dtype)
+                * finfo(attention_logits.dtype).min
+            )
             attention_logits: MultiHeadedAttention = attention_logits + attention_mask
 
         if position_bias is not None:
@@ -114,7 +137,9 @@ class ValuesReluAttention(BaselineAttention):
             attention_logits: MultiHeadedAttention = attention_logits + position_bias
 
         attention_probs: MultiHeadedAttention = attention_logits.softmax(dim=3)
-        attention_probs: MultiHeadedAttention = dropout(attention_probs, p=config.dropout_prob, training=self.training)
+        attention_probs: MultiHeadedAttention = dropout(
+            attention_probs, p=config.dropout_prob, training=self.training
+        )
 
         # Apply nonlinearity to values
         if not self.is_cross_attention:
@@ -126,7 +151,9 @@ class ValuesReluAttention(BaselineAttention):
 
         attention_values: MultiHeadedEmbeds = matmul(attention_probs, value)
 
-        attention_values: SequenceInputEmbeds = self.reshape_to_head_insensitive(attention_values)
+        attention_values: SequenceInputEmbeds = self.reshape_to_head_insensitive(
+            attention_values
+        )
 
         attention_output: SequenceInputEmbeds = self.w_o(attention_values)
 
@@ -134,7 +161,12 @@ class ValuesReluAttention(BaselineAttention):
 
 
 class ValuesReluFirstFFAttention(ValuesReluAttention):
-    def __init__(self, config: TransformerConfig, is_cross_attention: bool, has_relative_attention_bias: bool=False) -> None:
+    def __init__(
+        self,
+        config: TransformerConfig,
+        is_cross_attention: bool,
+        has_relative_attention_bias: bool = False,
+    ) -> None:
         super().__init__(config, is_cross_attention, has_relative_attention_bias)
         # If self attention, init extra values transform:
         if not is_cross_attention:
@@ -144,8 +176,10 @@ class ValuesReluFirstFFAttention(ValuesReluAttention):
 class ValuesReluEncoder(NoFFEncoder):
     ATTENTION_CLS = ValuesReluAttention
 
+
 class ValuesReluDecoder(NoFFDecoder):
     ATTENTION_CLS = ValuesReluAttention
+
 
 class ValuesReluTransformer(BaselineTransformer):
     ENCODER_CLS = ValuesReluEncoder
@@ -155,8 +189,10 @@ class ValuesReluTransformer(BaselineTransformer):
 class ValuesReluFirstFFEncoder(NoFFEncoder):
     ATTENTION_CLS = ValuesReluFirstFFAttention
 
+
 class ValuesReluFirstFFDecoder(NoFFDecoder):
     ATTENTION_CLS = ValuesReluFirstFFAttention
+
 
 class ValuesReluFirstFFTransformer(BaselineTransformer):
     ENCODER_CLS = ValuesReluFirstFFEncoder

@@ -30,7 +30,7 @@ class ScalingLawForCompute:
     def fit_scaling_law_for_compute(self) -> None:
         # TODO Fix power law fitting logic
         # The curve fit must qualitatively pass through the majority of the curve
-        # You can subjectively tell when its good or not. 
+        # You can subjectively tell when its good or not.
 
         low, high = self.MODELING_RANGE
         past_initial_curve = (low <= self.steps) & (self.steps <= high)
@@ -77,10 +77,18 @@ class ScalingLawForCompute:
     def plot_over_steps(self, ax: Axes, color: str) -> None:
         predicted_values = self.fit_function(self.steps, *self.fit_params)
         legend_label_full = f"Predicted {self.legend_label}"
-        ax.plot(self.steps, predicted_values, label=legend_label_full, color=color, linestyle="dashed")
+        ax.plot(
+            self.steps,
+            predicted_values,
+            label=legend_label_full,
+            color=color,
+            linestyle="dashed",
+        )
 
     def plot_over_all(self, ax: Axes) -> None:
-        predicted_values = exp(self.fit_function(self.TOTAL_TRAJECTORY, *self.fit_params))
+        predicted_values = exp(
+            self.fit_function(self.TOTAL_TRAJECTORY, *self.fit_params)
+        )
 
         legend_label_full = f"{self.legend_label}"
         ax.plot(self.TOTAL_TRAJECTORY, predicted_values, label=legend_label_full)

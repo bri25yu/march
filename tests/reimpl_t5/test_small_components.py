@@ -56,9 +56,17 @@ class TestReimplMatchT5SmallComponents(ComponentTestMixin, TestCase):
             t5_selfattn = t5_model.encoder.block[i].layer[0].SelfAttention
 
             set_torch_seed(self.SEED)
-            reimpl_outputs = reimpl_selfattn(current_reimpl_input_embeds, attention_mask, position_bias=current_reimpl_position_bias)
+            reimpl_outputs = reimpl_selfattn(
+                current_reimpl_input_embeds,
+                attention_mask,
+                position_bias=current_reimpl_position_bias,
+            )
             set_torch_seed(self.SEED)
-            t5_outputs = t5_selfattn(current_t5_input_embeds, t5_attention_mask, position_bias=current_t5_position_bias)
+            t5_outputs = t5_selfattn(
+                current_t5_input_embeds,
+                t5_attention_mask,
+                position_bias=current_t5_position_bias,
+            )
 
             reimpl_output_logits = reimpl_outputs.input_embeds
             t5_output_logits = t5_outputs[0]
@@ -92,9 +100,17 @@ class TestReimplMatchT5SmallComponents(ComponentTestMixin, TestCase):
             t5_crossattn = t5_model.decoder.block[i].layer[1].EncDecAttention
 
             set_torch_seed(self.SEED)
-            reimpl_outputs = reimpl_crossattn(current_reimpl_input_embeds, decoder_attention_mask, encoder_hidden_state=encoder_hidden_state)
+            reimpl_outputs = reimpl_crossattn(
+                current_reimpl_input_embeds,
+                decoder_attention_mask,
+                encoder_hidden_state=encoder_hidden_state,
+            )
             set_torch_seed(self.SEED)
-            t5_outputs = t5_crossattn(current_t5_input_embeds, t5_decoder_attention_mask, key_value_states=encoder_hidden_state)
+            t5_outputs = t5_crossattn(
+                current_t5_input_embeds,
+                t5_decoder_attention_mask,
+                key_value_states=encoder_hidden_state,
+            )
 
             reimpl_output_logits = reimpl_outputs.input_embeds
             t5_output_logits = t5_outputs[0]

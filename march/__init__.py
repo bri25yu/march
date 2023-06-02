@@ -1,5 +1,3 @@
-from typing import Union
-
 import os
 
 
@@ -22,9 +20,9 @@ os.environ["HF_DATASETS_CACHE"] = CACHE_DIR
 
 def run(
     experiment_name: str,
-    batch_size_pow_scale: int=0,
-    resume_from_checkpoint: bool=False,
-    overwrite_old_experiment: bool=False,
+    batch_size_pow_scale: int = 0,
+    resume_from_checkpoint: bool = False,
+    overwrite_old_experiment: bool = False,
 ) -> None:
     """
     batch_size_pow_scale: int
@@ -57,6 +55,8 @@ def run(
             if "CUDA out of memory" in error_message:
                 batch_size_pow_scale -= 1
                 overwrite_old_experiment = True
-                print(f"Lowering batch size by a factor of 2. Original pow scale {original_pow_scale}, current pow scale {batch_size_pow_scale}")
+                print(
+                    f"Lowering batch size by a factor of 2. Original pow scale {original_pow_scale}, current pow scale {batch_size_pow_scale}"
+                )
             else:
                 raise e

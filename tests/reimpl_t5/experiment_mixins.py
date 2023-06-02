@@ -1,4 +1,7 @@
-from march.experiments.baseline import BaselineSmallFullTrainExperiment, BaselineT5SmallExperiment
+from march.experiments.baseline import (
+    BaselineSmallFullTrainExperiment,
+    BaselineT5SmallExperiment,
+)
 
 
 __all__ = ["TestBaselineExperiment", "TestBaselineT5Experiment"]

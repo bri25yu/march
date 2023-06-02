@@ -1,4 +1,5 @@
 from os import environ
+
 environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
 import march  # Redirect cache. This is necessary because this file might be run as a standalone
@@ -15,7 +16,8 @@ from tests.fcabs.experiment_mixins import TestFCABSExperiment
 class TestFCABSEndToEnd(TestCase):
     def test_end_to_end(self) -> None:
         exp = TestFCABSExperiment(batch_size_pow_scale=-1)
-        if not exists(exp.output_dir): exp.train()
+        if not exists(exp.output_dir):
+            exp.train()
 
 
 if __name__ == "__main__":

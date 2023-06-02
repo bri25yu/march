@@ -5,7 +5,11 @@ from dataclasses import dataclass
 
 from torch import bfloat16, embedding, empty, finfo, float32
 from torch.nn import Module, ModuleList, Parameter
-from torch.nn.functional import cross_entropy, scaled_dot_product_attention as attention, linear
+from torch.nn.functional import (
+    cross_entropy,
+    scaled_dot_product_attention as attention,
+    linear,
+)
 from torch.backends.cuda import sdp_kernel
 
 from xformers.components.positional_embedding import RotaryEmbedding
@@ -40,19 +44,29 @@ class BaselineV2Config(PretrainedConfig):
     dtype = bfloat16 if is_torch_bf16_gpu_available() else float32
 
     def __post_init__(self) -> None:
-        assert self.dim_model % self.dim_qkv == 0, f"Dimensionality of the model must be divisible by dimensionality of the queries, keys, and values."
+        assert (
+            self.dim_model % self.dim_qkv == 0
+        ), f"Dimensionality of the model must be divisible by dimensionality of the queries, keys, and values."
         self.num_heads = self.dim_model // self.dim_qkv
 
         base = 64  # Round to multiple of 64 for better performance
-        self.dim_feedforward = round(self.dim_model * self.feedforward_scale / base) * base
+        self.dim_feedforward = (
+            round(self.dim_model * self.feedforward_scale / base) * base
+        )
 
 
 class Linear(TransformerComponentBase):
-    def __init__(self, config: BaselineV2Config, in_features: int, out_features: int, std: Optional[float]=None) -> None:
+    def __init__(
+        self,
+        config: BaselineV2Config,
+        in_features: int,
+        out_features: int,
+        std: Optional[float] = None,
+    ) -> None:
         super().__init__(config)
 
         self.weight = Parameter(empty((out_features, in_features), dtype=config.dtype))
-        self.weight.data.normal_(mean=0.0, std=std or in_features ** -0.5)
+        self.weight.data.normal_(mean=0.0, std=std or in_features**-0.5)
 
     def forward(self, embeds: NLD) -> NLD:
         return linear(embeds, self.weight)
@@ -69,7 +83,9 @@ class BaselineV2Attention(TransformerComponentBase):
         self.w_o = Linear(config, HDkv, D)
         self.rotary_emb = RotaryEmbedding(config.dim_qkv)
 
-    def forward(self, embeds: NLD, attention_mask: N1LL, encoder_embeds: Optional[NLD]=None) -> NLD:
+    def forward(
+        self, embeds: NLD, attention_mask: N1LL, encoder_embeds: Optional[NLD] = None
+    ) -> NLD:
         config = self.config
         N, L, D = embeds.size()
         H, Dkv = config.num_heads, config.dim_qkv
@@ -77,7 +93,9 @@ class BaselineV2Attention(TransformerComponentBase):
         def to_heads(embeds: NLD) -> NHLDkv:  # Use view to use the same underlying data
             return embeds.view(N, L, H, Dkv).transpose(1, 2)
 
-        def from_heads(embeds: NHLDkv) -> NLD:  # Use reshape to use different underlying data
+        def from_heads(
+            embeds: NHLDkv,
+        ) -> NLD:  # Use reshape to use different underlying data
             return embeds.transpose(1, 2).reshape(N, L, D)
 
         key_value_embeds = encoder_embeds if encoder_embeds is not None else embeds
@@ -88,7 +106,9 @@ class BaselineV2Attention(TransformerComponentBase):
         query, key = self.rotary_emb(query, key)
 
         is_gpu = query.is_cuda  # Use flash attention if on gpu, otherwise use math
-        with sdp_kernel(enable_flash=is_gpu, enable_math=not is_gpu, enable_mem_efficient=False):
+        with sdp_kernel(
+            enable_flash=is_gpu, enable_math=not is_gpu, enable_mem_efficient=False
+        ):
             attention_values: NHLDkv = attention(query, key, value, attention_mask)
 
         attention_output: NLD = self.w_o(from_heads(attention_values))
@@ -124,6 +144,7 @@ class BaselineV2EncoderDecoder(TransformerComponentBase):
 
         try:
             from apex.normalization import FusedRMSNorm
+
             ALL_LAYERNORM_LAYERS.append(FusedRMSNorm)
             layernorm_fn = lambda: FusedRMSNorm(config.dim_model, eps=1e-6)
         except ImportError:
@@ -142,12 +163,20 @@ class BaselineV2EncoderDecoder(TransformerComponentBase):
 
         self.final_layernorm = layernorm_fn()
 
-    def forward(self, embeds: NLD, mask: N1LL, encoder_embeds: Optional[NLD]=None, encoder_mask: Optional[N1LL]=None) -> NLD:
+    def forward(
+        self,
+        embeds: NLD,
+        mask: N1LL,
+        encoder_embeds: Optional[NLD] = None,
+        encoder_mask: Optional[N1LL] = None,
+    ) -> NLD:
         for layer in self.layers:
             embeds = embeds + layer.selfattn(layer.selfattn_ln(embeds), mask)
 
             if self.is_decoder:
-                embeds = embeds + layer.crossattn(layer.crossattn_ln(embeds), encoder_mask, encoder_embeds)
+                embeds = embeds + layer.crossattn(
+                    layer.crossattn_ln(embeds), encoder_mask, encoder_embeds
+                )
 
             embeds = embeds + layer.ff(layer.ff_ln(embeds))
 
@@ -176,17 +205,22 @@ class BaselineV2Transformer(TransformerComponentBase):
         config = self.config
 
         N, L = input_ids.size()
+
         def convert_attention_mask(mask) -> N1LL:
             return mask.view(N, 1, -1, L).to(config.dtype) * finfo(config.dtype).min
 
         encoder_mask: N1LL = convert_attention_mask(attention_mask)
-        encoder_embeds: NLD = self.encoder(embedding(self.embedding.weight, input_ids), encoder_mask)
+        encoder_embeds: NLD = self.encoder(
+            embedding(self.embedding.weight, input_ids), encoder_mask
+        )
 
         decoder_mask: N1LL = convert_attention_mask(decoder_attention_mask)
         decoder_embeds: NLD = embedding(self.embedding.weight, decoder_input_ids)
-        decoder_embeds: NLD = self.decoder(decoder_embeds, decoder_mask, encoder_embeds, encoder_mask)
+        decoder_embeds: NLD = self.decoder(
+            decoder_embeds, decoder_mask, encoder_embeds, encoder_mask
+        )
 
-        logits: NLD = self.embedding(decoder_embeds * (config.dim_model ** -0.5))
+        logits: NLD = self.embedding(decoder_embeds * (config.dim_model**-0.5))
 
         loss = cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1))
 

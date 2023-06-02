@@ -75,7 +75,9 @@ class TestReimplMatchT5LargeComponents(ComponentTestMixin, TestCase):
         attention_mask = self.attention_mask
         decoder_attention_mask = self.decoder_attention_mask
 
-        create_optimizer = lambda model: AdamW(params=model.parameters(), lr=1e-4, weight_decay=1e-1)
+        create_optimizer = lambda model: AdamW(
+            params=model.parameters(), lr=1e-4, weight_decay=1e-1
+        )
         reimpl_optimizer = create_optimizer(reimpl_model)
         t5_optimizer = create_optimizer(t5_model)
 

@@ -4,9 +4,7 @@ from march.experiments.baseline import *
 
 from march.experiments.tests import *
 
-experiments_to_check = [
-    DOBaselineExperiment
-]
+experiments_to_check = [DOBaselineExperiment]
 
 
 for experiment_cls in experiments_to_check:

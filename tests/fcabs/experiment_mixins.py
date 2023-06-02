@@ -1,7 +1,10 @@
 from transformers import Seq2SeqTrainingArguments
 
 from march.models.baseline import TransformerBase
-from march.models.fixed_change_attention_based_summarization import FCABSTransformerConfig, FCABSTransformer
+from march.models.fixed_change_attention_based_summarization import (
+    FCABSTransformerConfig,
+    FCABSTransformer,
+)
 
 from march.experiments.tests import FCABSExperiment
 

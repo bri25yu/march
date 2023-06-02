@@ -1,4 +1,9 @@
-from march.experiments.baseline import BaselineExperiment, BaselineTransformer, TransformerBase, TransformerConfig
+from march.experiments.baseline import (
+    BaselineExperiment,
+    BaselineTransformer,
+    TransformerBase,
+    TransformerConfig,
+)
 
 
 class ModelDim512Experiment(BaselineExperiment):

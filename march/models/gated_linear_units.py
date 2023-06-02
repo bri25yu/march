@@ -26,16 +26,24 @@ class GatedLinearUnitFeedforward(TransformerComponentBase):
     def __init__(self, config: GatedLinearUnitTransformerConfig) -> None:
         super().__init__(config)
 
-        self.up_projection = Linear(config.dim_model, config.dim_feedforward, bias=False)
-        self.gate_projection = Linear(config.dim_model, config.dim_feedforward, bias=False)
-        self.down_projection = Linear(config.dim_feedforward, config.dim_model, bias=False)
+        self.up_projection = Linear(
+            config.dim_model, config.dim_feedforward, bias=False
+        )
+        self.gate_projection = Linear(
+            config.dim_model, config.dim_feedforward, bias=False
+        )
+        self.down_projection = Linear(
+            config.dim_feedforward, config.dim_model, bias=False
+        )
 
     def init_weights(self) -> None:
         config = self.config
 
-        self.up_projection.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
-        self.gate_projection.weight.data.normal_(mean=0.0, std=config.dim_model ** -0.5)
-        self.down_projection.weight.data.normal_(mean=0.0, std=config.dim_feedforward ** -0.5)
+        self.up_projection.weight.data.normal_(mean=0.0, std=config.dim_model**-0.5)
+        self.gate_projection.weight.data.normal_(mean=0.0, std=config.dim_model**-0.5)
+        self.down_projection.weight.data.normal_(
+            mean=0.0, std=config.dim_feedforward**-0.5
+        )
 
     def forward(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:
         config: GatedLinearUnitTransformerConfig = self.config
@@ -44,7 +52,9 @@ class GatedLinearUnitFeedforward(TransformerComponentBase):
         gate: SequenceInputEmbeds = gate_fn(self.gate_projection(input_embeds))
         input_embeds: SequenceInputEmbeds = self.up_projection(input_embeds)
         input_embeds: SequenceInputEmbeds = input_embeds * gate
-        input_embeds: SequenceInputEmbeds = dropout(input_embeds, config.dropout_prob, training=self.training)
+        input_embeds: SequenceInputEmbeds = dropout(
+            input_embeds, config.dropout_prob, training=self.training
+        )
         input_embeds: SequenceInputEmbeds = self.down_projection(input_embeds)
 
         return input_embeds
