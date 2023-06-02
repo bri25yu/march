@@ -6,6 +6,7 @@ from tests.reimpl_t5.experiment_mixins import *
 
 __all__ = ["ComponentTestMixin"]
 
+
 class ComponentTestMixin:
     SEED = 42
 
@@ -31,11 +32,17 @@ class ComponentTestMixin:
         N, L = 2, 8
         D = reimpl_model.config.dim_model
         self.input_ids = randint(0, reimpl_model.config.vocab_size, (N, L), dtype=long)
-        self.reimpl_input_embeds = embedding(self.input_ids, reimpl_model.embedding.weight).to(bfloat16)
+        self.reimpl_input_embeds = embedding(
+            self.input_ids, reimpl_model.embedding.weight
+        ).to(bfloat16)
         self.t5_input_embeds = t5_model.shared(self.input_ids).to(bfloat16)
         self.encoder_hidden_state = rand((N, L, D), dtype=bfloat16)
 
         self.attention_mask = randint(0, 2, (N, L), dtype=bool)
-        self.t5_attention_mask = t5_model.get_extended_attention_mask(~self.attention_mask, (N, L))
+        self.t5_attention_mask = t5_model.get_extended_attention_mask(
+            ~self.attention_mask, (N, L)
+        )
         self.decoder_attention_mask = randint(0, 2, (N, L, L), dtype=bool)
-        self.t5_decoder_attention_mask = t5_model.get_extended_attention_mask(~self.decoder_attention_mask, (N, L, L))
+        self.t5_decoder_attention_mask = t5_model.get_extended_attention_mask(
+            ~self.decoder_attention_mask, (N, L, L)
+        )

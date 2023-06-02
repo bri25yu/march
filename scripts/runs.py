@@ -12,17 +12,30 @@ from tqdm.auto import tqdm
 from pandas import DataFrame
 
 from tensorboard.backend.event_processing.directory_watcher import DirectoryDeletedError
-from tensorboard.backend.event_processing.event_accumulator import EventAccumulator, ScalarEvent
+from tensorboard.backend.event_processing.event_accumulator import (
+    EventAccumulator,
+    ScalarEvent,
+)
 
 from march import ROOT_DIR
 from march.experiments import ExperimentBase, available_experiments
 
 
-RESULTS_DIRS = [join(ROOT_DIR, "..", "archived_results"), join(ROOT_DIR, "..", "results")]
+RESULTS_DIRS = [
+    join(ROOT_DIR, "..", "archived_results"),
+    join(ROOT_DIR, "..", "results"),
+]
 
 
 class ExperimentResult(OrderedDict):
-    def __init__(self, experiment: ExperimentBase, hostname: str, total_steps: int, *args, **kwargs) -> None:
+    def __init__(
+        self,
+        experiment: ExperimentBase,
+        hostname: str,
+        total_steps: int,
+        *args,
+        **kwargs,
+    ) -> None:
         super().__init__(*args, **kwargs)
 
         self.experiment = experiment
@@ -31,7 +44,9 @@ class ExperimentResult(OrderedDict):
         self.total_steps = total_steps
 
     @classmethod
-    def from_experiment(cls, experiment: ExperimentBase) -> "Optional[ExperimentResult]":
+    def from_experiment(
+        cls, experiment: ExperimentBase
+    ) -> "Optional[ExperimentResult]":
         results_path = None
         for results_dir in RESULTS_DIRS:
             results_path = join(results_dir, experiment.name)
@@ -40,7 +55,8 @@ class ExperimentResult(OrderedDict):
             else:
                 break
 
-        if results_path is None: return
+        if results_path is None:
+            return
 
         event_accumulator = EventAccumulator(results_path)
         try:
@@ -50,7 +66,9 @@ class ExperimentResult(OrderedDict):
 
         scalars: Iterable[ScalarEvent] = event_accumulator.Scalars("eval/loss")
         try:
-            hostname = event_accumulator.Tensors("hostname/text_summary")[0].tensor_proto.string_val
+            hostname = event_accumulator.Tensors("hostname/text_summary")[
+                0
+            ].tensor_proto.string_val
         except KeyError:
             hostname = "Unknown"
 
@@ -72,7 +90,8 @@ class ExperimentResult(OrderedDict):
         return not self.is_finished() and not self.is_old()
 
     def time_left(self) -> str:
-        if self.is_finished(): return "Finished"
+        if self.is_finished():
+            return "Finished"
 
         first_scalarevent = self[min(self)]
         last_scalarevent = self[max(self)]

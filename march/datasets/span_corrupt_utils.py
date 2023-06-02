@@ -12,7 +12,9 @@ import numpy as np
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 
-def compute_input_and_target_lengths(inputs_length, noise_density, mean_noise_span_length):
+def compute_input_and_target_lengths(
+    inputs_length, noise_density, mean_noise_span_length
+):
     """This function is copy of `random_spans_helper <https://github.com/google-research/text-to-text-transfer-transformer/blob/84f8bcc14b5f2c03de51bd3587609ba8f6bbd1cd/t5/data/preprocessors.py#L2466>`__ .
 
     Training parameters to avoid padding with random_spans_noise_mask.
@@ -46,10 +48,15 @@ def compute_input_and_target_lengths(inputs_length, noise_density, mean_noise_sp
 
     tokens_length = inputs_length
 
-    while _tokens_length_to_inputs_length_targets_length(tokens_length + 1)[0] <= inputs_length:
+    while (
+        _tokens_length_to_inputs_length_targets_length(tokens_length + 1)[0]
+        <= inputs_length
+    ):
         tokens_length += 1
 
-    inputs_length, targets_length = _tokens_length_to_inputs_length_targets_length(tokens_length)
+    inputs_length, targets_length = _tokens_length_to_inputs_length_targets_length(
+        tokens_length
+    )
 
     # minor hack to get the targets length to be equal to inputs length
     # which is more likely to have been set to a nice round number.
@@ -99,7 +106,12 @@ class T5SpanCorruption:
         input_ids = np.array(examples["input_ids"])
         batch_size, expanded_input_length = input_ids.shape
 
-        mask_indices = np.asarray([self.random_spans_noise_mask(expanded_input_length) for i in range(batch_size)])
+        mask_indices = np.asarray(
+            [
+                self.random_spans_noise_mask(expanded_input_length)
+                for i in range(batch_size)
+            ]
+        )
         labels_mask = ~mask_indices
 
         input_ids_sentinel = self.create_sentinel_ids(mask_indices.astype(np.int8))
@@ -131,8 +143,12 @@ class T5SpanCorruption:
         start_indices = mask_indices - np.roll(mask_indices, 1, axis=-1) * mask_indices
         start_indices[:, 0] = mask_indices[:, 0]
 
-        sentinel_ids = np.where(start_indices != 0, np.cumsum(start_indices, axis=-1), start_indices)
-        sentinel_ids = np.where(sentinel_ids != 0, (len(self.tokenizer) - sentinel_ids), 0)
+        sentinel_ids = np.where(
+            start_indices != 0, np.cumsum(start_indices, axis=-1), start_indices
+        )
+        sentinel_ids = np.where(
+            sentinel_ids != 0, (len(self.tokenizer) - sentinel_ids), 0
+        )
         sentinel_ids -= mask_indices - start_indices
 
         return sentinel_ids
@@ -149,7 +165,11 @@ class T5SpanCorruption:
         # masked tokens coming after sentinel tokens and should be removed
         input_ids = input_ids_full[input_ids_full >= 0].reshape((batch_size, -1))
         input_ids = np.concatenate(
-            [input_ids, np.full((batch_size, 1), self.tokenizer.eos_token_id, dtype=np.int32)], axis=-1
+            [
+                input_ids,
+                np.full((batch_size, 1), self.tokenizer.eos_token_id, dtype=np.int32),
+            ],
+            axis=-1,
         )
         return input_ids
 
@@ -180,7 +200,11 @@ class T5SpanCorruption:
         # avoid degeneracy by ensuring positive numbers of noise and nonnoise tokens.
         num_noise_tokens = min(max(num_noise_tokens, 1), length - 1)
         # num_noise_tokens should be less than num_noise_tokens and num_nonnoise_tokens
-        num_noise_spans = int(np.round(min(num_noise_tokens, num_nonnoise_tokens) / self.mean_noise_span_length))
+        num_noise_spans = int(
+            np.round(
+                min(num_noise_tokens, num_nonnoise_tokens) / self.mean_noise_span_length
+            )
+        )
 
         # avoid degeneracy by ensuring positive number of noise spans
         num_noise_spans = max(num_noise_spans, 1)
@@ -204,10 +228,13 @@ class T5SpanCorruption:
             return segment_length
 
         noise_span_lengths = _random_segmentation(num_noise_tokens, num_noise_spans)
-        nonnoise_span_lengths = _random_segmentation(num_nonnoise_tokens, num_noise_spans)
+        nonnoise_span_lengths = _random_segmentation(
+            num_nonnoise_tokens, num_noise_spans
+        )
 
         interleaved_span_lengths = np.reshape(
-            np.stack([nonnoise_span_lengths, noise_span_lengths], axis=1), [num_noise_spans * 2]
+            np.stack([nonnoise_span_lengths, noise_span_lengths], axis=1),
+            [num_noise_spans * 2],
         )
         span_starts = np.cumsum(interleaved_span_lengths)[:-1]
         span_start_indicator = np.zeros((length,), dtype=np.int8)

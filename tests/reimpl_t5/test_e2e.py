@@ -46,10 +46,12 @@ class TestReimplMatchT5EndToEnd(TestCase):
 
     def test_end_to_end_train(self) -> None:
         reimpl_exp = TestBaselineExperiment()
-        if not exists(reimpl_exp.output_dir): reimpl_exp.train()
+        if not exists(reimpl_exp.output_dir):
+            reimpl_exp.train()
 
         t5_exp = TestBaselineT5Experiment()
-        if not exists(t5_exp.output_dir): t5_exp.train()
+        if not exists(t5_exp.output_dir):
+            t5_exp.train()
 
         reimpl_train_loss = read_train_loss(reimpl_exp.output_dir)
         t5_train_loss = read_train_loss(t5_exp.output_dir)

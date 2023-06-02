@@ -33,7 +33,9 @@ def get_experiments_from_module(module: ModuleType) -> Dict[str, Type[Experiment
     return experiments
 
 
-def recursively_discover_experiments(package: ModuleType) -> Dict[str, Type[ExperimentBase]]:
+def recursively_discover_experiments(
+    package: ModuleType,
+) -> Dict[str, Type[ExperimentBase]]:
     """
     Recursively import all submodules of the input module, and returns the
     classes which:

@@ -2,15 +2,16 @@ from os.path import join
 
 from itertools import chain
 
-import march  # Redirect cache
-
 from datasets import DatasetDict, load_dataset, load_from_disk
 
 from transformers.tokenization_utils_base import VERY_LARGE_INTEGER
 from transformers import AutoTokenizer, PreTrainedTokenizerFast
 
 from march import CACHE_DIR
-from march.datasets.span_corrupt_utils import T5SpanCorruption, compute_input_and_target_lengths
+from march.datasets.span_corrupt_utils import (
+    T5SpanCorruption,
+    compute_input_and_target_lengths,
+)
 
 
 # T5 span corruption parameters
@@ -25,7 +26,9 @@ MULTIPROCESSING_NUM_PROC = 32
 
 
 def load_c4_tokenizer() -> PreTrainedTokenizerFast:
-    tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=MAX_LENGTH, use_fast=False)
+    tokenizer = AutoTokenizer.from_pretrained(
+        "t5-base", model_max_length=MAX_LENGTH, use_fast=False
+    )
     tokenizer.bos_token_id = tokenizer.pad_token_id
     return tokenizer
 
@@ -45,13 +48,19 @@ def load_c4_text() -> DatasetDict:
 def load_c4_text_tiny() -> DatasetDict:
     num_train = 100_000
     num_validation = 10_000
-    return DatasetDict({
-        "train": load_dataset("c4", "en", split=f"train[:{num_train}]"),
-        "validation": load_dataset("c4", "en", split=f"validation[:{num_validation}]"),
-    })
+    return DatasetDict(
+        {
+            "train": load_dataset("c4", "en", split=f"train[:{num_train}]"),
+            "validation": load_dataset(
+                "c4", "en", split=f"validation[:{num_validation}]"
+            ),
+        }
+    )
 
 
-def tokenize_using_t5(text_dataset_dict: DatasetDict, tokenized_dataset_path: str) -> DatasetDict:
+def tokenize_using_t5(
+    text_dataset_dict: DatasetDict, tokenized_dataset_path: str
+) -> DatasetDict:
     local_path = join(CACHE_DIR, tokenized_dataset_path)
     try:
         return load_from_disk(local_path)
@@ -93,7 +102,7 @@ def pack_for_t5_span_corruption(
     except FileNotFoundError:
         pass
 
-    expanded_inputs_length, targets_length = compute_input_and_target_lengths(
+    expanded_inputs_length, _ = compute_input_and_target_lengths(
         inputs_length=max_seq_length,
         noise_density=noise_density,
         mean_noise_span_length=mean_noise_span_length,
@@ -104,10 +113,15 @@ def pack_for_t5_span_corruption(
         total_length = len(concatenated_examples[list(examples.keys())[0]])
 
         if total_length >= expanded_inputs_length:
-            total_length = (total_length // expanded_inputs_length) * expanded_inputs_length
+            total_length = (
+                total_length // expanded_inputs_length
+            ) * expanded_inputs_length
 
         result = {
-            k: [t[i : i + expanded_inputs_length] for i in range(0, total_length, expanded_inputs_length)]
+            k: [
+                t[i : i + expanded_inputs_length]
+                for i in range(0, total_length, expanded_inputs_length)
+            ]
             for k, t in concatenated_examples.items()
         }
         return result
@@ -138,7 +152,7 @@ def span_corrupt_packed_dataset(
 
     tokenizer = load_c4_tokenizer()
 
-    expanded_inputs_length, targets_length = compute_input_and_target_lengths(
+    _, targets_length = compute_input_and_target_lengths(
         inputs_length=max_seq_length,
         noise_density=noise_density,
         mean_noise_span_length=mean_noise_span_length,
@@ -166,7 +180,7 @@ def span_corrupt_packed_dataset(
     return span_corrupted_dataset_dict
 
 
-def create_span_corrupted_c4(use_tiny: bool=False) -> DatasetDict:
+def create_span_corrupted_c4(use_tiny: bool = False) -> DatasetDict:
     max_seq_length = MAX_LENGTH
     noise_density = MASK_PROB
     mean_noise_span_length = AVERAGE_SPAN_LENGTH
@@ -194,8 +208,15 @@ def create_span_corrupted_c4(use_tiny: bool=False) -> DatasetDict:
     assert set(tokenized_dataset_dict["train"].column_names) == set(["input_ids"])
 
     n_head = 10_000
-    mean_length = sum(map(len, tokenized_dataset_dict["train"].select(range(n_head))["input_ids"])) / n_head
-    print(f"After tokenization, average length of the first {n_head:,} train split examples is {mean_length}")
+    mean_length = (
+        sum(
+            map(len, tokenized_dataset_dict["train"].select(range(n_head))["input_ids"])
+        )
+        / n_head
+    )
+    print(
+        f"After tokenization, average length of the first {n_head:,} train split examples is {mean_length}"
+    )
 
     packed_dataset_dict = pack_for_t5_span_corruption(
         tokenized_dataset_dict=tokenized_dataset_dict,
@@ -208,9 +229,14 @@ def create_span_corrupted_c4(use_tiny: bool=False) -> DatasetDict:
     assert set(packed_dataset_dict.keys()) == set(["train", "validation"])
     assert set(packed_dataset_dict["train"].column_names) == set(["input_ids"])
 
-    mean_length = sum(map(len, packed_dataset_dict["train"].select(range(n_head))["input_ids"])) / n_head
+    mean_length = (
+        sum(map(len, packed_dataset_dict["train"].select(range(n_head))["input_ids"]))
+        / n_head
+    )
     mean_length_around = int(max_seq_length * (1 + noise_density))
-    print(f"After packing, average length of the first {n_head:,} train split examples is {mean_length}")
+    print(
+        f"After packing, average length of the first {n_head:,} train split examples is {mean_length}"
+    )
     print(f"This number should be in the ballpark (+-10) of {mean_length_around}")
 
     corrupted_dataset_dict = span_corrupt_packed_dataset(
@@ -222,7 +248,9 @@ def create_span_corrupted_c4(use_tiny: bool=False) -> DatasetDict:
     )
 
     assert set(corrupted_dataset_dict.keys()) == set(["train", "validation"])
-    assert set(corrupted_dataset_dict["train"].column_names) == set(["input_ids", "labels"])
+    assert set(corrupted_dataset_dict["train"].column_names) == set(
+        ["input_ids", "labels"]
+    )
 
     corrupted_n_head = corrupted_dataset_dict["train"].select(range(n_head))
     mean_input_ids_length = sum(map(len, corrupted_n_head["input_ids"])) / n_head
@@ -230,7 +258,7 @@ def create_span_corrupted_c4(use_tiny: bool=False) -> DatasetDict:
     mean_input_ids_length_around = max_seq_length
     mean_labels_length_around = int(max_seq_length * 0.3)
     print(
-        f"After span corruption, average length of the first {n_head:,} train split example", 
+        f"After span corruption, average length of the first {n_head:,} train split example",
         f"input ids is {mean_input_ids_length}. This number should be {mean_input_ids_length_around}",
         f"labels is {mean_labels_length}. This number should be in the ballpark (+-10) of {mean_labels_length_around}",
         sep="\n\t",

@@ -44,8 +44,14 @@ class ModelComponents:
             return (cross_attn.q, cross_attn.k, cross_attn.v, cross_attn.o)
 
     class FeedForward:
-        reimpl = lambda m, i: (m.layers[i][-1].up_projection, m.layers[i][-1].down_projection)
-        t5 = lambda m, i: (m.block[i].layer[-1].DenseReluDense.wi, m.block[i].layer[-1].DenseReluDense.wo)
+        reimpl = lambda m, i: (
+            m.layers[i][-1].up_projection,
+            m.layers[i][-1].down_projection,
+        )
+        t5 = lambda m, i: (
+            m.block[i].layer[-1].DenseReluDense.wi,
+            m.block[i].layer[-1].DenseReluDense.wo,
+        )
 
     class LayerNorm:
         @staticmethod
@@ -73,7 +79,13 @@ class ModelComponents:
             return tuple(res)
 
 
-def get_components(model, model_type: str, component: str, layer_num: int=None, enc_or_dec: str=None):
+def get_components(
+    model,
+    model_type: str,
+    component: str,
+    layer_num: int = None,
+    enc_or_dec: str = None,
+):
     get_weight = getattr(getattr(ModelComponents, component), model_type)
     if component in "Embedding":
         output_weights = get_weight(model)
@@ -108,15 +120,24 @@ def get_matched_weights(reimpl_model, t5_model):
             {"component": "FeedForward", "layer_num": i, "enc_or_dec": enc_or_dec}
             for i, enc_or_dec in product(encdec_layer_nums, enc_or_dec_options)
         ],
-        *[{"component": "LayerNorm", "enc_or_dec": enc_or_dec} for enc_or_dec in enc_or_dec_options],
+        *[
+            {"component": "LayerNorm", "enc_or_dec": enc_or_dec}
+            for enc_or_dec in enc_or_dec_options
+        ],
     ]
 
     res = []
     for kwargs in batch_kwargs:
         reimpl_components = get_components(reimpl_model, "reimpl", **kwargs)
         t5_components = get_components(t5_model, "t5", **kwargs)
-        assert len(reimpl_components) == len(t5_components), (kwargs, len(reimpl_components), len(t5_components))
-        res.extend(zip([kwargs] * len(reimpl_components), reimpl_components, t5_components))
+        assert len(reimpl_components) == len(t5_components), (
+            kwargs,
+            len(reimpl_components),
+            len(t5_components),
+        )
+        res.extend(
+            zip([kwargs] * len(reimpl_components), reimpl_components, t5_components)
+        )
 
     return res
 
@@ -132,17 +153,24 @@ def assert_property_equal(reimpl_model, t5_model, property_name: str) -> int:
 
         num_parameters_matched += reimpl_weight.numel()
 
-        if property_name == "grad" and reimpl_property is None and t5_property is None: continue
+        if property_name == "grad" and reimpl_property is None and t5_property is None:
+            continue
 
         # At least one but not both are None
         property_mismatch = (reimpl_property is None) ^ (t5_property is None)
-        assert not property_mismatch, f"Property mismatch for {kwargs}\nReimpl\n{reimpl_property}\nT5\n{t5_property}"
+        assert (
+            not property_mismatch
+        ), f"Property mismatch for {kwargs}\nReimpl\n{reimpl_property}\nT5\n{t5_property}"
 
         weights_equal = equal(reimpl_property, t5_property)
         if not weights_equal:
             error_strs.add(str(kwargs))
 
-    assert not error_strs, f"Values not equal for property {property_name} for:\n\t" + "\n\t".join(error_strs)
+    assert (
+        not error_strs
+    ), f"Values not equal for property {property_name} for:\n\t" + "\n\t".join(
+        error_strs
+    )
 
     return num_parameters_matched
 

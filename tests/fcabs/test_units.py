@@ -61,5 +61,9 @@ class TestFCABSUnits(TestCase):
 
         dropped_ids = model_outputs.dropped_ids
         self.assertIsNotNone(dropped_ids)
-        expected_size = (inputs["input_ids"].size()[0], config.num_layers // 2, config.L_drop)  # (N, N_L, L_drop)
+        expected_size = (
+            inputs["input_ids"].size()[0],
+            config.num_layers // 2,
+            config.L_drop,
+        )  # (N, N_L, L_drop)
         self.assertEqual(dropped_ids.size(), expected_size)

@@ -25,17 +25,22 @@ class TestBaselineRuntimeShorterExperiment(TestBaselineRuntimeExperiment):
     def get_training_arguments(self) -> Seq2SeqTrainingArguments:
         args_dict = self.load_default_training_arguments()
 
-        args_dict["per_device_train_batch_size"] = args_dict["per_device_train_batch_size"] * 2
-        args_dict["per_device_eval_batch_size"] = args_dict["per_device_eval_batch_size"] * 4
+        args_dict["per_device_train_batch_size"] = (
+            args_dict["per_device_train_batch_size"] * 2
+        )
+        args_dict["per_device_eval_batch_size"] = (
+            args_dict["per_device_eval_batch_size"] * 4
+        )
 
         return Seq2SeqTrainingArguments(**args_dict)
 
     def get_data_collator(self, tokenizer: PreTrainedTokenizerFast):
         data_collator = super().get_data_collator(tokenizer)
+
         def shortened_seq_len_data_collator(examples):
             for example in examples:
-                example["input_ids"] = example["input_ids"][:self.MAX_INPUT_IDS_LEN]
-                example["labels"] = example["labels"][:self.MAX_LABELS_LEN]
+                example["input_ids"] = example["input_ids"][: self.MAX_INPUT_IDS_LEN]
+                example["labels"] = example["labels"][: self.MAX_LABELS_LEN]
 
             examples = data_collator(examples)
 

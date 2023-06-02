@@ -12,6 +12,7 @@ from numpy import array
 from pandas import DataFrame
 
 from matplotlib import rcParams
+
 FONT_SIZE = 14
 rcParams.update({"font.size": FONT_SIZE})
 from matplotlib.ticker import FuncFormatter
@@ -33,7 +34,8 @@ EXP_NAMES_TO_PATH: Dict[str, str] = dict()
 for result_dir in RESULTS_DIRS:
     for name in listdir(result_dir):
         path = join(result_dir, name)
-        if not isdir(path): continue
+        if not isdir(path):
+            continue
 
         EXP_NAMES_TO_PATH[name] = path
 
@@ -49,10 +51,13 @@ def steps_log_scale_format_fn(tick_value, position):
         tick_value = tick_value // 1_000_000
         return f"{tick_value}M"
 
+
 steps_log_scale_formatter = FuncFormatter(steps_log_scale_format_fn)
 
 
-def get_property_values(path: str, property_name: str) -> Tuple[List[float], List[float]]:
+def get_property_values(
+    path: str, property_name: str
+) -> Tuple[List[float], List[float]]:
     event_accumulator = EventAccumulator(path)
     event_accumulator.Reload()
 
@@ -70,7 +75,12 @@ def plot_comparative_experiment(
     title: str,
     save_name: str,
 ) -> None:
-    y_labels = ["Train set loss", "Validation set loss", "Predicted validation set loss", "Predicted validation set perplexity"]
+    y_labels = [
+        "Train set loss",
+        "Validation set loss",
+        "Predicted validation set loss",
+        "Predicted validation set perplexity",
+    ]
     ax_titles = [
         "Training loss curves over the 1000 step budget",
         "Validation loss curves over the 1000 step budget",
@@ -78,7 +88,8 @@ def plot_comparative_experiment(
         "Extrapolated validation perplexity over 1M step budget",
     ]
 
-    if not save_name.endswith(".pdf"): save_name += ".pdf"
+    if not save_name.endswith(".pdf"):
+        save_name += ".pdf"
     save_path = join(VISUALIZATION_OUTPUT_DIR, save_name)
     overwrite_existing = environ.get("OVERWRITE_EXISTING", None) == "true"
     if not overwrite_existing and exists(save_path):
@@ -87,11 +98,11 @@ def plot_comparative_experiment(
 
     rows, cols = 5, 4
     mosaic = [
-        ["train_loss_ax" , "val_loss_ax" ],
-        ["train_loss_ax" , "val_loss_ax" ],
+        ["train_loss_ax", "val_loss_ax"],
+        ["train_loss_ax", "val_loss_ax"],
         ["scale_steps_ax", "scale_all_ax"],
         ["scale_steps_ax", "scale_all_ax"],
-        ["table_ax"      , "table_ax"    ],
+        ["table_ax", "table_ax"],
     ]
     fig, axs_dict = subplot_mosaic(mosaic, figsize=(5 * cols, 4 * rows))
     train_loss_ax = axs_dict["train_loss_ax"]
@@ -101,9 +112,22 @@ def plot_comparative_experiment(
     table_ax = axs_dict["table_ax"]
     axs = [train_loss_ax, val_loss_ax, scaling_law_steps_ax, scaling_law_all_ax]
 
-    stats_df = DataFrame(columns=["Experiment", "Train - eval loss", "Scaling law", "PPL at 100k", "PPL at 300k", "PPL at 1M"])
+    stats_df = DataFrame(
+        columns=[
+            "Experiment",
+            "Train - eval loss",
+            "Scaling law",
+            "PPL at 100k",
+            "PPL at 300k",
+            "PPL at 1M",
+        ]
+    )
 
-    for experiment_name, legend_label in tqdm(zip(experiment_names, legend_labels), desc="Plotting", total=len(experiment_names)):
+    for experiment_name, legend_label in tqdm(
+        zip(experiment_names, legend_labels),
+        desc="Plotting",
+        total=len(experiment_names),
+    ):
         experiment_path = EXP_NAMES_TO_PATH[experiment_name]
 
         num_params = get_property_values(experiment_path, "train/num_params")[1][0]
@@ -115,16 +139,23 @@ def plot_comparative_experiment(
 
         val_steps, val_losses = get_property_values(experiment_path, "eval/loss")
         val_loss_ax.plot(val_steps, val_losses, label=legend_label_full)
-        scaling_law_baseline = scaling_law_steps_ax.plot(val_steps, val_losses, label=legend_label_full)[0]
+        scaling_law_baseline = scaling_law_steps_ax.plot(
+            val_steps, val_losses, label=legend_label_full
+        )[0]
 
-        scaling_law_plotter = ScalingLawForCompute(val_steps, val_losses, legend_label, stats_df)
-        scaling_law_plotter.plot_over_steps(scaling_law_steps_ax, scaling_law_baseline.get_color())
+        scaling_law_plotter = ScalingLawForCompute(
+            val_steps, val_losses, legend_label, stats_df
+        )
+        scaling_law_plotter.plot_over_steps(
+            scaling_law_steps_ax, scaling_law_baseline.get_color()
+        )
         scaling_law_plotter.plot_over_all(scaling_law_all_ax)
 
-        train_loss_matched = train_losses[val_steps - 1]  # Steps is 1 indexed, train_losses is 0 indexed
+        train_loss_matched = train_losses[
+            val_steps - 1
+        ]  # Steps is 1 indexed, train_losses is 0 indexed
         diff_mean = (train_loss_matched - val_losses).mean()
-        stats_df.at[len(stats_df.index)-1, "Train - eval loss"] = f"{diff_mean:.3f}"
-
+        stats_df.at[len(stats_df.index) - 1, "Train - eval loss"] = f"{diff_mean:.3f}"
 
     for y_label, ax_title, ax in zip(y_labels, ax_titles, axs):
         ax.set_ylim(ax.get_ylim()[0], 7.0)
@@ -155,7 +186,7 @@ def plot_comparative_experiment(
     cells[0, 3].set_text_props(ha="left")
 
     for (row, col), cell in table.get_celld().items():
-        if (row == 0):
+        if row == 0:
             cell.set_text_props(fontproperties=FontProperties(weight="bold"))
 
     fig.suptitle(f"{title}\n", fontweight="bold")

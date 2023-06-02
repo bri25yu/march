@@ -17,7 +17,9 @@ class TestReimplMatchT5Integration(TestCase):
     SEED = 42  # Only used for this test case
 
     def test_integration(self) -> None:
-        device = 7  # TODO Temporary, not sure how best to pass in a param with unittest lol
+        device = (
+            7  # TODO Temporary, not sure how best to pass in a param with unittest lol
+        )
         move_formats = lambda t: t.to(f"cuda:{device}", bfloat16)
 
         reimpl_exp = TestBaselineExperiment()
@@ -29,7 +31,9 @@ class TestReimplMatchT5Integration(TestCase):
         t5_exp._call_init_weights(t5_model, self.SEED)
         move_formats(t5_model)
 
-        create_optimizer = lambda model: AdamW(params=model.parameters(), lr=1e-4, weight_decay=1e-1)
+        create_optimizer = lambda model: AdamW(
+            params=model.parameters(), lr=1e-4, weight_decay=1e-1
+        )
         reimpl_optimizer = create_optimizer(reimpl_model)
         t5_optimizer = create_optimizer(t5_model)
 
@@ -39,7 +43,9 @@ class TestReimplMatchT5Integration(TestCase):
         num_iters = 10
 
         inputs_to_cuda = lambda d: {k: v.cuda(device) for k, v in d.items()}
-        reimpl_data_collator = reimpl_exp.get_data_collator(reimpl_exp.load_default_tokenizer())
+        reimpl_data_collator = reimpl_exp.get_data_collator(
+            reimpl_exp.load_default_tokenizer()
+        )
         t5_data_collator = t5_exp.get_data_collator(t5_exp.load_default_tokenizer())
 
         for step in trange(num_iters, desc="Running through inputs"):
@@ -54,11 +60,16 @@ class TestReimplMatchT5Integration(TestCase):
             set_torch_seed(self.SEED)
             t5_outputs = t5_model(**t5_inputs)
 
-            self.assertTrue(equal(reimpl_outputs.logits, t5_outputs.logits), f"Failed on iteration {step+1}")
+            self.assertTrue(
+                equal(reimpl_outputs.logits, t5_outputs.logits),
+                f"Failed on iteration {step+1}",
+            )
 
             reimpl_loss = reimpl_outputs.loss
             t5_loss = t5_outputs.loss
-            self.assertTrue(equal(reimpl_loss, t5_loss), f"Failed on iteration {step+1}")
+            self.assertTrue(
+                equal(reimpl_loss, t5_loss), f"Failed on iteration {step+1}"
+            )
 
             reimpl_optimizer.zero_grad()
             t5_optimizer.zero_grad()

@@ -66,7 +66,9 @@ class TransformerConfig(PretrainedConfig):
 
     def __post_init__(self) -> None:
         if self.num_heads is None:
-            assert self.dim_model % self.dim_qkv == 0, f"Dimensionality of the model must be divisible by dimensionality of the queries, keys, and values."
+            assert (
+                self.dim_model % self.dim_qkv == 0
+            ), f"Dimensionality of the model must be divisible by dimensionality of the queries, keys, and values."
             self.num_heads = self.dim_model // self.dim_qkv
 
         if self.dim_feedforward is None:
@@ -87,7 +89,9 @@ class TransformerComponentBase(Module):
     def forward(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:
         pass
 
-    def apply_residual(self, residual: SequenceInputEmbeds, current: SequenceInputEmbeds) -> SequenceInputEmbeds:
+    def apply_residual(
+        self, residual: SequenceInputEmbeds, current: SequenceInputEmbeds
+    ) -> SequenceInputEmbeds:
         return residual + self.apply_dropout(current)
 
     def apply_dropout(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:
@@ -99,15 +103,24 @@ class LayerNorm(TransformerComponentBase):
     """
     Equivalent to T5LayerNorm.
     """
+
     def __init__(self, config: TransformerConfig, eps=1e-6):
         super().__init__(config)
 
-        self.weight: TensorType["D"] = Parameter(ones(config.dim_model,))
+        self.weight: TensorType["D"] = Parameter(
+            ones(
+                config.dim_model,
+            )
+        )
         self.variance_epsilon = eps
 
     def forward(self, input_embeds: SequenceInputEmbeds) -> SequenceInputEmbeds:
-        variance: SequenceInputIds = input_embeds.to(float32).pow(2).mean(-1, keepdim=True)
-        input_embeds: SequenceInputEmbeds = input_embeds * rsqrt(variance + self.variance_epsilon)
+        variance: SequenceInputIds = (
+            input_embeds.to(float32).pow(2).mean(-1, keepdim=True)
+        )
+        input_embeds: SequenceInputEmbeds = input_embeds * rsqrt(
+            variance + self.variance_epsilon
+        )
         input_embeds: SequenceInputEmbeds = input_embeds.to(self.weight.dtype)
 
         return self.weight * input_embeds
@@ -123,7 +136,9 @@ class AttentionOutput:
 
 
 class AttentionBase(TransformerComponentBase):
-    def __init__(self, config: TransformerConfig, is_cross_attention: bool, is_decoder: bool) -> None:
+    def __init__(
+        self, config: TransformerConfig, is_cross_attention: bool, is_decoder: bool
+    ) -> None:
         super().__init__(config)
 
         self.is_cross_attention = is_cross_attention
@@ -134,24 +149,30 @@ class AttentionBase(TransformerComponentBase):
         self,
         input_embeds: SequenceInputEmbeds,
         attention_mask: SequenceInputIds,
-        position_bias: MultiHeadedAttention=None,
-        encoder_hidden_state: SequenceInputEmbeds=None,
+        position_bias: MultiHeadedAttention = None,
+        encoder_hidden_state: SequenceInputEmbeds = None,
     ) -> AttentionOutput:
         pass
 
-    def reshape_to_head_sensitive(self, input_embeds: SequenceInputEmbeds) -> MultiHeadedEmbeds:
+    def reshape_to_head_sensitive(
+        self, input_embeds: SequenceInputEmbeds
+    ) -> MultiHeadedEmbeds:
         config = self.config
 
         batch_size, sequence_length = input_embeds.size()[0], input_embeds.size()[1]
 
         # Input embeds reshape to shape (N, L, H, D_kv) from (N, L, (H * D_kv))
-        input_embeds = input_embeds.reshape(batch_size, sequence_length, config.num_heads, config.dim_qkv)
+        input_embeds = input_embeds.reshape(
+            batch_size, sequence_length, config.num_heads, config.dim_qkv
+        )
         # Permute to shape (N, H, L, D_kv)
         input_embeds = input_embeds.permute(0, 2, 1, 3)
 
         return input_embeds
 
-    def reshape_to_head_insensitive(self, input_embeds: MultiHeadedEmbeds) -> SequenceInputEmbeds:
+    def reshape_to_head_insensitive(
+        self, input_embeds: MultiHeadedEmbeds
+    ) -> SequenceInputEmbeds:
         # input_embeds input format (batch_size, num_heads, sequence_length, dim_qkv) (N, H, L, D_kv)
         # permute to (N, L, H, D_kv)
         input_embeds = input_embeds.permute(0, 2, 1, 3)

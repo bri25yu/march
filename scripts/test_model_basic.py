@@ -4,8 +4,7 @@ from march.experiments.baseline import *
 from march.experiments.tests import *
 
 
-experiments_to_check = [
-]
+experiments_to_check = []
 
 
 for experiment_cls in experiments_to_check:
