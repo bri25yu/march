@@ -21,9 +21,10 @@ os.environ["HF_DATASETS_CACHE"] = CACHE_DIR
 
 
 def run(
-    experiment_name: Union[None, str]=None,
+    experiment_name: str,
     batch_size_pow_scale: int=0,
     resume_from_checkpoint: bool=False,
+    overwrite_old_experiment: bool=False,
 ) -> None:
     """
     batch_size_pow_scale: int
@@ -36,26 +37,10 @@ def run(
     """
     from march.experiments import available_experiments
 
+    if experiment_cls not in available_experiments:
+        raise ValueError(f"Experiment {experiment_name} is not recognized!")
 
-    if experiment_name is None:
-        experiment_names = list(available_experiments)
-        experiment_index = input(
-            "Choose an experiment class:\n" + "\n".join(f"{i+1}. {name}" for i, name in enumerate(experiment_names)) + "\n"
-        )
-        try:
-            experiment_index = int(experiment_index) - 1
-        except ValueError as e:
-            raise e
-
-        experiment_name = experiment_names[experiment_index]
-        print(f"{experiment_name} chosen!")
-
-    experiment_cls = available_experiments.get(experiment_name, None)
-
-    if experiment_cls is None:
-        print(f"Experiment {experiment_name} is not recognized")
-        return
-
+    experiment_cls = available_experiments[experiment_name]
     original_pow_scale = batch_size_pow_scale
     finished = False
     while not finished:
@@ -63,6 +48,7 @@ def run(
             experiment = experiment_cls(
                 batch_size_pow_scale=batch_size_pow_scale,
                 resume_from_checkpoint=resume_from_checkpoint,
+                overwrite_old_experiment=overwrite_old_experiment,
             )
             experiment.train()
             finished = True
@@ -73,5 +59,3 @@ def run(
                 print(f"Lowering batch size by a factor of 2. Original pow scale {original_pow_scale}, current pow scale {batch_size_pow_scale}")
             else:
                 raise e
-        except AssertionError as e:
-            raise e

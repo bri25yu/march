@@ -2,7 +2,9 @@ from typing import Any, Dict, Optional, Union
 
 from abc import ABC, abstractmethod
 
-from os.path import join
+from os import listdir
+from os.path import exists, isdir, join
+from shutil import rmtree
 
 import json
 
@@ -23,13 +25,33 @@ from transformers.trainer_utils import EvalPrediction
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast, PrinterCallback, Seq2SeqTrainer, Seq2SeqTrainingArguments
 
 from march import CONFIG_DIR, RESULTS_DIR
-from march.utils import log_run
 from march.datasets.c4 import load_c4_tokenizer
 from march.models.baseline import TransformerBase
 from march.models.utils import count_parameters
 
 
 class TensorboardWithCustomLogsCallback(TensorBoardCallback):
+    def on_train_begin(self, args, state, control, **kwargs):
+        super().on_train_begin(args, state, control, **kwargs)
+
+        # Remove unnecessary tb logs folders like Experiment/1685541821.2379203
+        dirs = []
+        for name in listdir(args.outputdir):
+            if not isdir(join(args.output_dir, name)): continue
+
+            halves = name.split(".")
+            if len(halves) != 2: continue
+
+            if all(s.isnumeric() for s in halves):
+                dirs.append(name)
+
+        if len(dirs) == 0:
+            raise ValueError(f"Did not find unnecessary file at {args.output_dir} to remove")
+        elif len(dirs) > 1:
+            raise ValueError(f"Found too many unnecessary folders to remove at {args.output_dir}: {dirs}")
+        else:
+            rmtree(join(args.output_dir, dirs[0]))
+
     def on_log(self, args, state, control, logs=None, **kwargs):
         if not state.is_world_process_zero: return
 
@@ -74,13 +96,14 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
 class ExperimentBase(ABC):
     NUM_STEPS: Union[None, int] = None
 
-    def __init__(self, batch_size_pow_scale: int=0, resume_from_checkpoint: bool=False) -> None:
+    def __init__(self, batch_size_pow_scale: int=0, resume_from_checkpoint: bool=False, overwrite_old_experiment: bool=False) -> None:
         super().__init__()
 
         # For self.load_default_training_arguments
         self.batch_size_pow_scale = batch_size_pow_scale
 
         self.resume_from_checkpoint = resume_from_checkpoint
+        self.overwrite_old_experiment = overwrite_old_experiment
 
     @abstractmethod
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
@@ -198,6 +221,12 @@ class ExperimentBase(ABC):
         return compute_metrics
 
     def train(self) -> None:
+        experiment_exists = exists(self.output_dir)
+        if experiment_exists and self.overwrite_old_experiment:
+            rmtree(self.output_dir)
+        if experiment_exists and not self.overwrite_old_experiment and not self.resume_from_checkpoint:
+            raise ValueError(f"{self.name} already has logs. If it should be overwritten, please use pass in overwrite_old_experiment=True.")
+
         training_arguments = self.get_training_arguments()
 
         set_numpy_seed(training_arguments.seed)
@@ -220,9 +249,7 @@ class ExperimentBase(ABC):
             data_collator=data_collator,
             compute_metrics=self.get_compute_metrics(model),
         )
-        trainer.log({"num_params": count_parameters(model)})
-
-        log_run(trainer.is_world_process_zero(), self.name)        
+        trainer.log({"num_params": count_parameters(model)})    
 
         trainer.train(resume_from_checkpoint=self.resume_from_checkpoint)
 
