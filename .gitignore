@@ -131,3 +131,4 @@ dmypy.json
 # Run files
 run_*.py
 run.py
+runs.txt

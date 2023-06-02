@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from os import listdir
 from os.path import exists, isdir, join
 from shutil import rmtree
+from socket import gethostname
 
 import json
 
@@ -32,6 +33,9 @@ from march.models.utils import count_parameters
 
 class TensorboardWithCustomLogsCallback(TensorBoardCallback):
     def on_train_begin(self, args, state, control, **kwargs):
+        if not state.is_world_process_zero:
+            return
+
         super().on_train_begin(args, state, control, **kwargs)
 
         # Remove unnecessary tb logs folders like Experiment/1685541821.2379203
@@ -51,6 +55,11 @@ class TensorboardWithCustomLogsCallback(TensorBoardCallback):
             raise ValueError(f"Found too many unnecessary folders to remove at {args.output_dir}: {dirs}")
         else:
             rmtree(join(args.output_dir, dirs[0]))
+
+        # Log values
+        self.tb_writer.add_text("hostname", gethostname())
+        model = kwargs["model"]
+        self.tb_writer.add_scalar("num_params", count_parameters(model))
 
     def on_log(self, args, state, control, logs=None, **kwargs):
         if not state.is_world_process_zero: return
@@ -105,6 +114,9 @@ class ExperimentBase(ABC):
         self.resume_from_checkpoint = resume_from_checkpoint
         self.overwrite_old_experiment = overwrite_old_experiment
 
+        # For self.train
+        self.can_train = True
+
     @abstractmethod
     def load_dataset_dict(self, tokenizer: PreTrainedTokenizerFast) -> DatasetDict:
         pass
@@ -141,7 +153,7 @@ class ExperimentBase(ABC):
         elif num_gpus == 4:
             args_dict["gradient_accumulation_steps"] = args_dict["gradient_accumulation_steps"] * 2
         else:
-            raise ValueError(f"The number of GPUs must be 4 or 8, but got {num_gpus}")
+            self.can_train = False
 
         with open(join(CONFIG_DIR, "deepspeed.json")) as deepspeed_config_file:
             deepspeed_config = json.load(deepspeed_config_file)
@@ -228,6 +240,8 @@ class ExperimentBase(ABC):
             raise ValueError(f"{self.name} already has logs. If it should be overwritten, please use pass in overwrite_old_experiment=True.")
 
         training_arguments = self.get_training_arguments()
+        if not self.can_train:
+            raise ValueError(f"The number of GPUs for training must be 4 or 8, but got {device_count()}")
 
         set_numpy_seed(training_arguments.seed)
         set_torch_seed(training_arguments.seed)
@@ -249,7 +263,6 @@ class ExperimentBase(ABC):
             data_collator=data_collator,
             compute_metrics=self.get_compute_metrics(model),
         )
-        trainer.log({"num_params": count_parameters(model)})    
 
         trainer.train(resume_from_checkpoint=self.resume_from_checkpoint)
 
