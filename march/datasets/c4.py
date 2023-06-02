@@ -2,8 +2,6 @@ from os.path import join
 
 from itertools import chain
 
-import march  # Redirect cache
-
 from datasets import DatasetDict, load_dataset, load_from_disk
 
 from transformers.tokenization_utils_base import VERY_LARGE_INTEGER
@@ -104,7 +102,7 @@ def pack_for_t5_span_corruption(
     except FileNotFoundError:
         pass
 
-    expanded_inputs_length, targets_length = compute_input_and_target_lengths(
+    expanded_inputs_length, _ = compute_input_and_target_lengths(
         inputs_length=max_seq_length,
         noise_density=noise_density,
         mean_noise_span_length=mean_noise_span_length,
@@ -154,7 +152,7 @@ def span_corrupt_packed_dataset(
 
     tokenizer = load_c4_tokenizer()
 
-    expanded_inputs_length, targets_length = compute_input_and_target_lengths(
+    _, targets_length = compute_input_and_target_lengths(
         inputs_length=max_seq_length,
         noise_density=noise_density,
         mean_noise_span_length=mean_noise_span_length,
