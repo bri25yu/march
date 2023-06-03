@@ -116,7 +116,6 @@ def create_c4_for_language_generation(use_tiny: bool = False) -> DatasetDict:
         dataset_path_suffix = "_tiny"
         tokenized_dataset_path += dataset_path_suffix
         packed_dataset_path += dataset_path_suffix
-        corrupted_dataset_path += dataset_path_suffix
     else:
         text_dataset_dict = load_c4_text()
 
