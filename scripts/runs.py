@@ -64,7 +64,11 @@ class ExperimentResult(OrderedDict):
         except DirectoryDeletedError:
             return
 
-        scalars: Iterable[ScalarEvent] = event_accumulator.Scalars("eval/loss")
+        try:
+            scalars: Iterable[ScalarEvent] = event_accumulator.Scalars("eval/loss")
+        except KeyError:
+            return
+
         try:
             hostname = event_accumulator.Tensors("hostname/text_summary")[
                 0
@@ -105,7 +109,7 @@ class ExperimentResult(OrderedDict):
         hours, rem = divmod(diff.seconds, 3600)
         minutes, _ = divmod(rem, 60)
 
-        return (f"{diff.days} d " if diff.days else "") + f"{hours} hr {minutes} min"
+        return (f"{diff.days}d " if diff.days else "") + f"{hours:02}hr {minutes:02}min"
 
     def get_summary(self) -> Dict[str, str]:
         get_loss = lambda step: f"{self[step].value:.3f}" if step in self else ""
