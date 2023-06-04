@@ -38,40 +38,53 @@ from march.models.utils import count_parameters
 
 
 class TensorboardWithCustomLogsCallback(TensorBoardCallback):
+    # This is a copy of `TensorBoardCallback.on_train_begin` unless specified otherwise
     def on_train_begin(self, args, state, control, **kwargs):
         if not state.is_world_process_zero:
             return
 
-        super().on_train_begin(args, state, control, **kwargs)
+        log_dir = None
 
-        # Remove unnecessary tb logs folders like Experiment/1685541821.2379203
-        dirs = []
-        for name in listdir(args.outputdir):
-            if not isdir(join(args.output_dir, name)):
-                continue
+        if state.is_hyper_param_search:
+            trial_name = state.trial_name
+            if trial_name is not None:
+                log_dir = join(args.logging_dir, trial_name)
 
-            halves = name.split(".")
-            if len(halves) != 2:
-                continue
+        if self.tb_writer is None:
+            self._init_summary_writer(args, log_dir)
 
-            if all(s.isnumeric() for s in halves):
-                dirs.append(name)
+        if self.tb_writer is not None:
+            self.tb_writer.add_text("args", args.to_json_string())
+            if "model" in kwargs:
+                model = kwargs["model"]
+                if hasattr(model, "config") and model.config is not None:
+                    model_config_json = model.config.to_json_string()
+                    self.tb_writer.add_text("model_config", model_config_json)
 
-        if len(dirs) == 0:
-            raise ValueError(
-                f"Did not find unnecessary file at {args.output_dir} to remove"
-            )
-        elif len(dirs) > 1:
-            raise ValueError(
-                f"Found too many unnecessary folders to remove at {args.output_dir}: {dirs}"
-            )
-        else:
-            rmtree(join(args.output_dir, dirs[0]))
+            ###########################
+            # START log additional values
+            ###########################
 
-        # Log values
-        self.tb_writer.add_text("hostname", gethostname())
-        model = kwargs["model"]
-        self.tb_writer.add_scalar("num_params", count_parameters(model))
+            self.tb_writer.add_text("hostname", gethostname())
+            model = kwargs["model"]
+            self.tb_writer.add_scalar("num_params", count_parameters(model))
+
+            ###########################
+            # END log additional values
+            ###########################
+
+            ###########################
+            # START no hparams call
+            ###########################
+
+            # Original code:
+            # # Version of TensorBoard coming from tensorboardX does not have this method.
+            # if hasattr(self.tb_writer, "add_hparams"):
+            #     self.tb_writer.add_hparams(args.to_sanitized_dict(), metric_dict={})
+
+            ###########################
+            # END no hparams call
+            ###########################
 
     def on_log(self, args, state, control, logs=None, **kwargs):
         if not state.is_world_process_zero:
@@ -106,15 +119,7 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
         self.add_callback(TensorboardWithCustomLogsCallback)
 
     def _get_train_sampler(self) -> Optional[Sampler]:
-        sampler = super()._get_train_sampler()
-        assert type(sampler) is DistributedSampler
-
-        return DistributedSampler(
-            self.train_dataset,
-            num_replicas=self.args.world_size,
-            rank=self.args.process_index,
-            shuffle=False,
-        )
+        return self._get_eval_sampler(self.train_dataset)
 
 
 class ExperimentBase(ABC):
