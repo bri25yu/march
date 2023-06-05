@@ -35,7 +35,7 @@ def run(
     """
     from march.experiments import available_experiments
 
-    if experiment_cls not in available_experiments:
+    if experiment_name not in available_experiments:
         raise ValueError(f"Experiment {experiment_name} is not recognized!")
 
     experiment_cls = available_experiments[experiment_name]
