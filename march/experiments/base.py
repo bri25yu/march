@@ -2,8 +2,7 @@ from typing import Any, Dict, Optional
 
 from abc import ABC, abstractmethod
 
-from os import listdir
-from os.path import exists, isdir, join
+from os.path import exists, join
 from shutil import rmtree
 from socket import gethostname
 
@@ -18,7 +17,6 @@ from torch.cuda import device_count
 from torch.nn import Module, Parameter
 
 from torch.utils.data import Sampler
-from torch.utils.data.distributed import DistributedSampler
 
 from transformers.utils.import_utils import is_torch_bf16_gpu_available
 from transformers.integrations import TensorBoardCallback, rewrite_logs
