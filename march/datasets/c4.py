@@ -37,6 +37,8 @@ def load_c4(num_train_examples: int=None, num_validation_examples: int=None) -> 
     train_split = f"[:{num_train_examples}]" if num_train_examples is not None else ""
     validation_split = f"[:{num_validation_examples}]" if num_validation_examples is not None else ""
 
+    print(f"Using train split {train_split} and validation split {validation_split}")
+
     return DatasetDict({
         "train": load_dataset(f"hlillemark/c4_t5_corrupted_seqlen{MAX_LENGTH}", split=f"train{train_split}"),
         "validation": load_dataset(f"hlillemark/c4_t5_corrupted_seqlen{MAX_LENGTH}", split=f"validation{validation_split}"),
