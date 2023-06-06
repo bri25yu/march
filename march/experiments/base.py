@@ -275,7 +275,7 @@ class ExperimentBase(ABC):
 
     def get_compute_metrics(self, model: TransformerBase):
         def compute_metrics(eval_preds: EvalPrediction) -> Dict[str, Any]:
-            return dict(model.named_parameters())
+            return dict()
 
         return compute_metrics
 
