@@ -72,7 +72,7 @@ class ExperimentResult(OrderedDict):
         try:
             hostname = event_accumulator.Tensors("hostname/text_summary")[
                 0
-            ].tensor_proto.string_val
+            ].tensor_proto.string_val[0].decode()
         except KeyError:
             hostname = "Unknown"
 
