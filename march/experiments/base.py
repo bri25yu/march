@@ -173,9 +173,10 @@ class ExperimentBase(ABC):
         if num_gpus == 8:
             pass
         elif num_gpus == 4:
-            args_dict["gradient_accumulation_steps"] = (
-                args_dict["gradient_accumulation_steps"] * 2
-            )
+            args_dict.update({
+                "gradient_accumulation_steps": args_dict["gradient_accumulation_steps"] * 2,
+                "eval_accumulation_steps": 10,
+            })
         else:
             self.can_train = False
 
