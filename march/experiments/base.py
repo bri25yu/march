@@ -279,7 +279,7 @@ class ExperimentBase(ABC):
     def train(self) -> None:
         experiment_exists = exists(self.output_dir)
         if experiment_exists and self.overwrite_old_experiment:
-            rmtree(self.output_dir)
+            rmtree(self.output_dir, ignore_errors=True)
         if (
             experiment_exists
             and not self.overwrite_old_experiment
