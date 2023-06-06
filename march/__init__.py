@@ -1,21 +1,32 @@
-import os
+from os import environ
+from os.path import abspath, dirname, join
 
 
 __all__ = ["run"]
 
 
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
+environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-RESULTS_DIR = os.path.join(ROOT_DIR, "..", "results")
-CONFIG_DIR = os.path.join(ROOT_DIR, "config")
-CACHE_DIR = os.path.join(ROOT_DIR, "..", "cache")
-RUN_LOG_PATH = os.path.join(RESULTS_DIR, "run_logs.pkl")
+ROOT_DIR = dirname(abspath(__file__))
+RESULTS_DIR = join(ROOT_DIR, "..", "results")
+CONFIG_DIR = join(ROOT_DIR, "config")
+CACHE_DIR = join(ROOT_DIR, "..", "cache")
+RUN_LOG_PATH = join(RESULTS_DIR, "run_logs.pkl")
 
 
-os.environ["TRANSFORMERS_CACHE"] = CACHE_DIR
-os.environ["HF_DATASETS_CACHE"] = CACHE_DIR
+environ["TRANSFORMERS_CACHE"] = CACHE_DIR
+environ["HF_DATASETS_CACHE"] = CACHE_DIR
+
+
+old_print = print
+def print_on_main_only(*args, **kwargs):
+    if environ["RANK"] > 0: return
+
+    return old_print(*args, **kwargs)
+
+
+__builtins__["print"] = print_on_main_only
 
 
 def run(
