@@ -175,9 +175,8 @@ class ExperimentBase(ABC):
         elif num_gpus == 4:
             args_dict.update({
                 "gradient_accumulation_steps": args_dict["gradient_accumulation_steps"] * 2,
-                "eval_accumulation_steps": 1,
             })
-            print(f"Using 4 GPUs: setting eval_accumulation_steps={args_dict['eval_accumulation_steps']} and doubling gradient_accumulation_steps to {args_dict['gradient_accumulation_steps']}")
+            print(f"Using 4 GPUs: doubling gradient_accumulation_steps to {args_dict['gradient_accumulation_steps']}")
         else:
             self.can_train = False
 
