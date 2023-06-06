@@ -1,2 +1,4 @@
-*
-!*/events.out.tfevents.*
+*/checkpoint*
+*/*.json
+*/*.bin
+*/*.model
