@@ -1,2 +1,7 @@
 #!/bin/bash
-ssh -L 62724:localhost:62724 bri25yu@"$1".millennium.berkeley.edu
+if [ $1 = "dgx" ]
+then
+    ssh -L 62724:localhost:62724 bri25yu@128.32.162.189
+else
+    ssh -L 62724:localhost:62724 bri25yu@"$1".millennium.berkeley.edu
+fi
