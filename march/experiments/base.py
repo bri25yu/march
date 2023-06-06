@@ -284,8 +284,8 @@ class ExperimentBase(ABC):
             and not self.overwrite_old_experiment
             and not self.resume_from_checkpoint
         ):
-            raise ValueError(
-                f"{self.name} already has logs. If it should be overwritten, please use pass in overwrite_old_experiment=True."
+            print(
+                f"{self.name} already has logs. If it should be overwritten, please use pass in overwrite_old_experiment=True. Skipping for now..."
             )
 
         training_arguments = self.get_training_arguments()
