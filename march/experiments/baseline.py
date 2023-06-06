@@ -22,6 +22,20 @@ from march.models.DObaseline import DOBaselineTransformer
 from march.experiments.base import ExperimentBase
 
 
+class TestExperiment(ExperimentBase):
+    NUM_STEPS = 100
+
+    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
+        args_dict = self.load_default_training_arguments()
+
+        args_dict.update({
+            "eval_steps": 20,
+            "save_steps": 20,
+        })
+
+        return Seq2SeqTrainingArguments(**args_dict)
+
+
 class BaselineExperiment(ExperimentBase):
     def get_training_arguments(self) -> Seq2SeqTrainingArguments:
         default_training_arguments = self.load_default_training_arguments()
