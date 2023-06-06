@@ -105,9 +105,9 @@ class BaselineV2Attention(TransformerComponentBase):
 
         query, key = self.rotary_emb(query, key)
 
-        is_gpu = query.is_cuda  # Use flash attention if on gpu, otherwise use math
+        is_gpu = query.is_cuda  # Use mem efficient attention if on gpu, otherwise use math
         with sdp_kernel(
-            enable_flash=is_gpu, enable_math=not is_gpu, enable_mem_efficient=False
+            enable_flash=False, enable_math=not is_gpu, enable_mem_efficient=is_gpu
         ):
             attention_values: NHLDkv = attention(query, key, value, attention_mask)
 
