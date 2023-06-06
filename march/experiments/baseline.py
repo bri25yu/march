@@ -35,6 +35,13 @@ class TestExperiment(ExperimentBase):
 
         return Seq2SeqTrainingArguments(**args_dict)
 
+    def get_model(self) -> TransformerBase:
+        config = TransformerConfig(
+            dim_model=512,
+            num_layers=12,
+        )
+        return BaselineTransformer(config)
+
 
 class BaselineExperiment(ExperimentBase):
     def get_training_arguments(self) -> Seq2SeqTrainingArguments:
