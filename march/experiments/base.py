@@ -175,8 +175,9 @@ class ExperimentBase(ABC):
         elif num_gpus == 4:
             args_dict.update({
                 "gradient_accumulation_steps": args_dict["gradient_accumulation_steps"] * 2,
-                "eval_accumulation_steps": 10,
+                "eval_accumulation_steps": 5,
             })
+            print(f"Using 4 GPUs. eval_accumulation_steps={args_dict['eval_accumulation_steps']} and doubling gradient_accumulation_steps to {args_dict['gradient_accumulation_steps']}")
         else:
             self.can_train = False
 
@@ -214,12 +215,14 @@ class ExperimentBase(ABC):
 
         # Default to using bf16 if available
         use_bf16 = is_torch_bf16_gpu_available()
+        if not use_bf16: print(f"Turning off bf16 and using fp32 because these GPUs are not bf16 capable")
         args_dict["bf16"] = use_bf16
         args_dict["bf16_full_eval"] = use_bf16
 
         if self.NUM_STEPS is not None:
             assert isinstance(self.NUM_STEPS, int)
             args_dict["max_steps"] = self.NUM_STEPS
+            print(f"Setting max_steps={args_dict['max_steps']}")
 
         # Output and logging directories
         args_dict["output_dir"] = self.output_dir
