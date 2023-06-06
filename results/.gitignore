@@ -1,1 +1,1 @@
-!events.out.tfevents.*
+!*/events.out.tfevents.*
