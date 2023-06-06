@@ -15,6 +15,13 @@ cd march
 conda env create --file environment.yml
 conda activate march
 
+# For apex see https://github.com/NVIDIA/apex
+cd ..
+git clone https://github.com/NVIDIA/apex
+cd apex
+pip install -v --disable-pip-version-check --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./
+cd ../march
+
 deepspeed run.py
 ```
 
