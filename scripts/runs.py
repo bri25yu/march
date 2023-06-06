@@ -65,7 +65,7 @@ class ExperimentResult(OrderedDict):
             return
 
         try:
-            scalars: Iterable[ScalarEvent] = event_accumulator.Scalars("eval/loss")
+            scalars: Iterable[ScalarEvent] = event_accumulator.Scalars("train/loss")
         except KeyError:
             return
 
