@@ -21,7 +21,7 @@ environ["HF_DATASETS_CACHE"] = CACHE_DIR
 
 old_print = print
 def print_on_main_only(*args, **kwargs):
-    if environ["RANK"] > 0: return
+    if int(environ.get("RANK", -1)) > 0: return
 
     return old_print(*args, **kwargs)
 
