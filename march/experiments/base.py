@@ -274,10 +274,10 @@ class ExperimentBase(ABC):
         return data_collator
 
     def get_compute_metrics(self, model: TransformerBase):
-        def compute_metrics(eval_preds: EvalPrediction) -> Dict[str, Any]:
-            return dict()
+        # def compute_metrics(eval_preds: EvalPrediction) -> Dict[str, Any]:
+        #     return dict()
 
-        return compute_metrics
+        return None
 
     def train(self) -> None:
         experiment_exists = exists(self.output_dir)
