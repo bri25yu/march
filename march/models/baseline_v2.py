@@ -28,7 +28,6 @@ HalfD = TensorType["D/2"]
 L = TensorType["L"]
 LHalfD = TensorType["L", "D/2"]
 LD = TensorType["L", "2D"]
-_1L1D = TensorType["1", "L", "1", "D"]  # names in Python cannot start with a number
 NL = TensorType["N", "L"]
 NLD = TensorType["N", "L", "D"]
 NLL = TensorType["N", "L", "L"]
@@ -78,15 +77,16 @@ class Linear(TransformerComponentBase):
 
 
 @script
-def apply_rotary_pos_emb(embeds: NLHDkv, cos: _1L1D, sin: _1L1D) -> NLHDkv:
+def apply_rotary_pos_emb(embeds, cos, sin):
+    # embeds is NLHDkv, cos and sin are 1L1D. output is NLHDkv
     # Handle a possible sequence length mismatch in between q and k
     L = embeds.size(1)
-    cos: _1L1D = cos[:, :L, :, :]
-    sin: _1L1D = sin[:, :L, :, :]
+    cos = cos[:, :L, :, :]
+    sin = sin[:, :L, :, :]
 
-    # left_half and right_half are NLHalfD
+    # left_half and right_half are NLHHalfDkv. embeds_half_rotated is NLHDkv
     left_half, right_half = embeds.chunk(2, dim=3)  # In the D dimension
-    embeds_half_rotated: NLD = cat((-right_half, left_half), dim=3)
+    embeds_half_rotated = cat((-right_half, left_half), dim=3)
 
     return embeds * cos + embeds_half_rotated * sin
 
@@ -107,7 +107,7 @@ class RotaryEmbedding(TransformerComponentBase):
         freqs: LHalfD = outer(t, self.inv_freq)
         emb: LD = cat((freqs, freqs), dim=-1)
 
-        # sin and cos cached are _1L1D
+        # sin and cos cached are 1L1D
         self.register_buffer("sin_cached", emb.sin()[None, :, None, :], persistent=False)
         self.register_buffer("cos_cached", emb.cos()[None, :, None, :], persistent=False)
 
