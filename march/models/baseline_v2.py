@@ -96,7 +96,7 @@ class RotaryEmbedding(TransformerComponentBase):
     def __init__(self, config: BaselineV2Config) -> None:
         super().__init__(config)
 
-        inv_freq: HalfD = 1.0 / (10000 ** (arange(0, config.dim_model, 2, dtype=config.dtype) / config.dim_model))
+        inv_freq: HalfD = 1.0 / (10000 ** (arange(0, config.dim_qkv, 2, dtype=config.dtype) / config.dim_qkv))
         self.register_buffer("inv_freq", inv_freq)
         self.initialize_cos_sin_tables(config.max_length)
 
@@ -135,7 +135,7 @@ class BaselineV2Attention(TransformerComponentBase):
         self.w_k = Linear(config, D, HDkv)
         self.w_v = Linear(config, D, HDkv)
         self.w_o = Linear(config, HDkv, D)
-        self.rotary_emb = RotaryEmbedding(config.dim_qkv)
+        self.rotary_emb = RotaryEmbedding(config)
 
     def forward(self, embeds: NLD, encoder_embeds: Optional[NLD] = None) -> NLD:
         config = self.config
