@@ -23,7 +23,7 @@ from march.models.utils import LayerNorm, TransformerComponentBase
 NL = TensorType["N", "L"]
 NLD = TensorType["N", "L", "D"]
 NLL = TensorType["N", "L", "L"]
-N1LL = TensorType["N", "1", "L_q", "L_k"]
+NHLL = TensorType["N", "H", "L_q", "L_k"]
 NLHDkv = TensorType["N", "L", "H", "Dkv"]
 NHLDkv = TensorType["N", "H", "L", "Dkv"]
 
@@ -80,7 +80,7 @@ class BaselineV2Attention(TransformerComponentBase):
         self.rotary_emb = RotaryEmbedding(config.dim_qkv)
 
     def forward(
-        self, embeds: NLD, attention_mask: N1LL, encoder_embeds: Optional[NLD] = None
+        self, embeds: NLD, attention_mask: NHLL, encoder_embeds: Optional[NLD] = None
     ) -> NLD:
         config = self.config
         N, L_q, D = embeds.size()
@@ -152,9 +152,9 @@ class BaselineV2EncoderDecoder(TransformerComponentBase):
     def forward(
         self,
         embeds: NLD,
-        mask: N1LL,
+        mask: NHLL,
         encoder_embeds: Optional[NLD] = None,
-        encoder_mask: Optional[N1LL] = None,
+        encoder_mask: Optional[NHLL] = None,
     ) -> NLD:
         for layer in self.layers:
             embeds = embeds + layer.selfattn(layer.selfattn_ln(embeds), mask)
@@ -189,8 +189,9 @@ class BaselineV2Transformer(TransformerComponentBase):
         labels: NL,
     ) -> Seq2SeqLMOutput:
         config = self.config
+        H = config.num_heads
 
-        def convert_attention_mask(mask: Union[NL, NLL]) -> N1LL:
+        def convert_attention_mask(mask: Union[NL, NLL]) -> NHLL:
             N, L_k = mask.size(0), mask.size(-1)
             if mask.dim() == 2:
                 L_q = L_k
@@ -199,14 +200,14 @@ class BaselineV2Transformer(TransformerComponentBase):
                 L_q = mask.size(1)
                 mask = mask.view(N, 1, L_q, L_k)
 
-            return mask.to(config.dtype) * finfo(config.dtype).min
+            return mask.repeat(1, H, 1, 1).to(config.dtype) * finfo(config.dtype).min
 
-        encoder_mask: N1LL = convert_attention_mask(attention_mask)
+        encoder_mask: NHLL = convert_attention_mask(attention_mask)
         encoder_embeds: NLD = self.encoder(
             embedding(self.embedding.weight, input_ids), encoder_mask
         )
 
-        decoder_mask: N1LL = convert_attention_mask(decoder_attention_mask)
+        decoder_mask: NHLL = convert_attention_mask(decoder_attention_mask)
         decoder_embeds: NLD = embedding(self.embedding.weight, decoder_input_ids)
         decoder_embeds: NLD = self.decoder(
             decoder_embeds, decoder_mask, encoder_embeds, encoder_mask
