@@ -151,4 +151,4 @@ class BatchExperimentResults(dict):
 if __name__ == "__main__":
     print("Check runs.txt!")
     exp_results = BatchExperimentResults.from_available_experiments()
-    exp_results.get_summary()
+    exp_results.write_summary()
