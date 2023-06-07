@@ -20,7 +20,6 @@ from torch.utils.data import Sampler
 
 from transformers.utils.import_utils import is_torch_bf16_gpu_available
 from transformers.integrations import TensorBoardCallback, rewrite_logs
-from transformers.trainer_utils import EvalPrediction
 from transformers import (
     DataCollatorForSeq2Seq,
     PreTrainedTokenizerFast,
@@ -230,7 +229,7 @@ class ExperimentBase(ABC):
 
         return args_dict
 
-    def load_default_tokenizer(self) -> PreTrainedTokenizerFast:
+    def load_tokenizer(self) -> PreTrainedTokenizerFast:
         return load_c4_tokenizer()
 
     def load_dataset_dict(self, args: Seq2SeqTrainingArguments) -> DatasetDict:
@@ -303,7 +302,7 @@ class ExperimentBase(ABC):
         set_torch_seed(training_arguments.seed)
 
         with training_arguments.main_process_first():
-            tokenizer = self.load_default_tokenizer()
+            tokenizer = self.load_tokenizer()
             dataset_dict = self.load_dataset_dict(training_arguments)
             self._validate_dataset_dict(dataset_dict)
             model = self.get_model()
