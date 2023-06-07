@@ -1,31 +1,40 @@
-from typing import Optional, Union
+from typing import Tuple, Optional
 from torchtyping import TensorType
 
 from dataclasses import dataclass
 
-from torch import bfloat16, embedding, empty, finfo, float32
+from torch import arange, bfloat16, cat, embedding, empty, float32, outer
 from torch.nn import Module, ModuleList, Parameter
 from torch.nn.functional import cross_entropy, linear
+from torch.jit import script
 
-from xformers.components.positional_embedding import RotaryEmbedding
-from xformers.ops import memory_efficient_attention, swiglu, unbind
+from xformers.ops import LowerTriangularMask, memory_efficient_attention, swiglu, unbind
 
 from transformers.utils.import_utils import is_torch_bf16_gpu_available
 from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
 from transformers.modeling_outputs import Seq2SeqLMOutput
 from transformers import PretrainedConfig
 
-from march.datasets.c4 import VOCAB_SIZE
+from apex.normalization import FusedRMSNorm
+ALL_LAYERNORM_LAYERS.append(FusedRMSNorm)
 
-from march.models.utils import LayerNorm, TransformerComponentBase
+from march.datasets.c4 import MAX_LENGTH, VOCAB_SIZE
+
+from march.models.utils import TransformerComponentBase
 
 
+D = TensorType["D"]
+HalfD = TensorType["D/2"]
+L = TensorType["L"]
+LHalfD = TensorType["L", "D/2"]
+LD = TensorType["L", "2D"]
+_1L1D = TensorType["1", "L", "1", "D"]  # names in Python cannot start with a number
 NL = TensorType["N", "L"]
 NLD = TensorType["N", "L", "D"]
+NLHalfD = TensorType["N", "L", "D/2"]
 NLL = TensorType["N", "L", "L"]
 NHLL = TensorType["N", "H", "L_q", "L_k"]
 NLHDkv = TensorType["N", "L", "H", "Dkv"]
-NHLDkv = TensorType["N", "H", "L", "Dkv"]
 
 
 @dataclass
@@ -38,6 +47,7 @@ class BaselineV2Config(PretrainedConfig):
 
     vocab_size: int = VOCAB_SIZE
     dtype = bfloat16 if is_torch_bf16_gpu_available() else float32
+    max_length: int = MAX_LENGTH
 
     def __post_init__(self) -> None:
         assert (
@@ -68,9 +78,59 @@ class Linear(TransformerComponentBase):
         return linear(embeds, self.weight)
 
 
-class BaselineV2Attention(TransformerComponentBase):
+@script
+def apply_rotary_pos_emb(embeds: NLHDkv, cos: _1L1D, sin: _1L1D) -> NLHDkv:
+    # Handle a possible sequence length mismatch in between q and k
+    L = embeds.size(1)
+    cos = cos[:, :L, :, :]
+    sin = sin[:, :L, :, :]
+
+    left_half: NLHalfD
+    right_half: NLHalfD
+    left_half, right_half = embeds.chunk(2, dim=3)  # In the D dimension
+    embeds_half_rotated: NLD = cat((-right_half, left_half), dim=3)
+
+    return embeds * cos + embeds_half_rotated * sin
+
+
+# Copied and reformatted from xformers
+class RotaryEmbedding(TransformerComponentBase):
     def __init__(self, config: BaselineV2Config) -> None:
         super().__init__(config)
+
+        inv_freq: HalfD = 1.0 / (10000 ** (arange(0, config.dim_model, 2, dtype=config.dtype) / config.dim_model))
+        self.register_buffer("inv_freq", inv_freq)
+        self.initialize_cos_sin_tables(config.max_length)
+
+    def initialize_cos_sin_tables(self, seq_len: int) -> None:
+        dtype = self.config.dtype
+
+        t: L = arange(seq_len, dtype=dtype)
+        freqs: LHalfD = outer(t, self.inv_freq)
+        emb: LD = cat((freqs, freqs), dim=-1)
+
+        # sin and cos cached are _1L1D
+        self.register_buffer("sin_cached", emb.sin()[None, :, None, :], persistent=False)
+        self.register_buffer("cos_cached", emb.cos()[None, :, None, :], persistent=False)
+
+    def forward(self, query: NLHDkv, key: NLHDkv) -> Tuple[NLHDkv, NLHDkv]:
+        max_length = self.config.max_length
+        L_q, L_k = query.size(1), key.size(1)
+
+        if L_q > max_length or L_k > max_length:
+            self.initialize_cos_sin_tables(max(L_q, L_k))
+
+        return (
+            apply_rotary_pos_emb(query, self.cos_cached, self.sin_cached),
+            apply_rotary_pos_emb(key, self.cos_cached, self.sin_cached),
+        )
+
+
+class BaselineV2Attention(TransformerComponentBase):
+    def __init__(self, config: BaselineV2Config, is_causal: bool=False) -> None:
+        super().__init__(config)
+
+        self.attn_bias = LowerTriangularMask() if is_causal else None
 
         D, HDkv = config.dim_model, config.num_heads * config.dim_qkv
         self.w_q = Linear(config, D, HDkv)
@@ -79,26 +139,27 @@ class BaselineV2Attention(TransformerComponentBase):
         self.w_o = Linear(config, HDkv, D)
         self.rotary_emb = RotaryEmbedding(config.dim_qkv)
 
-    def forward(
-        self, embeds: NLD, attention_mask: NHLL, encoder_embeds: Optional[NLD] = None
-    ) -> NLD:
+    def forward(self, embeds: NLD, encoder_embeds: Optional[NLD] = None) -> NLD:
         config = self.config
         N, L_q, D = embeds.size()
-        L_k = encoder_embeds.size(1) if encoder_embeds is not None else L_q
         H, Dkv = config.num_heads, config.dim_qkv
 
-        key_value_embeds = encoder_embeds if encoder_embeds is not None else embeds
-        query: NHLDkv = self.w_q(embeds).view(N, L_q, H, Dkv).transpose(1, 2)
-        key: NHLDkv = self.w_k(key_value_embeds).view(N, L_k, H, Dkv).transpose(1, 2)
-        query, key = self.rotary_emb(query, key)
-        query: NLHDkv = query.transpose(1, 2)
-        key: NLHDkv = key.transpose(1, 2)
+        if encoder_embeds is not None:  # cross attention
+            L_k = encoder_embeds.size(1)
+            key_value_embeds = encoder_embeds
+        else:  # self attention
+            L_k = L_q
+            key_value_embeds = embeds
+
+        query: NLHDkv = self.w_q(embeds).view(N, L_q, H, Dkv)
+        key: NLHDkv = self.w_k(key_value_embeds).view(N, L_k, H, Dkv)
         value: NLHDkv = self.w_v(key_value_embeds).view(N, L_k, H, Dkv)
 
-        attention_values: NLHDkv = memory_efficient_attention(query, key, value, attention_mask)
+        query, key = self.rotary_emb(query, key)
+
+        attention_values: NLHDkv = memory_efficient_attention(query, key, value, self.attn_bias)
 
         attention_output: NLD = self.w_o(attention_values.reshape(N, L_q, D))
-
         return attention_output
 
 
@@ -127,20 +188,13 @@ class BaselineV2EncoderDecoder(TransformerComponentBase):
 
         attn_cls = self.ATTENTION_CLS
         ff_cls = self.FEEDFORWARD_CLS
-
-        try:
-            from apex.normalization import FusedRMSNorm
-
-            ALL_LAYERNORM_LAYERS.append(FusedRMSNorm)
-            layernorm_fn = lambda: FusedRMSNorm(config.dim_model, eps=1e-6)
-        except ImportError:
-            layernorm_fn = lambda: LayerNorm(config)
+        layernorm_fn = lambda: FusedRMSNorm(config.dim_model, eps=1e-6)
 
         self.layers = ModuleList()
         for _ in range(config.num_decoder_layers):
             self.layers.append(layer := Module())
 
-            layer.selfattn_ln, layer.selfattn = layernorm_fn(), attn_cls(config)
+            layer.selfattn_ln, layer.selfattn = layernorm_fn(), attn_cls(config, is_causal=is_decoder)
 
             if is_decoder:
                 layer.crossattn_ln, layer.crossattn = layernorm_fn(), attn_cls(config)
@@ -149,20 +203,12 @@ class BaselineV2EncoderDecoder(TransformerComponentBase):
 
         self.final_layernorm = layernorm_fn()
 
-    def forward(
-        self,
-        embeds: NLD,
-        mask: NHLL,
-        encoder_embeds: Optional[NLD] = None,
-        encoder_mask: Optional[NHLL] = None,
-    ) -> NLD:
+    def forward(self, embeds: NLD, encoder_embeds: Optional[NLD] = None) -> NLD:
         for layer in self.layers:
-            embeds = embeds + layer.selfattn(layer.selfattn_ln(embeds), mask)
+            embeds = embeds + layer.selfattn(layer.selfattn_ln(embeds))
 
             if self.is_decoder:
-                embeds = embeds + layer.crossattn(
-                    layer.crossattn_ln(embeds), encoder_mask, encoder_embeds
-                )
+                embeds = embeds + layer.crossattn(layer.crossattn_ln(embeds), encoder_embeds)
 
             embeds = embeds + layer.ff(layer.ff_ln(embeds))
 
@@ -180,38 +226,13 @@ class BaselineV2Transformer(TransformerComponentBase):
         self.encoder = self.ENCODERDECODER_CLS(config, is_decoder=False)
         self.decoder = self.ENCODERDECODER_CLS(config, is_decoder=True)
 
-    def forward(
-        self,
-        input_ids: NL,  # encoder input ids
-        attention_mask: NL,  # encoder attention mask
-        decoder_input_ids: NL,
-        decoder_attention_mask: NLL,
-        labels: NL,
-    ) -> Seq2SeqLMOutput:
+    def forward(self, input_ids: NL, decoder_input_ids: NL, labels: NL) -> Seq2SeqLMOutput:
         config = self.config
-        H = config.num_heads
 
-        def convert_attention_mask(mask: Union[NL, NLL]) -> NHLL:
-            N, L_k = mask.size(0), mask.size(-1)
-            if mask.dim() == 2:
-                L_q = L_k
-                mask = mask.view(N, 1, 1, L_k).repeat(1, 1, L_q, 1)
-            else:
-                L_q = mask.size(1)
-                mask = mask.view(N, 1, L_q, L_k)
+        encoder_embeds: NLD = self.encoder(embedding(self.embedding.weight, input_ids))
 
-            return mask.repeat(1, H, 1, 1).to(config.dtype) * finfo(config.dtype).min
-
-        encoder_mask: NHLL = convert_attention_mask(attention_mask)
-        encoder_embeds: NLD = self.encoder(
-            embedding(self.embedding.weight, input_ids), encoder_mask
-        )
-
-        decoder_mask: NHLL = convert_attention_mask(decoder_attention_mask)
         decoder_embeds: NLD = embedding(self.embedding.weight, decoder_input_ids)
-        decoder_embeds: NLD = self.decoder(
-            decoder_embeds, decoder_mask, encoder_embeds, encoder_mask
-        )
+        decoder_embeds: NLD = self.decoder(decoder_embeds, encoder_embeds)
 
         logits: NLD = self.embedding(decoder_embeds * (config.dim_model**-0.5))
 
