@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 from torchtyping import TensorType
 
 from dataclasses import dataclass
@@ -190,9 +190,9 @@ class BaselineV2Transformer(TransformerComponentBase):
     ) -> Seq2SeqLMOutput:
         config = self.config
 
-        def convert_attention_mask(mask) -> N1LL:
+        def convert_attention_mask(mask: Union[NL, NLL]) -> N1LL:
             N, L_k = mask.size(0), mask.size(-1)
-            if mask.dim == 2:
+            if mask.dim() == 2:
                 L_q = L_k
                 mask = mask.view(N, 1, 1, L_k).repeat(1, 1, L_q, 1)
             else:
