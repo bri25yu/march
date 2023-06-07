@@ -24,6 +24,7 @@ NL = TensorType["N", "L"]
 NLD = TensorType["N", "L", "D"]
 NLL = TensorType["N", "L", "L"]
 NL1L = TensorType["N", "L", "1", "L"]
+NLHDkv = TensorType["N", "L", "H", "Dkv"]
 NHLDkv = TensorType["N", "H", "L", "Dkv"]
 
 
@@ -85,24 +86,17 @@ class BaselineV2Attention(TransformerComponentBase):
         N, L, D = embeds.size()
         H, Dkv = config.num_heads, config.dim_qkv
 
-        def to_heads(embeds: NLD) -> NHLDkv:  # Use view to use the same underlying data
-            return embeds.view(N, L, H, Dkv)
-
-        def from_heads(
-            embeds: NHLDkv,
-        ) -> NLD:  # Use reshape to use different underlying data
-            return embeds.reshape(N, L, D)
-
         key_value_embeds = encoder_embeds if encoder_embeds is not None else embeds
-        query: NHLDkv = to_heads(self.w_q(embeds))
-        key: NHLDkv = to_heads(self.w_k(key_value_embeds))
-        value: NHLDkv = to_heads(self.w_v(key_value_embeds))
-
+        query: NHLDkv = self.w_q(embeds).view(N, L, H, Dkv).transpose(1, 2)
+        key: NHLDkv = self.w_k(key_value_embeds).view(N, L, H, Dkv).transpose(1, 2)
         query, key = self.rotary_emb(query, key)
+        query: NLHDkv = query.transpose(1, 2)
+        key: NLHDkv = key.transpose(1, 2)
+        value: NLHDkv = self.w_v(key_value_embeds).view(N, L, H, Dkv)
 
-        attention_values: NHLDkv = memory_efficient_attention(query, key, value, attention_mask)
+        attention_values: NLHDkv = memory_efficient_attention(query, key, value, attention_mask)
 
-        attention_output: NLD = self.w_o(from_heads(attention_values))
+        attention_output: NLD = self.w_o(attention_values.reshape(N, L, D))
 
         return attention_output
 
