@@ -1,7 +1,3 @@
-from os.path import join
-
-import json
-
 from torch import manual_seed as set_torch_seed, triu, ones, cat, zeros
 
 from transformers import (
@@ -12,7 +8,6 @@ from transformers import (
     AutoConfig,
 )
 
-from march import CONFIG_DIR
 from march.models.baseline import (
     TransformerBase,
     BaselineTransformer,
@@ -96,21 +91,7 @@ class BaselineLargeExperiment(BaselineExperiment):
 
 
 class BaselineSmallFullTrainExperiment(BaselineExperiment):
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-
-        self.resume_from_checkpoint = True
-
-    def get_training_arguments(self) -> Seq2SeqTrainingArguments:
-        args_dict = self.load_default_training_arguments()
-        with open(
-            join(CONFIG_DIR, "full_train_training_arguments.json")
-        ) as full_train_training_args_file:
-            full_train_args_dict = json.load(full_train_training_args_file)
-
-        args_dict.update(full_train_args_dict)
-
-        return Seq2SeqTrainingArguments(**args_dict)
+    NUM_STEPS = 100_000
 
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(
