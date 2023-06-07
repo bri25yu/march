@@ -25,7 +25,7 @@ RESULTS_DIRS = [
     join(ROOT_DIR, "..", "archived_results"),
     join(ROOT_DIR, "..", "results"),
 ]
-
+WRITE_FILE = join(ROOT_DIR, "..", "runs.txt")
 
 class ExperimentResult(OrderedDict):
     def __init__(
@@ -137,17 +137,18 @@ class BatchExperimentResults(dict):
 
         return available_exp_results
 
-    def get_summary(self) -> DataFrame:
+    def write_summary(self) -> DataFrame:
         df = DataFrame.from_dict(list(map(lambda v: v.get_summary(), self.values())))
         df = df.set_index("Experiment name")
 
         df_str = df.to_string() + "\n"
-        with open(join(ROOT_DIR, "..", "runs.txt"), "w") as f:
+        with open(WRITE_FILE, "w") as f:
             f.write(df_str)
-        print(df_str)
 
         return df
 
 
-exp_results = BatchExperimentResults.from_available_experiments()
-exp_results.get_summary()
+if __name__ == "__main__":
+    print("Check runs.txt!")
+    exp_results = BatchExperimentResults.from_available_experiments()
+    exp_results.get_summary()
