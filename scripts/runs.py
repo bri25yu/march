@@ -97,6 +97,15 @@ class ExperimentResult(OrderedDict):
         if self.is_finished():
             return "Finished"
 
+        diff = timedelta(seconds=self.get_seconds_left())
+        hours, rem = divmod(diff.seconds, 3600)
+        minutes, _ = divmod(rem, 60)
+
+        return (f"{diff.days}d " if diff.days else "") + f"{hours:02}hr {minutes:02}min"
+
+    def get_seconds_left(self) -> float:
+        if self.is_finished(): return float("inf")  # For sorting purposes
+
         first_scalarevent = self[min(self)]
         last_scalarevent = self[max(self)]
         steps_run = last_scalarevent.step - first_scalarevent.step
@@ -105,11 +114,7 @@ class ExperimentResult(OrderedDict):
         steps_left = self.total_steps - steps_run
         seconds_left = steps_left * seconds_per_step
 
-        diff = timedelta(seconds=seconds_left)
-        hours, rem = divmod(diff.seconds, 3600)
-        minutes, _ = divmod(rem, 60)
-
-        return (f"{diff.days}d " if diff.days else "") + f"{hours:02}hr {minutes:02}min"
+        return seconds_left
 
     def get_summary(self) -> Dict[str, str]:
         get_loss = lambda step: f"{self[step].value:.3f}" if step in self else ""
@@ -117,6 +122,7 @@ class ExperimentResult(OrderedDict):
             "Experiment name": self.name,
             "Node": self.hostname,
             "Step": str(max(self)),
+            "Seconds left": self.get_seconds_left(),
             "Time left": self.time_left(),
             "Loss at 1k": get_loss(1_000),
             "Loss at 5k": get_loss(5_000),
@@ -140,6 +146,9 @@ class BatchExperimentResults(dict):
     def write_summary(self) -> DataFrame:
         df = DataFrame.from_dict(list(map(lambda v: v.get_summary(), self.values())))
         df = df.set_index("Experiment name")
+
+        df = df.sort_values(by=["Seconds left", "Loss at 15k"], ascending=[True, True])
+        df = df.drop(columns="Seconds left")
 
         df_str = df.to_string() + "\n"
         with open(WRITE_FILE, "w") as f:
