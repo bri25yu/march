@@ -31,7 +31,6 @@ LD = TensorType["L", "2D"]
 _1L1D = TensorType["1", "L", "1", "D"]  # names in Python cannot start with a number
 NL = TensorType["N", "L"]
 NLD = TensorType["N", "L", "D"]
-NLHalfD = TensorType["N", "L", "D/2"]
 NLL = TensorType["N", "L", "L"]
 NHLL = TensorType["N", "H", "L_q", "L_k"]
 NLHDkv = TensorType["N", "L", "H", "Dkv"]
@@ -82,11 +81,10 @@ class Linear(TransformerComponentBase):
 def apply_rotary_pos_emb(embeds: NLHDkv, cos: _1L1D, sin: _1L1D) -> NLHDkv:
     # Handle a possible sequence length mismatch in between q and k
     L = embeds.size(1)
-    cos = cos[:, :L, :, :]
-    sin = sin[:, :L, :, :]
+    cos: _1L1D = cos[:, :L, :, :]
+    sin: _1L1D = sin[:, :L, :, :]
 
-    left_half: NLHalfD
-    right_half: NLHalfD
+    # left_half and right_half are NLHalfD
     left_half, right_half = embeds.chunk(2, dim=3)  # In the D dimension
     embeds_half_rotated: NLD = cat((-right_half, left_half), dim=3)
 
