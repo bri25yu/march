@@ -23,7 +23,7 @@ from march.models.utils import LayerNorm, TransformerComponentBase
 NL = TensorType["N", "L"]
 NLD = TensorType["N", "L", "D"]
 NLL = TensorType["N", "L", "L"]
-NL1L = TensorType["N", "L", "1", "L"]
+N1LL = TensorType["N", "1", "L_q", "L_k"]
 NLHDkv = TensorType["N", "L", "H", "Dkv"]
 NHLDkv = TensorType["N", "H", "L", "Dkv"]
 
@@ -80,23 +80,24 @@ class BaselineV2Attention(TransformerComponentBase):
         self.rotary_emb = RotaryEmbedding(config.dim_qkv)
 
     def forward(
-        self, embeds: NLD, attention_mask: NL1L, encoder_embeds: Optional[NLD] = None
+        self, embeds: NLD, attention_mask: N1LL, encoder_embeds: Optional[NLD] = None
     ) -> NLD:
         config = self.config
-        N, L, D = embeds.size()
+        N, L_q, D = embeds.size()
+        L_k = encoder_embeds.size(1) if encoder_embeds is not None else L_q
         H, Dkv = config.num_heads, config.dim_qkv
 
         key_value_embeds = encoder_embeds if encoder_embeds is not None else embeds
-        query: NHLDkv = self.w_q(embeds).view(N, L, H, Dkv).transpose(1, 2)
-        key: NHLDkv = self.w_k(key_value_embeds).view(N, L, H, Dkv).transpose(1, 2)
+        query: NHLDkv = self.w_q(embeds).view(N, L_q, H, Dkv).transpose(1, 2)
+        key: NHLDkv = self.w_k(key_value_embeds).view(N, L_k, H, Dkv).transpose(1, 2)
         query, key = self.rotary_emb(query, key)
         query: NLHDkv = query.transpose(1, 2)
         key: NLHDkv = key.transpose(1, 2)
-        value: NLHDkv = self.w_v(key_value_embeds).view(N, L, H, Dkv)
+        value: NLHDkv = self.w_v(key_value_embeds).view(N, L_k, H, Dkv)
 
         attention_values: NLHDkv = memory_efficient_attention(query, key, value, attention_mask)
 
-        attention_output: NLD = self.w_o(attention_values.reshape(N, L, D))
+        attention_output: NLD = self.w_o(attention_values.reshape(N, L_q, D))
 
         return attention_output
 
@@ -151,9 +152,9 @@ class BaselineV2EncoderDecoder(TransformerComponentBase):
     def forward(
         self,
         embeds: NLD,
-        mask: NL1L,
+        mask: N1LL,
         encoder_embeds: Optional[NLD] = None,
-        encoder_mask: Optional[NL1L] = None,
+        encoder_mask: Optional[N1LL] = None,
     ) -> NLD:
         for layer in self.layers:
             embeds = embeds + layer.selfattn(layer.selfattn_ln(embeds), mask)
@@ -189,17 +190,23 @@ class BaselineV2Transformer(TransformerComponentBase):
     ) -> Seq2SeqLMOutput:
         config = self.config
 
-        N, L = input_ids.size()
+        def convert_attention_mask(mask) -> N1LL:
+            N, L_k = mask.size(0), mask.size(-1)
+            if mask.dim == 2:
+                L_q = L_k
+                mask = mask.view(N, 1, 1, L_k).repeat(1, 1, L_q, 1)
+            else:
+                L_q = mask.size(1)
+                mask = mask.view(N, 1, L_q, L_k)
 
-        def convert_attention_mask(mask) -> NL1L:
-            return mask.view(N, -1, 1, L).to(config.dtype) * finfo(config.dtype).min
+            return mask.to(config.dtype) * finfo(config.dtype).min
 
-        encoder_mask: NL1L = convert_attention_mask(attention_mask)
+        encoder_mask: N1LL = convert_attention_mask(attention_mask)
         encoder_embeds: NLD = self.encoder(
             embedding(self.embedding.weight, input_ids), encoder_mask
         )
 
-        decoder_mask: NL1L = convert_attention_mask(decoder_attention_mask)
+        decoder_mask: N1LL = convert_attention_mask(decoder_attention_mask)
         decoder_embeds: NLD = embedding(self.embedding.weight, decoder_input_ids)
         decoder_embeds: NLD = self.decoder(
             decoder_embeds, decoder_mask, encoder_embeds, encoder_mask
