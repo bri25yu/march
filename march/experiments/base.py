@@ -227,6 +227,9 @@ class ExperimentBase(ABC):
         args_dict["output_dir"] = self.output_dir
         args_dict["logging_dir"] = self.output_dir
 
+        # Overwrite output dir if we want to resume from checkpoint
+        args_dict["overwrite_output_dir"] = self.resume_from_checkpoint
+
         return args_dict
 
     def load_tokenizer(self) -> PreTrainedTokenizerFast:
