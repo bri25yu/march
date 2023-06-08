@@ -295,6 +295,10 @@ class ExperimentBase(ABC):
             )
             return
 
+        if not experiment_exists and self.resume_from_checkpoint:
+            print("Setting resume_from_checkpoint to false because the experiment does not exist")
+            self.resume_from_checkpoint = False
+
         training_arguments = self.get_training_arguments()
         if not self.can_train:
             raise ValueError(
