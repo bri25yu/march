@@ -91,7 +91,7 @@ class BaselineLargeExperiment(BaselineExperiment):
 
 
 class BaselineSmallFullTrainExperiment(BaselineExperiment):
-    NUM_STEPS = 100_000
+    NUM_STEPS = 150_000
 
     def get_model(self) -> TransformerBase:
         config = TransformerConfig(
