@@ -1,13 +1,15 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
-from os import environ, listdir
+from os import listdir
 from os.path import abspath, dirname, exists, isdir, join
+
+from argparse import ArgumentParser
 
 from tqdm.auto import tqdm
 
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-from numpy import array
+from numpy import array, isin
 
 from pandas import DataFrame
 
@@ -25,7 +27,7 @@ from march.visualization.compute_scaling_law import ScalingLawForCompute
 __all__ = ["plot_comparative_experiment"]
 
 
-ROOT_DIR = join(dirname(abspath(__file__)), "..")
+ROOT_DIR = join(dirname(abspath(__file__)), "..", "..")
 RESULTS_DIRS = [join(ROOT_DIR, "archived_results"), join(ROOT_DIR, "results")]
 VISUALIZATION_OUTPUT_DIR = join(ROOT_DIR, "readme_resources")
 
@@ -74,47 +76,45 @@ def plot_comparative_experiment(
     legend_labels: List[str],
     title: str,
     save_name: str,
+    max_steps: Optional[int]=None,
 ) -> None:
     y_labels = [
-        "Train set loss",
-        "Validation set loss",
-        "Predicted validation set loss",
-        "Predicted validation set perplexity",
+        "Train loss",
+        "Extrapolated train loss",
     ]
     ax_titles = [
-        "Training loss curves over the 1000 step budget",
-        "Validation loss curves over the 1000 step budget",
-        "Validation loss curves fit to a scaling law",
-        "Extrapolated validation perplexity over 1M step budget",
+        "Train loss curves over 15k steps",
+        "Extrapolated train loss over 1M step budget",
     ]
 
     if not save_name.endswith(".pdf"):
         save_name += ".pdf"
     save_path = join(VISUALIZATION_OUTPUT_DIR, save_name)
-    overwrite_existing = environ.get("OVERWRITE_EXISTING", None) == "true"
-    if not overwrite_existing and exists(save_path):
+
+    parser = ArgumentParser()
+    parser.add_argument("--overwrite_existing", action="store_true")
+    args = parser.parse_args()
+
+    if not args.overwrite_existing and exists(save_path):
         print(f"Already have a graph at {save_path}")
         return
 
-    rows, cols = 5, 4
+    rows, cols = 3, 4
     mosaic = [
-        ["train_loss_ax", "val_loss_ax"],
-        ["train_loss_ax", "val_loss_ax"],
-        ["scale_steps_ax", "scale_all_ax"],
-        ["scale_steps_ax", "scale_all_ax"],
+        ["train_loss_ax", "scale_all_ax"],
+        ["train_loss_ax", "scale_all_ax"],
         ["table_ax", "table_ax"],
     ]
     fig, axs_dict = subplot_mosaic(mosaic, figsize=(5 * cols, 4 * rows))
     train_loss_ax = axs_dict["train_loss_ax"]
-    val_loss_ax = axs_dict["val_loss_ax"]
-    scaling_law_steps_ax = axs_dict["scale_steps_ax"]
     scaling_law_all_ax = axs_dict["scale_all_ax"]
     table_ax = axs_dict["table_ax"]
-    axs = [train_loss_ax, val_loss_ax, scaling_law_steps_ax, scaling_law_all_ax]
+    axs = [train_loss_ax, scaling_law_all_ax]
 
     stats_df = DataFrame(
         columns=[
             "Experiment",
+            "# params",
             "Train - eval loss",
             "Scaling law",
             "PPL at 100k",
@@ -130,32 +130,28 @@ def plot_comparative_experiment(
     ):
         experiment_path = EXP_NAMES_TO_PATH[experiment_name]
 
-        num_params = get_property_values(experiment_path, "train/num_params")[1][0]
-        num_params_M = round(num_params / (1e6))  # Assume xxxM params
-        legend_label_full = f"{legend_label} ({num_params_M}M params)"
-
         train_steps, train_losses = get_property_values(experiment_path, "train/loss")
-        train_loss_ax.plot(train_steps, train_losses, label=legend_label_full)
-
-        val_steps, val_losses = get_property_values(experiment_path, "eval/loss")
-        val_loss_ax.plot(val_steps, val_losses, label=legend_label_full)
-        scaling_law_baseline = scaling_law_steps_ax.plot(
-            val_steps, val_losses, label=legend_label_full
-        )[0]
+        in_range = train_steps <= max_steps
+        train_steps = train_steps[in_range]
+        train_losses = train_losses[in_range]
+        train_loss_ax.plot(train_steps, train_losses, label=legend_label)
 
         scaling_law_plotter = ScalingLawForCompute(
-            val_steps, val_losses, legend_label, stats_df
-        )
-        scaling_law_plotter.plot_over_steps(
-            scaling_law_steps_ax, scaling_law_baseline.get_color()
+            train_steps, train_losses, legend_label, stats_df
         )
         scaling_law_plotter.plot_over_all(scaling_law_all_ax)
 
-        train_loss_matched = train_losses[
-            val_steps - 1
-        ]  # Steps is 1 indexed, train_losses is 0 indexed
-        diff_mean = (train_loss_matched - val_losses).mean()
+        eval_steps, eval_losses = get_property_values(experiment_path, "eval/loss")
+        train_steps_matched = isin(train_steps, eval_steps, assume_unique=True)
+        eval_steps_matched = isin(eval_steps, train_steps, assume_unique=True)
+        train_loss_matched = train_losses[train_steps_matched]
+        eval_loss_matched = eval_losses[eval_steps_matched]
+        diff_mean = (train_loss_matched - eval_loss_matched).mean()
         stats_df.at[len(stats_df.index) - 1, "Train - eval loss"] = f"{diff_mean:.3f}"
+
+        num_params = get_property_values(experiment_path, "num_params")[1][0]
+        num_params_M = f"{round(num_params / (1e6))}M"  # Assume xxxM params
+        stats_df.at[len(stats_df.index) - 1, "# params"] = num_params_M
 
     for y_label, ax_title, ax in zip(y_labels, ax_titles, axs):
         ax.set_ylim(ax.get_ylim()[0], 7.0)
@@ -169,7 +165,7 @@ def plot_comparative_experiment(
     scaling_law_all_ax.set_xlabel("Steps with a log scale")
     scaling_law_all_ax.xaxis.set_major_formatter(steps_log_scale_formatter)
 
-    x_margin = 0.1
+    x_margin = 0.0
     table = table_ax.table(
         cellText=stats_df.values,
         cellLoc="center",
@@ -180,14 +176,12 @@ def plot_comparative_experiment(
     table_ax.set_title("Scaling law fit details and perplexity (PPL) predictions")
     table.auto_set_font_size(False)
     table.set_fontsize(FONT_SIZE + 4)
-    table.auto_set_column_width(col=list(range(len(stats_df.index))))
-
-    cells = table.properties()["celld"]
-    cells[0, 3].set_text_props(ha="left")
 
     for (row, col), cell in table.get_celld().items():
         if row == 0:
             cell.set_text_props(fontproperties=FontProperties(weight="bold"))
+
+    table.auto_set_column_width(col=list(range(len(stats_df.index))))
 
     fig.suptitle(f"{title}\n", fontweight="bold")
     fig.tight_layout()
