@@ -83,3 +83,7 @@ class FCABSLdrop32Experiment(FCABSExperiment):
     def get_model(self) -> TransformerBase:
         config = FCABSTransformerConfig(L_drop=32)
         return FCABSTransformer(config)
+
+
+class TestA25Experiment(BaselineT5Experiment):
+    pass
