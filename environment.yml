@@ -12,3 +12,4 @@ dependencies:
     - -r requirements.txt
     - deepspeed==0.9.1
     - mpi4py==3.1.4
+    - git+https://github.com/NVIDIA/apex -v --disable-pip-version-check --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext"
