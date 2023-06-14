@@ -18,9 +18,14 @@ CACHE_DIR = join(ROOT_DIR, "..", "cache")
 environ["TRANSFORMERS_CACHE"] = CACHE_DIR
 environ["HF_DATASETS_CACHE"] = CACHE_DIR
 
+
+def is_main() -> bool:
+    return int(environ.get("RANK", -1)) <= 0
+
+
 old_print = print  # Override builtin print
 def print_on_main_only(*args, **kwargs):
-    if int(environ.get("RANK", -1)) > 0: return
+    if not is_main(): return
 
     return old_print(*args, **kwargs)
 
@@ -68,5 +73,7 @@ def run(
                 print(
                     f"Lowering batch size by a factor of 2. Original pow scale {original_pow_scale}, current pow scale {batch_size_pow_scale}"
                 )
-            else:
+            elif is_main():
                 raise e
+            else:
+                pass  # Skip error raise on non-main nodes to avoid jumbled prints

@@ -20,6 +20,7 @@ ALL_LAYERNORM_LAYERS.append(FusedRMSNorm)
 if not is_torch_cuda_available():
     from torch.nn import LayerNorm
     FusedRMSNorm = LayerNorm
+    print("Can't use apex FusedRMSNorm. Using torch.nn.LayerNorm")
 
 from march.datasets.c4 import MAX_LENGTH, VOCAB_SIZE
 
