@@ -19,6 +19,11 @@ environ["TRANSFORMERS_CACHE"] = CACHE_DIR
 environ["HF_DATASETS_CACHE"] = CACHE_DIR
 
 
+import datasets
+datasets.logging.set_verbosity_error()
+# Transformers logging level will be controlled by the training arguments
+
+
 def is_main() -> bool:
     return int(environ.get("RANK", -1)) <= 0
 
