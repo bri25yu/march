@@ -10,23 +10,13 @@ environ["TOKENIZERS_PARALLELISM"] = "false"
 
 ROOT_DIR = dirname(abspath(__file__))
 RESULTS_DIR = join(ROOT_DIR, "..", "results")
+EVALUATION_RESULTS_DIR = join(ROOT_DIR, "..", "evaluation_results")
 CONFIG_DIR = join(ROOT_DIR, "config")
 CACHE_DIR = join(ROOT_DIR, "..", "cache")
-RUN_LOG_PATH = join(RESULTS_DIR, "run_logs.pkl")
 
 
 environ["TRANSFORMERS_CACHE"] = CACHE_DIR
 environ["HF_DATASETS_CACHE"] = CACHE_DIR
-
-
-old_print = print
-def print_on_main_only(*args, **kwargs):
-    if int(environ.get("RANK", -1)) > 0: return
-
-    return old_print(*args, **kwargs)
-
-
-__builtins__["print"] = print_on_main_only
 
 
 def run(

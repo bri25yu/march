@@ -1,0 +1,69 @@
+[
+    {
+        "task_name": "wic",
+        "convert_to_label": {
+            "0": "False",
+            "1": "True"
+        },
+        "metric_for_best_model": "accuracy",
+        "prompt": "wic sentence1: {sentence1} sentence2: {sentence2} word: {word}"
+    },
+    {
+        "task_name": "boolq",
+        "convert_to_label": {
+            "0": "False",
+            "1": "True"
+        },
+        "metric_for_best_model": "accuracy",
+        "prompt": "boolq passage: {passage} question: {question}"
+    },
+    {
+        "task_name": "copa",
+        "convert_to_label": {
+            "0": "False",
+            "1": "True"
+        },
+        "metric_for_best_model": "accuracy",
+        "prompt": "copa choice1: {choice1} choice2: {choice2} premise: {premise} question: {question}"
+    },
+    {
+        "task_name": "multirc",
+        "convert_to_label": {
+            "0": "False",
+            "1": "True"
+        },
+        "metric_for_best_model": "f1_a",
+        "prompt": "multirc question: {question} answer: {answer} paragraph: {paragraph}"
+    },
+    {
+        "task_name": "cb",
+        "convert_to_label": {
+            "0": "entailment",
+            "1": "contradiction",
+            "2": "neutral"
+        },
+        "metric_for_best_model": "f1",
+        "prompt": "cb hypothesis: {hypothesis} premise: {premise}"
+    },
+    {
+        "task_name": "rte",
+        "convert_to_label": {
+            "0": "entailment",
+            "1": "not_entailment"
+        },
+        "metric_for_best_model": "accuracy",
+        "prompt": "rte sentence1: {premise} sentence2: {hypothesis}"
+    },
+    {
+        "task_name": "wsc",
+        "convert_to_label": "{span2_text}",
+        "metric_for_best_model": "accuracy",
+        "prompt": "wsc text: {text} word: {span1_text}"
+    },
+    {
+        "task_name": "record",
+        "convert_to_label": "{answers[0]}",
+        "metric_for_best_model": "f1",
+        "prompt": "record passage: {passage} query: {query}"
+    }
+]
