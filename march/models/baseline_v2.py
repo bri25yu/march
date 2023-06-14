@@ -5,18 +5,21 @@ from dataclasses import dataclass
 
 from torch import arange, bfloat16, cat, embedding, empty, float32, outer
 from torch.nn import Module, ModuleList, Parameter
-from torch.nn.functional import cross_entropy, linear
+from torch.nn.functional import cross_entropy, linear, scaled_dot_product_attention
 from torch.jit import script
 
-from xformers.ops import LowerTriangularMask, memory_efficient_attention, swiglu, unbind
+from xformers.ops import swiglu, unbind
 
-from transformers.utils.import_utils import is_torch_bf16_gpu_available
+from transformers.utils.import_utils import is_torch_bf16_gpu_available, is_torch_cuda_available
 from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
 from transformers.modeling_outputs import Seq2SeqLMOutput
 from transformers import PretrainedConfig
 
 from apex.normalization import FusedRMSNorm
 ALL_LAYERNORM_LAYERS.append(FusedRMSNorm)
+if not is_torch_cuda_available():
+    from torch.nn import LayerNorm
+    FusedRMSNorm = LayerNorm
 
 from march.datasets.c4 import MAX_LENGTH, VOCAB_SIZE
 
@@ -30,9 +33,7 @@ LHalfD = TensorType["L", "D/2"]
 LD = TensorType["L", "2D"]
 NL = TensorType["N", "L"]
 NLD = TensorType["N", "L", "D"]
-NLL = TensorType["N", "L", "L"]
-NHLL = TensorType["N", "H", "L_q", "L_k"]
-NLHDkv = TensorType["N", "L", "H", "Dkv"]
+NHLDkv = TensorType["N", "H", "H", "Dkv"]
 
 
 @dataclass
@@ -78,15 +79,17 @@ class Linear(TransformerComponentBase):
 
 @script
 def apply_rotary_pos_emb(embeds, cos, sin):
-    # embeds is NLHDkv, cos and sin are 1L1D. output is NLHDkv
+    # embeds is NHLDkv, cos and sin are 11LD. output is NHLDkv
     # Handle a possible sequence length mismatch in between q and k
-    L = embeds.size(1)
-    cos = cos[:, :L, :, :]
-    sin = sin[:, :L, :, :]
+    L_dim, D_dim = 2, 3
 
-    # left_half and right_half are NLHHalfDkv. embeds_half_rotated is NLHDkv
-    left_half, right_half = embeds.chunk(2, dim=3)  # In the D dimension
-    embeds_half_rotated = cat((-right_half, left_half), dim=3)
+    L = embeds.size(L_dim)
+    cos = cos[:, :, :L, :]
+    sin = sin[:, :, :L, :]
+
+    # left_half and right_half are NHLHalfDkv. embeds_half_rotated is NHLDkv
+    left_half, right_half = embeds.chunk(2, dim=D_dim)  # In the D dimension
+    embeds_half_rotated = cat((-right_half, left_half), dim=D_dim)
 
     return embeds * cos + embeds_half_rotated * sin
 
@@ -107,11 +110,11 @@ class RotaryEmbedding(TransformerComponentBase):
         freqs: LHalfD = outer(t, self.inv_freq)
         emb: LD = cat((freqs, freqs), dim=-1)
 
-        # sin and cos cached are 1L1D
-        self.register_buffer("sin_cached", emb.sin()[None, :, None, :], persistent=False)
-        self.register_buffer("cos_cached", emb.cos()[None, :, None, :], persistent=False)
+        # sin and cos cached are 11LD
+        self.register_buffer("sin_cached", emb.sin()[None, None, :, :], persistent=False)
+        self.register_buffer("cos_cached", emb.cos()[None, None, :, :], persistent=False)
 
-    def forward(self, query: NLHDkv, key: NLHDkv) -> Tuple[NLHDkv, NLHDkv]:
+    def forward(self, query: NHLDkv, key: NHLDkv) -> Tuple[NHLDkv, NHLDkv]:
         max_length = self.config.max_length
         L_q, L_k = query.size(1), key.size(1)
 
@@ -125,17 +128,17 @@ class RotaryEmbedding(TransformerComponentBase):
 
 
 class BaselineV2Attention(TransformerComponentBase):
-    def __init__(self, config: BaselineV2Config, is_causal: bool=False) -> None:
+    def __init__(self, config: BaselineV2Config, shared_rotary_emb: RotaryEmbedding, is_causal: bool=False) -> None:
         super().__init__(config)
 
-        self.attn_bias = LowerTriangularMask() if is_causal else None
+        self.is_causal = is_causal
 
         D, HDkv = config.dim_model, config.num_heads * config.dim_qkv
         self.w_q = Linear(config, D, HDkv)
         self.w_k = Linear(config, D, HDkv)
         self.w_v = Linear(config, D, HDkv)
         self.w_o = Linear(config, HDkv, D)
-        self.rotary_emb = RotaryEmbedding(config)
+        self.rotary_emb = shared_rotary_emb
 
     def forward(self, embeds: NLD, encoder_embeds: Optional[NLD] = None) -> NLD:
         config = self.config
@@ -149,15 +152,15 @@ class BaselineV2Attention(TransformerComponentBase):
             L_k = L_q
             key_value_embeds = embeds
 
-        query: NLHDkv = self.w_q(embeds).view(N, L_q, H, Dkv)
-        key: NLHDkv = self.w_k(key_value_embeds).view(N, L_k, H, Dkv)
-        value: NLHDkv = self.w_v(key_value_embeds).view(N, L_k, H, Dkv)
+        query: NHLDkv = self.w_q(embeds).view(N, L_q, H, Dkv).transpose(1, 2)
+        key: NHLDkv = self.w_k(key_value_embeds).view(N, L_k, H, Dkv).transpose(1, 2)
+        value: NHLDkv = self.w_v(key_value_embeds).view(N, L_k, H, Dkv).transpose(1, 2)
 
         query, key = self.rotary_emb(query, key)
 
-        attention_values: NLHDkv = memory_efficient_attention(query, key, value, self.attn_bias)
+        attention_values: NHLDkv = scaled_dot_product_attention(query, key, value, is_causal=self.is_causal)
 
-        attention_output: NLD = self.w_o(attention_values.reshape(N, L_q, D))
+        attention_output: NLD = self.w_o(attention_values.transpose(1, 2).reshape(N, L_q, D))
         return attention_output
 
 
@@ -187,15 +190,16 @@ class BaselineV2EncoderDecoder(TransformerComponentBase):
         attn_cls = self.ATTENTION_CLS
         ff_cls = self.FEEDFORWARD_CLS
         layernorm_fn = lambda: FusedRMSNorm(config.dim_model, eps=1e-6)
+        shared_rotary_emb = RotaryEmbedding(config)
 
         self.layers = ModuleList()
         for _ in range(config.num_decoder_layers):
             self.layers.append(layer := Module())
 
-            layer.selfattn_ln, layer.selfattn = layernorm_fn(), attn_cls(config, is_causal=is_decoder)
+            layer.selfattn_ln, layer.selfattn = layernorm_fn(), attn_cls(config, shared_rotary_emb, is_causal=is_decoder)
 
             if is_decoder:
-                layer.crossattn_ln, layer.crossattn = layernorm_fn(), attn_cls(config)
+                layer.crossattn_ln, layer.crossattn = layernorm_fn(), attn_cls(config, shared_rotary_emb)
 
             layer.ff_ln, layer.ff = layernorm_fn(), ff_cls(config)
 
