@@ -18,6 +18,15 @@ CACHE_DIR = join(ROOT_DIR, "..", "cache")
 environ["TRANSFORMERS_CACHE"] = CACHE_DIR
 environ["HF_DATASETS_CACHE"] = CACHE_DIR
 
+old_print = print  # Override builtin print
+def print_on_main_only(*args, **kwargs):
+    if int(environ.get("RANK", -1)) > 0: return
+
+    return old_print(*args, **kwargs)
+
+
+__builtins__["print"] = print_on_main_only
+
 
 def run(
     experiment_name: str,
