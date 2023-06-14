@@ -10,14 +10,14 @@ from torch.jit import script
 
 from xformers.ops import swiglu, unbind
 
-from transformers.utils.import_utils import is_torch_bf16_gpu_available, is_torch_cuda_available
+from transformers.utils.import_utils import is_torch_bf16_gpu_available
 from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
 from transformers.modeling_outputs import Seq2SeqLMOutput
 from transformers import PretrainedConfig
 
 from apex.normalization import FusedRMSNorm
 ALL_LAYERNORM_LAYERS.append(FusedRMSNorm)
-if not is_torch_cuda_available():
+if not is_torch_bf16_gpu_available():
     from torch.nn import LayerNorm
     FusedRMSNorm = LayerNorm
     print("Can't use apex FusedRMSNorm. Using torch.nn.LayerNorm")
