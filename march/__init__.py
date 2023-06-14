@@ -62,7 +62,9 @@ def run(
             finished = True
         except RuntimeError as e:
             error_message = str(e)
-            if "CUDA out of memory" in error_message:
+            oom_messages = ["CUDA out of memory", "CUDA error: no kernel image is available for execution on the device"]
+            has_oom_message = [m in error_message for m in oom_messages]
+            if has_oom_message:
                 batch_size_pow_scale -= 1
                 overwrite_old_experiment = True
                 print(
